@@ -1,4 +1,5 @@
 ﻿using System;
+using BinanceTrader.Api;
 
 namespace BinanceTrader
 {
@@ -8,18 +9,16 @@ namespace BinanceTrader
         {
             Trade();
 
-            //var cr = new BinanceKeyProvider();
+            //var api = new BinanceApi(new BinanceKeyProvider("d:/Keys.config"));
+            //var order = api.CreateTestOrder().Result;
 
-            //cr.GetSecretKey();
-            // var api = new BinanceApi();
-            //var r= api.GetAccountInfo().Result;
             PreventAppClose();
         }
 
         public static void Trade()
         {
-            var trader = new Trader();
-            trader.Trade("ADA", "ETH", 1);
+            var trader = new Trader(new BinanceApi(new BinanceKeyProvider("d:/Keys.config")));
+            trader.Trade("TRX", "ETH", 1);
         }
 
         private static void PreventAppClose()

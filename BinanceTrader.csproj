@@ -52,7 +52,8 @@
     <Compile Include="Api\BinanceApi.cs" />
     <Compile Include=".Utils\HttpClientExtensions.cs" />
     <Compile Include=".Utils\MathExtension.cs" />
-    <Compile Include="Api\PriceTicker.cs" />
+    <Compile Include=".Utils\UrlEncoder.cs" />
+    <Compile Include="Entities\PriceTicker.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Trader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

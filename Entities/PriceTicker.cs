@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace BinanceTrader.Api
+namespace BinanceTrader.Entities
 {
     public class PriceTicker
     {

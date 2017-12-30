@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Net.Http;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using BinanceTrader.Entities;
 using BinanceTrader.Utils;
 
 namespace BinanceTrader.Api
@@ -13,21 +12,21 @@ namespace BinanceTrader.Api
     public class BinanceApi
     {
         private readonly HttpClient _client = new HttpClient();
+        private readonly string _secretKey;
         private readonly Uri _baseUri = new Uri("https://www.binance.com/api/");
         private readonly Uri _pricesUri;
         private readonly Uri _accountInfoUri;
-
-        private readonly string _secretKey;
+        private readonly Uri _testOrderUri;
 
         public BinanceApi(IBinanceKeyProvider binanceKeyProvider)
         {
             var keys = binanceKeyProvider.GetKeys();
-            var apiKey = keys.ApiKey;
             _secretKey = keys.SecretKey;
+            _client.DefaultRequestHeaders.TryAddWithoutValidation("X-MBX-APIKEY", keys.ApiKey);
 
             _pricesUri = new Uri(_baseUri, "v1/ticker/allPrices");
             _accountInfoUri = new Uri(_baseUri, "v3/account");
-            _client.DefaultRequestHeaders.TryAddWithoutValidation("X-MBX-APIKEY", apiKey);
+            _testOrderUri = new Uri(_baseUri, "v3/order/test");
         }
 
         public async Task<List<CurrencyPrice>> GetPrices()
@@ -38,17 +37,35 @@ namespace BinanceTrader.Api
 
         public async Task<string> GetAccountInfo()
         {
-            var result = await _client.GetAsync(CreateSignedUri());
+            var result = await _client.GetAsync(CreateSignedUri(_accountInfoUri));
             var content = await result.Content.ReadAsStringAsync();
 
             return content;
         }
 
-        public Uri CreateSignedUri(NameValueCollection queryParams = null)
+        public async Task<string> CreateTestOrder()
+        {
+            var queryParams = new NameValueCollection
+            {
+                {"symbol", "XRPETH"},
+                {"side", "BUY"},
+                {"type", "LIMIT"},
+                {"timeInForce", "IOC"},
+                {"quantity", "1000"},
+                {"price", "0.0001"}
+            };
+
+            var result = await _client.PostAsync(CreateSignedUri(_testOrderUri, queryParams), new ByteArrayContent(new byte[0]));
+            var content = await result.Content.ReadAsStringAsync();
+
+            return content;
+        }
+
+        private Uri CreateSignedUri(Uri uri, NameValueCollection queryParams = null)
         {
             queryParams = queryParams ?? new NameValueCollection();
             var timestamp = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-            var uriBuilder = new UriBuilder(_accountInfoUri);
+            var uriBuilder = new UriBuilder(uri);
             var query = HttpUtility.ParseQueryString(uriBuilder.Query);
 
             foreach (string key in queryParams)
@@ -58,23 +75,11 @@ namespace BinanceTrader.Api
 
             query["recvWindow"] = "5000";
             query["timestamp"] = timestamp.ToString();
-            query["signature"] = CreateSignature(query.ToString(), _secretKey);
+            query["signature"] = UrlEncoder.CreateHash(query.ToString(), _secretKey);
 
             uriBuilder.Query = query.ToString();
 
             return uriBuilder.Uri;
-        }
-
-        private static string CreateSignature(string data, string secretKey)
-        {
-            var key = Encoding.ASCII.GetBytes(secretKey);
-            using (var hmac = new HMACSHA256(key))
-            {
-                var payload = Encoding.ASCII.GetBytes(data);
-                var hash = hmac.ComputeHash(payload, 0, payload.Length);
-
-                return BitConverter.ToString(hash).Replace("-", "").ToLower();
-            }
         }
     }
 }

@@ -1,15 +1,23 @@
 ﻿using System;
 using System.Threading.Tasks;
 using BinanceTrader.Api;
+using BinanceTrader.Entities;
 using BinanceTrader.Utils;
 
 namespace BinanceTrader
 {
     public class Trader
     {
+        private readonly BinanceApi _binanceApi;
         private decimal? _lastOrderPrice;
         private decimal _baseAmount;
         private decimal _quoteAmount;
+
+
+        public Trader(BinanceApi binanceApi)
+        {
+            _binanceApi = binanceApi;
+        }
 
         public async void Trade(string baseCurrency, string quoteCurrency, decimal quoteAmount,
             decimal tolerance = 0.1m, decimal fee = 0.05m)
@@ -72,11 +80,10 @@ namespace BinanceTrader
             Console.WriteLine();
         }
 
-        private static async Task<CurrencyPrice> GetCurrencyPrice(string cyrrencySymbol)
+        private async Task<CurrencyPrice> GetCurrencyPrice(string cyrrencySymbol)
         {
-            var bs = new BinanceApi(new BinanceKeyProvider("d:/Keys.config"));
 
-            var prices = await bs.GetPrices();
+            var prices = await _binanceApi.GetPrices();
             var priceTicker = new PriceTicker(prices);
             var price = priceTicker.GetPrice(cyrrencySymbol);
             return price;
