@@ -18,7 +18,7 @@ namespace BinanceTrader
         public static void Trade()
         {
             var trader = new Trader(new BinanceApi(new BinanceKeyProvider("d:/Keys.config")));
-            trader.Trade("TRX", "ETH", 1);
+            trader.Trade("XRP", "ETH", 1);
         }
 
         private static void PreventAppClose()

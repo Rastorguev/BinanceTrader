@@ -54,6 +54,7 @@
     <Compile Include=".Utils\MathExtension.cs" />
     <Compile Include=".Utils\UrlEncoder.cs" />
     <Compile Include="Entities\PriceTicker.cs" />
+    <Compile Include="Loger.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Trader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
