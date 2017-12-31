@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Linq;
 using BinanceTrader.Api;
-using BinanceTrader.Entities;
-using BinanceTrader.Entities.Enums;
-using BinanceTrader.Utils;
 
 namespace BinanceTrader
 {
@@ -11,14 +7,14 @@ namespace BinanceTrader
     {
         private static void Main(string[] args)
         {
-            //Trade();
+            Trade();
 
-            var api = new BinanceApi(new BinanceKeyProvider("d:/Keys.config"));
+            //var api = new BinanceApi(new BinanceKeyProvider("d:/Keys.config"));
 
-            var info = api.GetAccountInfo().Result;
+            //var info = api.GetAccountInfo().Result;
 
-            var trx = info.Balances.GetBalanceFor("TRX");
-            var eth = info.Balances.GetBalanceFor("ETH");
+            //var trx = info.Balances.GetBalanceFor("TRX");
+            //var eth = info.Balances.GetBalanceFor("ETH");
 
             //var baseCurrency = "TRX";
             //var quoteCurrency = "ETH";
@@ -51,8 +47,11 @@ namespace BinanceTrader
 
         public static void Trade()
         {
-            var trader = new Trader(new BinanceApi(new BinanceKeyProvider("d:/Keys.config")));
-            trader.Trade("TRX", "ETH", 0.01m);
+            var trader = new Trader(
+                new BinanceApi(new BinanceKeyProvider("d:/Keys.config")),
+                "TRX",
+                "ETH");
+            trader.Trade();
         }
 
         private static void PreventAppClose()

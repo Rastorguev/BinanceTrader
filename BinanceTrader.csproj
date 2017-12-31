@@ -65,8 +65,10 @@
     <Compile Include="Entities\Enums\TimeInForceType.cs" />
     <Compile Include="Loger.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="TestTrader.cs" />
     <Compile Include="Trader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TraderState.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

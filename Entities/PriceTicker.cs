@@ -3,18 +3,26 @@ using System.Linq;
 
 namespace BinanceTrader.Entities
 {
-    public class PriceTicker
+    //public class PriceTicker
+    //{
+    //    public PriceTicker(List<CurrencyPrice> prices)
+    //    {
+    //        Prices = prices;
+    //    }
+
+    //    public List<CurrencyPrice> Prices { get; }
+
+    //    public CurrencyPrice GetPrice(string symbol)
+    //    {
+    //        return Prices.First(p => p.Symbol == symbol);
+    //    }
+    //}
+
+    public class CurrencyPrices : List<CurrencyPrice>
     {
-        public PriceTicker(List<CurrencyPrice> prices)
+        public CurrencyPrice PriceFor(string symbol)
         {
-            Prices = prices;
-        }
-
-        public List<CurrencyPrice> Prices { get; }
-
-        public CurrencyPrice GetPrice(string symbol)
-        {
-            return Prices.First(p => p.Symbol == symbol);
+            return this.FirstOrDefault(p => p.Symbol == symbol);
         }
     }
 

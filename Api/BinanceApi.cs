@@ -30,9 +30,9 @@ namespace BinanceTrader.Api
             _testOrderUri = new Uri(_baseUri, "v3/order");
         }
 
-        public async Task<List<CurrencyPrice>> GetPrices()
+        public async Task<CurrencyPrices> GetPrices()
         {
-            var prices = await _client.GetAsync<List<CurrencyPrice>>(_pricesUri);
+            var prices = await _client.GetAsync<CurrencyPrices>(_pricesUri);
             return prices;
         }
 
