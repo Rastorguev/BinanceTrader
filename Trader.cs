@@ -14,15 +14,18 @@ namespace BinanceTrader
         private decimal _baseAmount;
         private decimal _quoteAmount;
         private decimal _fee;
-        private decimal _tolerance;
+        private decimal _fluctuation;
         private Loger _loger;
 
         private decimal _initialQuoteAmount;
         private TraderState _state;
         private DateTime _lastUpdateTime;
-        private readonly TimeSpan _idlePeriod = TimeSpan.FromMinutes(1);
-        private readonly Dictionary<TraderState, Func<decimal, TraderState>> _stateActionMap =
-            new Dictionary<TraderState, Func<decimal, TraderState>>();
+        private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromSeconds(1);
+        private readonly Dictionary<TraderState, Func<TraderState>> _stateActionMap =
+            new Dictionary<TraderState, Func<TraderState>>();
+
+        private decimal _currentPrice;
+        private int _stopLossPercents;
 
         public Trader(BinanceApi binanceApi)
         {
@@ -43,8 +46,9 @@ namespace BinanceTrader
                 {
                     return;
                 }
-                _lastUpdateTime = DateTime.Now;
+
                 _state = value;
+                _lastUpdateTime = DateTime.Now;
             }
         }
 
@@ -52,44 +56,44 @@ namespace BinanceTrader
             string baseCurrency,
             string quoteCurrency,
             decimal quoteAmount,
-            decimal tolerance = 0.2m,
-            decimal fee = 0.05m)
+            decimal fluctuation = 0.2m,
+            decimal fee = 0.05m,
+            int stopLossPercents = 10)
         {
             _quoteAmount = _initialQuoteAmount = quoteAmount;
             _fee = fee;
-            _tolerance = tolerance;
+            _fluctuation = fluctuation;
             _loger = new Loger(baseCurrency, quoteCurrency);
+            _stopLossPercents = stopLossPercents;
 
             State = TraderState.InitialBuy;
 
             while (true)
             {
-                var currencyPair = string.Format($"{baseCurrency}{quoteCurrency}");
-                var price = (await GetCurrencyPrice(currencyPair)).Price;
+                var currencyPair = ApiUtils.CreateCurrencySymbol(baseCurrency, quoteCurrency);
+                _currentPrice = (await GetCurrencyPrice(currencyPair)).Price;
 
-                State = _stateActionMap[State].Invoke(price);
+                State = _stateActionMap[State].Invoke();
             }
         }
 
-        private TraderState InitialBuyAction(decimal price)
+        private TraderState InitialBuyAction()
         {
-            Buy(price);
-            _loger.Log(State, price, _baseAmount, _quoteAmount, CalculateProfit(price));
+            Buy();
 
             return TraderState.Sell;
         }
 
-        private TraderState BuyAction(decimal price)
+        private TraderState BuyAction()
         {
-            if (price + _lastOrderPrice.Percents(_tolerance) < _lastOrderPrice)
+            if (_currentPrice + _lastOrderPrice.Percents(_fluctuation) < _lastOrderPrice)
             {
-                Buy(price);
-                _loger.Log(State, price, _baseAmount, _quoteAmount, CalculateProfit(price));
+                Buy();
 
                 return TraderState.Sell;
             }
 
-            if (DateTime.Now - _lastUpdateTime > _idlePeriod)
+            if (DateTime.Now - _lastUpdateTime > _maxIdlePeriod)
             {
                 return TraderState.ForceBuy;
             }
@@ -97,17 +101,16 @@ namespace BinanceTrader
             return TraderState.Buy;
         }
 
-        private TraderState SellAction(decimal price)
+        private TraderState SellAction()
         {
-            if (price > _lastOrderPrice + _lastOrderPrice.Percents(_tolerance))
+            if (_currentPrice > _lastOrderPrice + _lastOrderPrice.Percents(_fluctuation))
             {
-                Sell(price);
-                _loger.Log(State, price, _baseAmount, _quoteAmount, CalculateProfit(price));
+                Sell();
 
                 return TraderState.Buy;
             }
 
-            if (DateTime.Now - _lastUpdateTime > _idlePeriod)
+            if (DateTime.Now - _lastUpdateTime > _maxIdlePeriod)
             {
                 return TraderState.ForceSell;
             }
@@ -115,13 +118,12 @@ namespace BinanceTrader
             return TraderState.Sell;
         }
 
-        private TraderState ForceBuyAction(decimal price)
+        private TraderState ForceBuyAction()
         {
-            var profit = CalculateProfit(price);
-            if (profit > 0)
+            var profit = CalculateProfit(_currentPrice);
+            if (profit > -_stopLossPercents)
             {
-                Buy(price);
-                _loger.Log(State, price, _baseAmount, _quoteAmount, CalculateProfit(price));
+                Buy();
 
                 return TraderState.Sell;
             }
@@ -129,13 +131,12 @@ namespace BinanceTrader
             return TraderState.ForceBuy;
         }
 
-        private TraderState ForceSellAction(decimal price)
+        private TraderState ForceSellAction()
         {
-            var profit = CalculateProfit(price);
-            if (profit > 0)
+            var profit = CalculateProfit(_currentPrice);
+            if (profit > -_stopLossPercents)
             {
-                Sell(price);
-                _loger.Log(State, price, _baseAmount, _quoteAmount, CalculateProfit(price));
+                Sell();
 
                 return TraderState.Buy;
             }
@@ -143,18 +144,22 @@ namespace BinanceTrader
             return TraderState.ForceSell;
         }
 
-        private void Sell(decimal price)
+        private void Sell()
         {
-            _quoteAmount = SubstractFee(_baseAmount * price, _fee);
+            _quoteAmount = SubstractFee(_baseAmount * _currentPrice, _fee);
             _baseAmount = 0;
-            _lastOrderPrice = price;
+            _lastOrderPrice = _currentPrice;
+
+            Log();
         }
 
-        private void Buy(decimal price)
+        private void Buy()
         {
-            _baseAmount = SubstractFee(_quoteAmount / price, _fee);
+            _baseAmount = SubstractFee(_quoteAmount / _currentPrice, _fee);
             _quoteAmount = 0;
-            _lastOrderPrice = price;
+            _lastOrderPrice = _currentPrice;
+
+            Log();
         }
 
         private async Task<CurrencyPrice> GetCurrencyPrice(string cyrrencySymbol)
@@ -170,6 +175,11 @@ namespace BinanceTrader
             return value - value.Percents(fee);
         }
 
+        private void Log()
+        {
+            _loger.Log(State, _currentPrice, _baseAmount, _quoteAmount, CalculateProfit(_currentPrice));
+        }
+
         private decimal CalculateProfit(decimal price)
         {
             var quoteAmount = _quoteAmount > 0 ? _quoteAmount : _baseAmount * price;
@@ -177,6 +187,18 @@ namespace BinanceTrader
 
             return profit;
         }
+
+        //private decimal CalculateQuoteAmount(decimal quoteAmount,  )
+        //{
+        //    var quoteAmount = _quoteAmount > 0 ? _quoteAmount : _baseAmount * price;
+        //}
+
+        //private decimal CalculateProfit(decimal quoteAmount, decimal initialQuoteAmount)
+        //{
+        //    var profit = (quoteAmount - initialQuoteAmount) * 100 / initialQuoteAmount;
+
+        //    return profit;
+        //}
     }
 
     public enum TraderState

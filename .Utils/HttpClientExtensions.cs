@@ -8,9 +8,22 @@ namespace BinanceTrader.Utils
 {
     public static class HttpClientExtensions
     {
-        public static async Task<T> Execute<T>(this HttpClient client, Uri uri)
+        public static async Task<T> GetAsync<T>(this HttpClient client, Uri uri)
         {
             var response = await client.GetAsync(uri);
+            var json = response.Content.ReadAsStringAsync().Result;
+
+            if (response.StatusCode != HttpStatusCode.OK)
+            {
+                throw new NetworkException(response.Content.ReadAsStringAsync().Result);
+            }
+
+            return JsonConvert.DeserializeObject<T>(json);
+        }
+
+        public static async Task<T> PostAsync<T>(this HttpClient client, Uri uri)
+        {
+            var response = await client.PostAsync(uri, new ByteArrayContent(new byte[0]));
             var json = response.Content.ReadAsStringAsync().Result;
 
             if (response.StatusCode != HttpStatusCode.OK)

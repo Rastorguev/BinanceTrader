@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
@@ -26,39 +27,36 @@ namespace BinanceTrader.Api
 
             _pricesUri = new Uri(_baseUri, "v1/ticker/allPrices");
             _accountInfoUri = new Uri(_baseUri, "v3/account");
-            _testOrderUri = new Uri(_baseUri, "v3/order/test");
+            _testOrderUri = new Uri(_baseUri, "v3/order");
         }
 
         public async Task<List<CurrencyPrice>> GetPrices()
         {
-            var prices = await _client.Execute<List<CurrencyPrice>>(_pricesUri);
+            var prices = await _client.GetAsync<List<CurrencyPrice>>(_pricesUri);
             return prices;
         }
 
-        public async Task<string> GetAccountInfo()
+        public async Task<AccountInfo> GetAccountInfo()
         {
-            var result = await _client.GetAsync(CreateSignedUri(_accountInfoUri));
-            var content = await result.Content.ReadAsStringAsync();
-
-            return content;
+            return await _client.GetAsync<AccountInfo>(CreateSignedUri(_accountInfoUri));
         }
 
-        public async Task<string> CreateTestOrder()
+        public async Task<OrderResult> CreateOrder(OrderConfig config)
         {
             var queryParams = new NameValueCollection
             {
-                {"symbol", "XRPETH"},
-                {"side", "BUY"},
-                {"type", "LIMIT"},
-                {"timeInForce", "IOC"},
-                {"quantity", "1000"},
-                {"price", "0.0001"}
+                {"symbol", ApiUtils.CreateCurrencySymbol(config.BaseCurrency, config.QuoteCurrency)},
+                {"side", config.Side.ToRequestParam()},
+                {"type", config.Type.ToRequestParam()},
+                {"timeInForce", config.TimeInForce.ToRequestParam()},
+                {"quantity", config.Quantity.ToString(CultureInfo.InvariantCulture)},
+                {"price", config.Price.ToString(CultureInfo.InvariantCulture)}
             };
 
-            var result = await _client.PostAsync(CreateSignedUri(_testOrderUri, queryParams), new ByteArrayContent(new byte[0]));
-            var content = await result.Content.ReadAsStringAsync();
+            var result = await _client.PostAsync<OrderResult>(
+                CreateSignedUri(_testOrderUri, queryParams));
 
-            return content;
+            return result;
         }
 
         private Uri CreateSignedUri(Uri uri, NameValueCollection queryParams = null)
@@ -74,7 +72,7 @@ namespace BinanceTrader.Api
             }
 
             query["recvWindow"] = "5000";
-            query["timestamp"] = timestamp.ToString();
+            query["timestamp"] = (timestamp - 1000).ToString();
             query["signature"] = UrlEncoder.CreateHash(query.ToString(), _secretKey);
 
             uriBuilder.Query = query.ToString();

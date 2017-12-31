@@ -48,12 +48,21 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include=".Utils\Exceptions.cs" />
+    <Compile Include=".Utils\ApiUtils.cs" />
     <Compile Include="Api\BinanceKeyProvider.cs" />
     <Compile Include="Api\BinanceApi.cs" />
     <Compile Include=".Utils\HttpClientExtensions.cs" />
     <Compile Include=".Utils\MathExtension.cs" />
     <Compile Include=".Utils\UrlEncoder.cs" />
+    <Compile Include="Entities\AccountInfo.cs" />
+    <Compile Include="Entities\OrderConfig.cs" />
+    <Compile Include="Api\ParseUtils.cs" />
+    <Compile Include="Entities\OrderResult.cs" />
+    <Compile Include="Entities\Enums\OrderSide.cs" />
+    <Compile Include="Entities\Enums\OrderStatus.cs" />
+    <Compile Include="Entities\Enums\OrderType.cs" />
     <Compile Include="Entities\PriceTicker.cs" />
+    <Compile Include="Entities\Enums\TimeInForceType.cs" />
     <Compile Include="Loger.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Trader.cs" />

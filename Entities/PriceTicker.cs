@@ -21,6 +21,7 @@ namespace BinanceTrader.Entities
     public class CurrencyPrice
     {
         public string Symbol { get; set; }
+
         public decimal Price { get; set; }
     }
 }
