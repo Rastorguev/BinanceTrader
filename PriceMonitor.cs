@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BinanceTrader.Api;
@@ -35,6 +36,37 @@ namespace BinanceTrader
                 var ma7 = decimal.Round(CalculateAveragePrice(candles, 7), 8);
                 var ma25 = decimal.Round(CalculateAveragePrice(candles, 25), 8);
 
+                var stats = new List<Stat>();
+
+                for (var i = 25; i <= candles.Count; i++)
+                {
+                    var c = candles.GetRange(0, i);
+
+                    var ma_7 = decimal.Round(CalculateAveragePrice(c, 7), 8);
+                    var ma_25 = decimal.Round(CalculateAveragePrice(c, 25), 8);
+
+                    var diff = (ma_7 - ma_25) * 100 / ma7;
+
+                    var current = c.Last();
+
+                    var stat = new Stat
+                    {
+                        Time = current.CloseTime,
+                        MA7 = ma_7,
+                        MA25 = ma_25,
+                        Diff = diff
+                    };
+
+                    stats.Add(stat);
+                }
+
+                var st = stats.OrderBy(s => s.Diff).ToList();
+
+                var ch = stats.OrderBy(s => Math.Abs(s.Diff)).ToList();
+
+                var min = st.First();
+                var max = st.Last();
+
                 var currentState = PriceState.Unknown;
 
                 if (ma7 > ma25)
@@ -61,13 +93,18 @@ namespace BinanceTrader
             }
         }
 
-        private decimal CalculateAveragePrice(Candles candles, int n)
+        public class Stat
+        {
+            public DateTime Time { get; set; }
+            public decimal MA7 { get; set; }
+            public decimal MA25 { get; set; }
+            public decimal Diff { get; set; }
+        }
+
+        private decimal CalculateAveragePrice(List<Candle> candles, int n)
         {
             var range = candles.GetRange(candles.Count - n, n);
-
-            var av = range.Average(c => c.ClosePrice);
-
-            return av;
+            return range.Average(c => c.ClosePrice);
         }
 
         public enum PriceState
