@@ -15,7 +15,7 @@ namespace BinanceTrader.Utils
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
-                throw new NetworkException(response.Content.ReadAsStringAsync().Result);
+                throw new BinaceApiException(response.Content.ReadAsStringAsync().Result);
             }
 
             return JsonConvert.DeserializeObject<T>(json);
@@ -28,7 +28,7 @@ namespace BinanceTrader.Utils
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
-                throw new NetworkException(response.Content.ReadAsStringAsync().Result);
+                throw new BinaceApiException(response.Content.ReadAsStringAsync().Result);
             }
 
             return JsonConvert.DeserializeObject<T>(json);
@@ -41,7 +41,7 @@ namespace BinanceTrader.Utils
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
-                throw new NetworkException(response.Content.ReadAsStringAsync().Result);
+                throw new BinaceApiException(response.Content.ReadAsStringAsync().Result);
             }
 
             return JsonConvert.DeserializeObject<T>(json);

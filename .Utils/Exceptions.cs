@@ -2,13 +2,13 @@
 
 namespace BinanceTrader.Utils
 {
-    public class NetworkException : Exception
+    public class BinaceApiException : Exception
     {
-        public NetworkException(string message) : base(message)
+        public BinaceApiException(string message) : base(message)
         {
         }
 
-        public NetworkException(string message, Exception innerException) : base(message, innerException)
+        public BinaceApiException(string message, Exception innerException) : base(message, innerException)
         {
         }
     }
