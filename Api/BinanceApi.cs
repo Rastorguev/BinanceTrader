@@ -17,7 +17,9 @@ namespace BinanceTrader.Api
         private readonly Uri _baseUri = new Uri("https://www.binance.com/api/");
         private readonly Uri _pricesUri;
         private readonly Uri _accountInfoUri;
-        private readonly Uri _testOrderUri;
+        private readonly Uri _orderUri;
+        private readonly Uri _openOrdersUri;
+        private readonly Uri _allOrdersUri;
 
         public BinanceApi(IBinanceKeyProvider binanceKeyProvider)
         {
@@ -27,7 +29,9 @@ namespace BinanceTrader.Api
 
             _pricesUri = new Uri(_baseUri, "v1/ticker/allPrices");
             _accountInfoUri = new Uri(_baseUri, "v3/account");
-            _testOrderUri = new Uri(_baseUri, "v3/order");
+            _orderUri = new Uri(_baseUri, "v3/order");
+            _openOrdersUri = new Uri(_baseUri, "v3/openOrders");
+            _allOrdersUri = new Uri(_baseUri, "v3/allOrders");
         }
 
         public async Task<CurrencyPrices> GetPrices()
@@ -41,11 +45,11 @@ namespace BinanceTrader.Api
             return await _client.GetAsync<AccountInfo>(CreateSignedUri(_accountInfoUri));
         }
 
-        public async Task<OrderResult> CreateOrder(OrderConfig config)
+        public async Task<Order> MakeOrder(OrderConfig config)
         {
             var queryParams = new NameValueCollection
             {
-                {"symbol", ApiUtils.CreateCurrencySymbol(config.BaseCurrency, config.QuoteCurrency)},
+                {"symbol", ApiUtils.CreateCurrencySymbol(config.BaseAsset, config.QuoteAsset)},
                 {"side", config.Side.ToRequestParam()},
                 {"type", config.Type.ToRequestParam()},
                 {"timeInForce", config.TimeInForce.ToRequestParam()},
@@ -53,8 +57,46 @@ namespace BinanceTrader.Api
                 {"price", config.Price.ToString(CultureInfo.InvariantCulture)}
             };
 
-            var result = await _client.PostAsync<OrderResult>(
-                CreateSignedUri(_testOrderUri, queryParams));
+            var result = await _client.PostAsync<Order>(
+                CreateSignedUri(_orderUri, queryParams));
+
+            return result;
+        }
+
+        public async Task<Orders> GetOpenOrders(string baseAsset, string quoteAsset)
+        {
+            var queryParams = new NameValueCollection
+            {
+                {"symbol", ApiUtils.CreateCurrencySymbol(baseAsset, quoteAsset)}
+            };
+
+            var result = await _client.GetAsync<Orders>(CreateSignedUri(_openOrdersUri, queryParams));
+
+            return result;
+        }
+
+        public async Task<Orders> GetAllOrders(string baseAsset, string quoteAsset, int limit = 500)
+        {
+            var queryParams = new NameValueCollection
+            {
+                {"symbol", ApiUtils.CreateCurrencySymbol(baseAsset, quoteAsset)},
+                {"limit", limit.ToString(CultureInfo.InvariantCulture)}
+            };
+
+            var result = await _client.GetAsync<Orders>(CreateSignedUri(_allOrdersUri, queryParams));
+
+            return result;
+        }
+
+        public async Task<Order> CancelOrder(string baseAsset, string quoteAsset, long id)
+        {
+            var queryParams = new NameValueCollection
+            {
+                {"symbol", ApiUtils.CreateCurrencySymbol(baseAsset, quoteAsset)},
+                {"orderId", id.ToString(CultureInfo.InvariantCulture)}
+            };
+
+            var result = await _client.DeleteAsync<Order>(CreateSignedUri(_orderUri, queryParams));
 
             return result;
         }

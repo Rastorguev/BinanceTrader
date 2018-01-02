@@ -1,10 +1,20 @@
-﻿using BinanceTrader.Entities.Enums;
+﻿using System.Collections.Generic;
+using System.Linq;
+using BinanceTrader.Entities.Enums;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
 namespace BinanceTrader.Entities
 {
-    public class OrderResult
+    public class Orders : List<Order>
+    {
+        public Order GetOrder(long id)
+        {
+            return this.FirstOrDefault(o => o.OrderId == id);
+        }
+    }
+
+    public class Order
     {
         public string Symbol { get; set; }
 

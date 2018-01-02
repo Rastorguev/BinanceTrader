@@ -7,7 +7,7 @@
         InitialBuy,
         Buy,
         Sell,
-        ForceBuy,
-        ForceSell
+        //ForceBuy,
+        //ForceSell
     }
 }

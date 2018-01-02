@@ -33,5 +33,19 @@ namespace BinanceTrader.Utils
 
             return JsonConvert.DeserializeObject<T>(json);
         }
+
+        public static async Task<T> DeleteAsync<T>(this HttpClient client, Uri uri)
+        {
+            var response = await client.DeleteAsync(uri);
+            var json = response.Content.ReadAsStringAsync().Result;
+
+            if (response.StatusCode != HttpStatusCode.OK)
+            {
+                throw new NetworkException(response.Content.ReadAsStringAsync().Result);
+            }
+
+            return JsonConvert.DeserializeObject<T>(json);
+        }
+
     }
 }

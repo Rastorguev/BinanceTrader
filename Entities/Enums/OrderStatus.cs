@@ -1,12 +1,16 @@
-﻿namespace BinanceTrader.Entities.Enums
+﻿using Newtonsoft.Json;
+
+namespace BinanceTrader.Entities.Enums
 {
     public enum OrderStatus
     {
         New,
-        PartiallyFilled,
+        [JsonProperty(PropertyName = "PARTIALLY_FILLED")]
+        PARTIALLY_FILLED,
         Filled,
         Canceled,
-        PendingCancel,
+        [JsonProperty(PropertyName = "PENDING_CANCEL")]
+        PENDING_CANCEL,
         Rejected,
         Expired
     }

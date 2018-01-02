@@ -1,5 +1,9 @@
 ﻿using System;
+using System.Linq;
 using BinanceTrader.Api;
+using BinanceTrader.Entities;
+using BinanceTrader.Entities.Enums;
+using BinanceTrader.Utils;
 
 namespace BinanceTrader
 {
@@ -9,6 +13,11 @@ namespace BinanceTrader
         {
             Trade();
 
+            var api = new BinanceApi(new BinanceKeyProvider("d:/Keys.config"));
+
+            //var order = api.GetAllOrders("TRX", "ETH", 5).Result.GetOrder(4541287);
+
+
             //var api = new BinanceApi(new BinanceKeyProvider("d:/Keys.config"));
 
             //var info = api.GetAccountInfo().Result;
@@ -16,12 +25,11 @@ namespace BinanceTrader
             //var trx = info.Balances.GetBalanceFor("TRX");
             //var eth = info.Balances.GetBalanceFor("ETH");
 
-            //var baseCurrency = "TRX";
+            //var baseCurrency = "IOTA";
             //var quoteCurrency = "ETH";
 
             //var prices = api.GetPrices().Result;
-            //var priceTicker = new PriceTicker(prices);
-            ////var price = priceTicker.GetPrice(ApiUtils.CreateCurrencySymbol(baseCurrency, quoteCurrency)).Price;
+            ////var price = prices.PriceFor(ApiUtils.CreateCurrencySymbol(baseCurrency, quoteCurrency)).Price;
             //var price = 0.00001m;
 
             //var q = 0.011m / price;
@@ -29,18 +37,19 @@ namespace BinanceTrader
 
             //var orderConfig = new OrderConfig
             //{
-            //    BaseCurrency = baseCurrency,
-            //    QuoteCurrency = quoteCurrency,
+            //    BaseAsset = baseCurrency,
+            //    QuoteAsset = quoteCurrency,
             //    Price = price,
             //    Quantity = quantity,
-            //    TimeInForce = TimeInForceType.IOC,
+            //    TimeInForce = TimeInForceType.GTC,
             //    Side = OrderSide.Buy,
             //    Type = OrderType.Limit
             //};
 
-            //var result = api.CreateOrder(orderConfig).Result;
+            //var order = api.MakeOrder(orderConfig).Result;
+            //var r2 = api.CancelOrder(baseCurrency, quoteCurrency, order.OrderId).Result;
 
-            //Console.WriteLine($"{result}");
+
 
             PreventAppClose();
         }
@@ -49,9 +58,9 @@ namespace BinanceTrader
         {
             var trader = new Trader(
                 new BinanceApi(new BinanceKeyProvider("d:/Keys.config")),
-                "TRX",
+                "XVG",
                 "ETH");
-            trader.Trade();
+            trader.Start();
         }
 
         private static void PreventAppClose()

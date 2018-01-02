@@ -6,9 +6,9 @@ namespace BinanceTrader.Entities
 {
     public class OrderConfig
     {
-        public string BaseCurrency { get; set; }
+        public string BaseAsset { get; set; }
 
-        public string QuoteCurrency { get; set; }
+        public string QuoteAsset { get; set; }
 
         public OrderSide Side { get; set; }
 

@@ -57,7 +57,7 @@
     <Compile Include="Entities\AccountInfo.cs" />
     <Compile Include="Entities\OrderConfig.cs" />
     <Compile Include="Api\ParseUtils.cs" />
-    <Compile Include="Entities\OrderResult.cs" />
+    <Compile Include="Entities\Order.cs" />
     <Compile Include="Entities\Enums\OrderSide.cs" />
     <Compile Include="Entities\Enums\OrderStatus.cs" />
     <Compile Include="Entities\Enums\OrderType.cs" />

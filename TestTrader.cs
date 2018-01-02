@@ -52,7 +52,7 @@
 //            }
 //        }
 
-//        public async void Trade(
+//        public async void Start(
 //            string baseCurrency,
 //            string quoteCurrency,
 //            decimal quoteAmount,

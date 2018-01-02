@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using BinanceTrader.Api;
 using BinanceTrader.Entities;
 using BinanceTrader.Entities.Enums;
@@ -10,225 +9,241 @@ namespace BinanceTrader
     public class Trader
     {
         private readonly BinanceApi _api;
-        private decimal _lastOrderPrice;
-        private readonly decimal _fee;
-        private readonly decimal _fluctuation;
-        private readonly Loger _loger;
-
-        private decimal _initialTotalAmount;
-        private TraderState _state = TraderState.Idle;
-        private DateTime _lastUpdateTime;
-        private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromMinutes(2);
-        private readonly Dictionary<TraderState, Func<TraderState>> _stateActionMap =
-            new Dictionary<TraderState, Func<TraderState>>();
-
-        private decimal _currentPrice;
-        private readonly int _stopLossPercents;
-        private readonly string _currencySymbol;
         private readonly string _baseAsset;
         private readonly string _quoteAsset;
-        private Balances _currentBalances;
+        private readonly decimal _fee;
+
+        private readonly decimal _oneDealProfit;
+        private readonly decimal _minOrderAmount;
+        private readonly Loger _loger;
+
+        private readonly decimal _fluctuation;
+        private decimal _initialTotalAmount;
+        private readonly string _currencySymbol;
+        private Order _lastOrder;
+        private DateTime _lastOrderTime;
 
         public Trader(
             BinanceApi api,
             string baseAsset,
             string quoteAsset,
-            decimal fluctuationPercents = 0.1m,
+            decimal oneDealProfit = 0.1m,
             decimal fee = 0.05m,
-            int stopLossPercents = 2)
+            decimal minOrderAmount = 0.01m)
         {
             _api = api;
-
             _baseAsset = baseAsset;
             _quoteAsset = quoteAsset;
             _currencySymbol = ApiUtils.CreateCurrencySymbol(baseAsset, quoteAsset);
             _fee = fee;
-            _fluctuation = fluctuationPercents;
+            _oneDealProfit = oneDealProfit;
+            _minOrderAmount = minOrderAmount;
             _loger = new Loger(baseAsset, quoteAsset);
-            _stopLossPercents = stopLossPercents;
-
-            _stateActionMap.Add(TraderState.InitialBuy, InitialBuyAction);
-            _stateActionMap.Add(TraderState.Buy, BuyAction);
-            _stateActionMap.Add(TraderState.Sell, SellAction);
-            _stateActionMap.Add(TraderState.ForceBuy, ForceBuyAction);
-            _stateActionMap.Add(TraderState.ForceSell, ForceSellAction);
+            _fluctuation = _fee + _oneDealProfit;
         }
 
-        public TraderState State
+        public TraderState State { get; } = TraderState.Idle;
+
+        public void Start()
         {
-            get => _state;
-            private set
-            {
-                if (_state == value)
-                {
-                    return;
-                }
-
-                _state = value;
-                _lastUpdateTime = DateTime.Now;
-            }
-        }
-
-        public void Trade(
-        )
-        {
-            State = TraderState.Initialization;
-
             Init();
-
-            State = TraderState.InitialBuy;
 
             while (true)
             {
-                _currentPrice = _api.GetPrices().Result.PriceFor(_currencySymbol).Price;
-
-                State = _stateActionMap[State].Invoke();
+                Trade();
             }
         }
 
         private void Init()
         {
-            _currentBalances = GetBalances();
+            var balances = GetBalances();
+            var prices = _api.GetPrices().Result;
+            var price = prices.PriceFor(_currencySymbol).Price;
+
+            _initialTotalAmount = GetTotalAmount(balances, price);
+        }
+
+        private void Trade()
+        {
+            var orders = GetAllOrders();
+            var lastOrder = _lastOrder != null ? orders.GetOrder(_lastOrder.OrderId) : null;
+
+            //if (lastOrder != null && DateTime.Now - _lastOrderTime > TimeSpan.FromSeconds(20))
+            //{
+            //    var balances = GetBalances();
+            //    var prices = _api.GetPrices().Result;
+            //    var price = prices.PriceFor(_currencySymbol).Price;
+
+            //    var totalAmount = GetTotalAmount(balances, price);
+
+            //    var profit = CalculateProfit(_initialTotalAmount, totalAmount);
+            //    if (profit > -5)
+            //    {
+            //        var cancelResult = _api.CancelOrder(_baseAsset, _quoteAsset, lastOrder.OrderId).Result;
+            //        lastOrder = _lastOrder = null;
+
+            //        Console.WriteLine("Order Canceled");
+            //        Console.WriteLine();
+            //    }
+            //}
+
+            if (lastOrder == null ||
+                lastOrder.Status == OrderStatus.Canceled ||
+                lastOrder.Status == OrderStatus.Expired)
+            {
+                StartTrading();
+            }
+
+            else if (lastOrder.Status == OrderStatus.Filled)
+            {
+                ContinueTrading(lastOrder);
+            }
+        }
+
+        private void StartTrading()
+        {
+            var balances = GetBalances();
             var price = _api.GetPrices().Result.PriceFor(_currencySymbol).Price;
-            _initialTotalAmount = GetTotalAmount(_currentBalances, price);
-        }
 
-        private TraderState InitialBuyAction()
-        {
-            if (Buy())
+            if (CanPlaceSellOrder(balances, price, _minOrderAmount))
             {
-                return TraderState.Sell;
+                var amount = GetAmountToSell(balances);
+                PlaceSellOrder(price, amount);
             }
-
-            return TraderState.InitialBuy;
+            else if (CanPlaceBuyOrder(balances, _minOrderAmount))
+            {
+                var amount = GetAmountToBuy(price, balances);
+                PlaceBuyOrder(price, amount);
+            }
         }
 
-        private TraderState BuyAction()
+        private void ContinueTrading(Order lastOrder)
         {
-            if (_currentPrice + _lastOrderPrice.Percents(_fluctuation) < _lastOrderPrice)
+            var balances = GetBalances();
+
+            LogOrderComplited(lastOrder.Side, lastOrder.Status, lastOrder.Price, balances);
+
+            if (lastOrder.Side == OrderSide.Buy)
             {
-                if (Buy())
+                var price = decimal.Round(lastOrder.Price + lastOrder.Price.Percents(_fluctuation), 8);
+                if (CanPlaceSellOrder(balances, price, _minOrderAmount))
                 {
-                    return TraderState.Sell;
+                    var amount = GetAmountToSell(balances);
+                    PlaceSellOrder(price, amount);
                 }
             }
-
-            if (DateTime.Now - _lastUpdateTime > _maxIdlePeriod)
+            else if (lastOrder.Side == OrderSide.Sell)
             {
-                return TraderState.ForceBuy;
-            }
-
-            return TraderState.Buy;
-        }
-
-        private TraderState SellAction()
-        {
-            if (_currentPrice > _lastOrderPrice + _lastOrderPrice.Percents(_fluctuation))
-            {
-                if (Sell())
+                var price = decimal.Round(lastOrder.Price - lastOrder.Price.Percents(_fluctuation), 8);
+                if (CanPlaceBuyOrder(balances, _minOrderAmount))
                 {
-                    return TraderState.Buy;
+                    var amount = GetAmountToBuy(price, balances);
+                    PlaceBuyOrder(price, amount);
                 }
             }
-
-            if (DateTime.Now - _lastUpdateTime > _maxIdlePeriod)
-            {
-                return TraderState.ForceSell;
-            }
-
-            return TraderState.Sell;
         }
 
-        private TraderState ForceBuyAction()
+        private bool CanPlaceSellOrder(Balances balances, decimal price, decimal minOrderAmount)
         {
-            var quoteAmount = _currentBalances.GetBalanceFor(_quoteAsset).Free;
-            var baseAmount = quoteAmount / _currentPrice;
-            var profit = CalculateProfit(_initialTotalAmount, _currentPrice, baseAmount, _fee);
-            if (profit > -_stopLossPercents)
-            {
-                if (Buy())
-                {
-                    return TraderState.Sell;
-                }
-            }
-
-            return TraderState.ForceBuy;
+            var baseAmount = balances.GetBalanceFor(_baseAsset).Free;
+            var amount = GetAmountToSell(balances);
+            return baseAmount * price > minOrderAmount && amount > 0;
         }
 
-        private TraderState ForceSellAction()
+        private bool CanPlaceBuyOrder(Balances balances, decimal minOrderAmount)
         {
-            var baseAmount = _currentBalances.GetBalanceFor(_baseAsset).Free;
-            var profit = CalculateProfit(_initialTotalAmount, _currentPrice, baseAmount, _fee);
-            if (profit > -_stopLossPercents)
-            {
-                if (Sell())
-                {
-                    return TraderState.Buy;
-                }
-            }
+            var quoteAmount = balances.GetBalanceFor(_quoteAsset).Free;
 
-            return TraderState.ForceSell;
+            return quoteAmount > minOrderAmount;
         }
 
-        private bool Buy()
+        private bool PlaceBuyOrder(decimal price, decimal amount)
         {
-            var succeed = HandleOrderRequest(OrderSide.Buy, _currentPrice, GetAmountToBuy());
+            var succeed = HandleOrderRequest(
+                OrderSide.Buy,
+                TimeInForceType.GTC,
+                price,
+                amount,
+                OrderStatus.New);
 
             return succeed;
         }
 
-        private bool Sell()
+        private bool PlaceSellOrder(decimal price, decimal amount)
         {
-            var succeed = HandleOrderRequest(OrderSide.Sell, _currentPrice, GetAmountToSell());
+            var succeed = HandleOrderRequest(
+                OrderSide.Sell,
+                TimeInForceType.GTC,
+                price,
+                amount,
+                OrderStatus.New);
 
             return succeed;
         }
 
-        private bool HandleOrderRequest(OrderSide side, decimal price, decimal amount)
+        private bool HandleOrderRequest(
+            OrderSide side,
+            TimeInForceType timeInForce,
+            decimal price,
+            decimal amount,
+            OrderStatus succedStatus)
         {
-            var succeed = MakeOrder(side, price, amount);
-            if (succeed)
+            var order = PlaceOrder(side, timeInForce, price, amount);
+            var succed = order.Status == succedStatus;
+
+            _lastOrder = order;
+            _lastOrderTime = DateTime.Now;
+
+            if (succed)
             {
-                _lastOrderPrice = _currentPrice;
-                _currentBalances = GetBalances();
+                LogOrderPlaced(side, order.Status, price);
             }
 
-            Log(_currentBalances, GetTotalAmount(_currentBalances, _currentPrice), succeed);
-
-            return succeed;
+            return succed;
         }
 
-        private bool MakeOrder(OrderSide side, decimal price, decimal amount)
+        private Order PlaceOrder(
+            OrderSide side,
+            TimeInForceType timeInForce,
+            decimal price,
+            decimal amount)
         {
             var orderConfig = new OrderConfig
             {
-                BaseCurrency = _baseAsset,
-                QuoteCurrency = _quoteAsset,
+                BaseAsset = _baseAsset,
+                QuoteAsset = _quoteAsset,
                 Price = price,
                 Quantity = amount,
-                TimeInForce = TimeInForceType.IOC,
+                TimeInForce = timeInForce,
                 Side = side,
                 Type = OrderType.Limit
             };
 
-            var result = _api.CreateOrder(orderConfig).Result;
+            var order = _api.MakeOrder(orderConfig).Result;
 
-            return result.Status == OrderStatus.Filled;
+            return order;
         }
 
-        private void Log(Balances balances, decimal totalAmount, bool succed)
+        private void LogOrderPlaced(OrderSide side, OrderStatus status, decimal price)
+        {
+            _loger.LogOrderPlaced(side, status, price);
+        }
+
+        private void LogOrderComplited(OrderSide side, OrderStatus status, decimal price, Balances balances)
         {
             var baseAmount = balances.GetBalanceFor(_baseAsset).Free;
             var quoteAmount = balances.GetBalanceFor(_quoteAsset).Free;
+            var totalAmount = GetTotalAmount(balances, price);
+            var profit = CalculateProfit(_initialTotalAmount, totalAmount);
 
-            _loger.Log(
-                State,
-                succed,
-                _currentPrice,
+            _loger.LogOrderComplited(
+                side,
+                status,
+                price,
                 baseAmount,
                 quoteAmount,
                 totalAmount,
-                CalculateProfit(_initialTotalAmount, GetTotalAmount(_currentBalances, _currentPrice)));
+                profit);
         }
 
         private static decimal CalculateProfit(decimal initialAmount, decimal currentAmount)
@@ -238,20 +253,25 @@ namespace BinanceTrader
             return profit;
         }
 
-        private static decimal CalculateProfit(decimal initialAmount, decimal price, decimal baseAmount, decimal fee)
-        {
-            var qouteAmount = price * baseAmount;
-            var netAmount = qouteAmount + qouteAmount.Percents(fee);
+        //private static decimal CalculateProfit(decimal initialAmount, decimal price, decimal baseAmount, decimal fee)
+        //{
+        //    var qouteAmount = price * baseAmount;
+        //    var netAmount = qouteAmount + qouteAmount.Percents(fee);
 
-            return CalculateProfit(initialAmount, netAmount);
-        }
+        //    return CalculateProfit(initialAmount, netAmount);
+        //}
 
-        private decimal GetTotalAmount(Balances balances, decimal price)
+        private decimal GetTotalAmount(Balances balances, decimal basePrice)
         {
             var baseAmount = balances.GetBalanceFor(_baseAsset);
             var quoteAmount = balances.GetBalanceFor(_quoteAsset);
+            //var feeAmount = balances.GetBalanceFor(_feeAsset);
 
-            return quoteAmount.Free + baseAmount.Free * price;
+            var total = quoteAmount.Free + quoteAmount.Locked +
+                        (baseAmount.Free + baseAmount.Locked) * basePrice;
+            //(feeAmount.Free + feeAmount.Locked) * feePrice;
+
+            return total;
         }
 
         private Balances GetBalances()
@@ -259,17 +279,23 @@ namespace BinanceTrader
             return _api.GetAccountInfo().Result.Balances;
         }
 
-        private decimal GetAmountToBuy()
+        private decimal GetAmountToBuy(decimal price, Balances balances)
         {
-            var quoteAmount = _currentBalances.GetBalanceFor(_quoteAsset).Free;
-            var baseAmount = Math.Floor(quoteAmount / _currentPrice);
+            var quoteAmount = balances.GetBalanceFor(_quoteAsset).Free;
+            var baseAmount = Math.Floor(quoteAmount / price);
             return baseAmount;
         }
 
-        private decimal GetAmountToSell()
+        private decimal GetAmountToSell(Balances balances)
         {
-            var baseAmount = Math.Floor(_currentBalances.GetBalanceFor(_baseAsset).Free);
+            var baseAmount = Math.Floor(balances.GetBalanceFor(_baseAsset).Free);
+
             return baseAmount;
+        }
+
+        private Orders GetAllOrders()
+        {
+            return _api.GetAllOrders(_baseAsset, _quoteAsset, 10).Result;
         }
     }
 }
