@@ -16,6 +16,7 @@ namespace BinanceTrader.Api
         private readonly string _secretKey;
         private readonly Uri _baseUri = new Uri("https://www.binance.com/api/");
         private readonly Uri _pricesUri;
+        private readonly Uri _candlesUri;
         private readonly Uri _accountInfoUri;
         private readonly Uri _orderUri;
         private readonly Uri _openOrdersUri;
@@ -27,18 +28,47 @@ namespace BinanceTrader.Api
             _secretKey = keys.SecretKey;
             _client.DefaultRequestHeaders.TryAddWithoutValidation("X-MBX-APIKEY", keys.ApiKey);
 
+            _candlesUri = new Uri(_baseUri, "v1/klines");
             _pricesUri = new Uri(_baseUri, "v1/ticker/allPrices");
+
             _accountInfoUri = new Uri(_baseUri, "v3/account");
             _orderUri = new Uri(_baseUri, "v3/order");
             _openOrdersUri = new Uri(_baseUri, "v3/openOrders");
             _allOrdersUri = new Uri(_baseUri, "v3/allOrders");
         }
 
+        #region MarketData
+
         public async Task<CurrencyPrices> GetPrices()
         {
             var prices = await _client.GetAsync<CurrencyPrices>(_pricesUri);
             return prices;
         }
+
+        public async Task<Candles> GetCandles(
+            string baseAsset,
+            string quoteAsset,
+            string interval,
+            int limit = 100)
+        {
+            var queryParams = new NameValueCollection
+            {
+                {"symbol", ApiUtils.CreateCurrencySymbol(baseAsset, quoteAsset)},
+                {"interval", interval}
+            };
+
+            if (limit != 0)
+            {
+                queryParams.Add("limit", limit.ToString(CultureInfo.InvariantCulture));
+            }
+
+            var candles = (await _client.GetAsync<List<List<object>>>(CreateUri(_candlesUri, queryParams))).ToCandles();
+            return candles;
+        }
+
+        #endregion
+
+        #region Account
 
         public async Task<AccountInfo> GetAccountInfo()
         {
@@ -101,6 +131,8 @@ namespace BinanceTrader.Api
             return result;
         }
 
+        #endregion
+
         private Uri CreateSignedUri(Uri uri, NameValueCollection queryParams = null)
         {
             queryParams = queryParams ?? new NameValueCollection();
@@ -116,6 +148,22 @@ namespace BinanceTrader.Api
             query["recvWindow"] = "5000";
             query["timestamp"] = (timestamp - 1000).ToString();
             query["signature"] = UrlEncoder.CreateHash(query.ToString(), _secretKey);
+
+            uriBuilder.Query = query.ToString();
+
+            return uriBuilder.Uri;
+        }
+
+        private Uri CreateUri(Uri uri, NameValueCollection queryParams = null)
+        {
+            queryParams = queryParams ?? new NameValueCollection();
+            var uriBuilder = new UriBuilder(uri);
+            var query = HttpUtility.ParseQueryString(uriBuilder.Query);
+
+            foreach (string key in queryParams)
+            {
+                query.Add(key, queryParams.Get(key));
+            }
 
             uriBuilder.Query = query.ToString();
 

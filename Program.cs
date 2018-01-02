@@ -2,8 +2,6 @@
 using System.Linq;
 using BinanceTrader.Api;
 using BinanceTrader.Entities;
-using BinanceTrader.Entities.Enums;
-using BinanceTrader.Utils;
 
 namespace BinanceTrader
 {
@@ -11,12 +9,20 @@ namespace BinanceTrader
     {
         private static void Main(string[] args)
         {
-            Trade();
+            //Trade();
 
             var api = new BinanceApi(new BinanceKeyProvider("d:/Keys.config"));
+            var candles = new Candles(api.GetCandles("XVG", "ETH", "1m").Result.OrderBy(c => c.OpenTime).ToList());
+            var candle = candles.Last();
+            var ot = candle.OpenTime;
+            var ct = candle.CloseTime;
+
+            var av7 = decimal.Round(CalculateAveragePrice(candles, 7), 8);
+            var av25 = decimal.Round(CalculateAveragePrice(candles, 25), 8);
+
+            var s = "";
 
             //var order = api.GetAllOrders("TRX", "ETH", 5).Result.GetOrder(4541287);
-
 
             //var api = new BinanceApi(new BinanceKeyProvider("d:/Keys.config"));
 
@@ -49,9 +55,16 @@ namespace BinanceTrader
             //var order = api.MakeOrder(orderConfig).Result;
             //var r2 = api.CancelOrder(baseCurrency, quoteCurrency, order.OrderId).Result;
 
-
-
             PreventAppClose();
+        }
+
+        private static decimal CalculateAveragePrice(Candles candles, int n)
+        {
+            var range = candles.GetRange(candles.Count - n, n);
+
+            var av = range.Average(c => c.ClosePrice);
+
+            return av;
         }
 
         public static void Trade()
