@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Linq;
 using BinanceTrader.Api;
-using BinanceTrader.Entities;
 
 namespace BinanceTrader
 {
@@ -11,16 +9,50 @@ namespace BinanceTrader
         {
             //Trade();
 
-            var api = new BinanceApi(new BinanceKeyProvider("d:/Keys.config"));
-            var candles = new Candles(api.GetCandles("XVG", "ETH", "1m").Result.OrderBy(c => c.OpenTime).ToList());
-            var candle = candles.Last();
-            var ot = candle.OpenTime;
-            var ct = candle.CloseTime;
 
-            var av7 = decimal.Round(CalculateAveragePrice(candles, 7), 8);
-            var av25 = decimal.Round(CalculateAveragePrice(candles, 25), 8);
+            MonitorPrices();
 
-            var s = "";
+            PreventAppClose();
+        }
+
+        public static void Trade()
+        {
+            var trader = new Trader(
+                new BinanceApi(new BinanceKeyProvider("d:/Keys.config")),
+                "XVG",
+                "ETH");
+            trader.Start();
+        }
+
+        public static void MonitorPrices()
+        {
+            var monitor = new PriceMonitor(
+                new BinanceApi(new BinanceKeyProvider("d:/Keys.config")),
+                "XVG",
+                "ETH");
+            monitor.Start();
+        }
+
+        private static void PreventAppClose()
+        {
+            while (true)
+            {
+                Console.ReadKey();
+            }
+        }
+
+        private void ApiTest()
+        {
+            //var api = new BinanceApi(new BinanceKeyProvider("d:/Keys.config"));
+            //var candles = new Candles(api.GetCandles("XVG", "ETH", "1m").Result.OrderBy(c => c.OpenTime).ToList());
+            //var candle = candles.Last();
+            //var ot = candle.OpenTime;
+            //var ct = candle.CloseTime;
+
+            //var av7 = decimal.Round(CalculateAveragePrice(candles, 7), 8);
+            //var av25 = decimal.Round(CalculateAveragePrice(candles, 25), 8);
+
+            // var s = "";
 
             //var order = api.GetAllOrders("TRX", "ETH", 5).Result.GetOrder(4541287);
 
@@ -54,34 +86,6 @@ namespace BinanceTrader
 
             //var order = api.MakeOrder(orderConfig).Result;
             //var r2 = api.CancelOrder(baseCurrency, quoteCurrency, order.OrderId).Result;
-
-            PreventAppClose();
-        }
-
-        private static decimal CalculateAveragePrice(Candles candles, int n)
-        {
-            var range = candles.GetRange(candles.Count - n, n);
-
-            var av = range.Average(c => c.ClosePrice);
-
-            return av;
-        }
-
-        public static void Trade()
-        {
-            var trader = new Trader(
-                new BinanceApi(new BinanceKeyProvider("d:/Keys.config")),
-                "XVG",
-                "ETH");
-            trader.Start();
-        }
-
-        private static void PreventAppClose()
-        {
-            while (true)
-            {
-                Console.ReadKey();
-            }
         }
     }
 }
