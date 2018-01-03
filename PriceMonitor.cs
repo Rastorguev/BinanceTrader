@@ -30,7 +30,7 @@ namespace BinanceTrader
             var chart =
                 new CandlesChart
                 {
-                    Candles = _api.GetCandles(_baseAsset, _quoteAsset, "15m").Result
+                    Candles = _api.GetCandles(_baseAsset, _quoteAsset, "1h").Result
                         .Candles.OrderBy(c => c.OpenTime).ToList()
                 };
 

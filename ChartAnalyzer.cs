@@ -11,34 +11,46 @@ namespace BinanceTrader
     {
         public void FindMACrossovers([NotNull] CandlesChart chart, int shortMAPeriod, int longMAPeriod)
         {
-            var shortMA = CalculateMA(chart, shortMAPeriod);
             var longMA = CalculateMA(chart, longMAPeriod);
+            var shortMA = CalculateMA(chart, shortMAPeriod);
+            shortMA = shortMA.GetRange(longMAPeriod - shortMAPeriod, longMA.Count);
+            var candles = chart.Candles.GetRange(longMAPeriod - 1, longMA.Count);
 
-            var diffs = new List<MAPoint>();
+            var trendPoints = new List<MATrendPoint>();
 
-            foreach (var longPoint in longMA)
+            for (var i = 0; i < longMA.Count; i++)
             {
-                var shortPoint = shortMA.First(p => p.Time == longPoint.Time).NotNull();
-                diffs.Add(new MAPoint
+                var longPoint = longMA[i];
+                var shortPoint = shortMA[i];
+
+                var current = new MATrendPoint
                 {
-                    Time = longPoint.Time,
-                    Price = shortPoint.Price - longPoint.Price
-                });
-            }
+                    Time = candles[i].OpenTime,
+                    Price = candles[i].OpenPrice,
+                    ShortMAPrice = shortPoint.Price,
+                    LongMAPrice = longPoint.Price
+                };
 
-            var crossPoints = new List<MAPoint>();
-
-            for (var i = 1; i < diffs.Count - 1; i++)
-            {
-                var prev = diffs[i - 1].NotNull();
-                var next = diffs[i + 1].NotNull();
-
-                if (prev.Price < 0 && next.Price > 0 ||
-                    prev.Price > 0 && next.Price < 0)
+                if (current.TrendStrength > 0)
                 {
-                    crossPoints.Add(diffs[i]);
+                    current.Type = MATrendType.Bullish;
                 }
+                else if (current.TrendStrength < 0)
+                {
+                    current.Type = MATrendType.Bearish;
+                }
+                else if (current.TrendStrength == 0)
+                {
+                    current.Type = MATrendType.Neutral;
+                }
+
+                trendPoints.Add(current);
             }
+
+            SetPointsType(trendPoints);
+
+            var crossovers = trendPoints.Where(p =>
+                p.Type == MATrendType.BullishCrossover || p.Type == MATrendType.BearishCrossover).ToList();
 
             var startTime = longMA.First().NotNull().Time;
             var endTime = longMA.Last().NotNull().Time;
@@ -52,16 +64,55 @@ namespace BinanceTrader
             var maxLong = longMA.OrderBy(ma => ma.Price).Last();
         }
 
+        private static void SetPointsType(IReadOnlyList<MATrendPoint> trendPoints)
+        {
+            for (var i = 1; i < trendPoints.Count - 1; i++)
+            {
+                var current = trendPoints[i].NotNull();
+                var prev = i > 0 ? trendPoints[i - 1].NotNull() : null;
+                var next = i < trendPoints.Count - 1 ? trendPoints[i + 1] : null;
+
+                if (prev != null &&
+                    next != null &&
+                    prev.TrendStrength < 0 &&
+                    next.TrendStrength > 0 &&
+                    current.TrendStrength > 0)
+                {
+                    current.Type = MATrendType.BullishCrossover;
+                }
+                else if (prev != null &&
+                         next != null &&
+                         prev.TrendStrength > 0 &&
+                         next.TrendStrength < 0 &&
+                         current.TrendStrength < 0)
+                {
+                    current.Type = MATrendType.BearishCrossover;
+                }
+                else if (current.TrendStrength > 0)
+                {
+                    current.Type = MATrendType.Bullish;
+                }
+                else if (current.TrendStrength < 0)
+                {
+                    current.Type = MATrendType.Bearish;
+                }
+                else if (current.TrendStrength == 0)
+                {
+                    current.Type = MATrendType.Neutral;
+                }
+            }
+        }
+
         [NotNull]
         [ItemNotNull]
-        private List<MAPoint> CalculateMA([NotNull] CandlesChart chart, int period)
+        private static List<MAPoint> CalculateMA([NotNull] CandlesChart chart, int period)
         {
             var points = new List<MAPoint>();
             var candles = chart.Candles;
+
             for (var i = period; i < candles.Count; i++)
             {
-                var start = i - period;
-                var range = candles.GetRange(start, period);
+                var range = candles.GetRange(i - period, period);
                 var average = range.Average(c => c.ClosePrice);
 
                 points.Add(new MAPoint
@@ -79,5 +130,29 @@ namespace BinanceTrader
     {
         public DateTime Time { get; set; }
         public decimal Price { get; set; }
+    }
+
+    public class MATrendPoint
+    {
+        public DateTime Time { get; set; }
+        public decimal Price { get; set; }
+        public decimal ShortMAPrice { get; set; }
+        public decimal LongMAPrice { get; set; }
+        public MATrendType Type { get; set; }
+
+        public decimal TrendStrength
+        {
+            get { return (ShortMAPrice - LongMAPrice) * 100 / ShortMAPrice; }
+        }
+    }
+
+    public enum MATrendType
+    {
+        Undefined,
+        Neutral,
+        Bullish,
+        BullishCrossover,
+        Bearish,
+        BearishCrossover
     }
 }

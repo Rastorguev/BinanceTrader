@@ -23,7 +23,7 @@ namespace BinanceTrader
         {
             var monitor = new PriceMonitor(
                 new BinanceApi(new BinanceKeyProvider(KeysFilePath)),
-                "XVG",
+                "ADA",
                 "ETH");
             monitor.Start();
         }
