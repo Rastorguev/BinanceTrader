@@ -1,17 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 
 namespace BinanceTrader.Entities
 {
-    public class Candles : List<Candle>
+    public class CandlesChart
     {
-        public Candles()
-        {
-        }
-
-        public Candles(IEnumerable<Candle> candles) : base(candles)
-        {
-        }
+        [NotNull]
+        [ItemNotNull]
+        public List<Candle> Candles { get; set; } = new List<Candle>();
     }
 
     public class Candle
@@ -23,6 +20,7 @@ namespace BinanceTrader.Entities
         public decimal HighPrice { get; set; }
         public decimal LowPrice { get; set; }
         public decimal Volume { get; set; }
+
         public long NumberOfTrades { get; set; }
         //public decimal QuoteAssetVolume { get; set; }
         //public decimal TakerBuyBasesAssetVolume { get; set; }

@@ -45,7 +45,7 @@ namespace BinanceTrader.Api
             return prices;
         }
 
-        public async Task<Candles> GetCandles(
+        public async Task<CandlesChart> GetCandles(
             string baseAsset,
             string quoteAsset,
             string interval,

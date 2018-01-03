@@ -5,6 +5,8 @@ namespace BinanceTrader
 {
     internal class Program
     {
+        private  const string KeysFilePath = "d:/Dev/TestProjects/BinanceTrader/Keys.config";
+
         private static void Main(string[] args)
         {
             //Trade();
@@ -15,23 +17,25 @@ namespace BinanceTrader
             PreventAppClose();
         }
 
-        public static void Trade()
-        {
-            var trader = new Trader(
-                new BinanceApi(new BinanceKeyProvider("d:/Keys.config")),
-                "XVG",
-                "ETH");
-            trader.Start();
-        }
+       
 
         public static void MonitorPrices()
         {
             var monitor = new PriceMonitor(
-                new BinanceApi(new BinanceKeyProvider("d:/Keys.config")),
+                new BinanceApi(new BinanceKeyProvider(KeysFilePath)),
                 "XVG",
                 "ETH");
             monitor.Start();
         }
+
+        //public static void Trade()
+        //{
+        //    var trader = new Trader(
+        //        new BinanceApi(new BinanceKeyProvider(KeysFilePath)),
+        //        "XVG",
+        //        "ETH");
+        //    trader.Start();
+        //}
 
         private static void PreventAppClose()
         {
@@ -44,7 +48,7 @@ namespace BinanceTrader
         private void ApiTest()
         {
             //var api = new BinanceApi(new BinanceKeyProvider("d:/Keys.config"));
-            //var candles = new Candles(api.GetCandles("XVG", "ETH", "1m").Result.OrderBy(c => c.OpenTime).ToList());
+            //var candles = new CandlesChart(api.GetCandles("XVG", "ETH", "1m").Result.OrderBy(c => c.OpenTime).ToList());
             //var candle = candles.Last();
             //var ot = candle.OpenTime;
             //var ct = candle.CloseTime;

@@ -125,7 +125,7 @@ namespace BinanceTrader
 
             if (lastOrder.Side == OrderSide.Buy)
             {
-                var price = decimal.Round(lastOrder.Price + lastOrder.Price.Percents(_fluctuation), 8);
+                var price = (lastOrder.Price + lastOrder.Price.Percents(_fluctuation)).RoundPrice();
                 if (CanPlaceSellOrder(balances, price, _minOrderAmount))
                 {
                     var amount = GetAmountToSell(balances);
@@ -134,7 +134,7 @@ namespace BinanceTrader
             }
             else if (lastOrder.Side == OrderSide.Sell)
             {
-                var price = decimal.Round(lastOrder.Price - lastOrder.Price.Percents(_fluctuation), 8);
+                var price = (lastOrder.Price - lastOrder.Price.Percents(_fluctuation)).RoundPrice();
                 if (CanPlaceBuyOrder(balances, _minOrderAmount))
                 {
                     var amount = GetAmountToBuy(price, balances);
