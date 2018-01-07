@@ -44,13 +44,15 @@ namespace BinanceTrader
             var analyzer = new ChartAnalyzer();
             var crossovers = analyzer.FindMACrossovers(chart, 7, 25);
 
-            var initialBaseAmount = 1000m;
-            var initialQuoteAmount = 0m;
+            const decimal initialBaseAmount = 1000m;
+            const decimal initialQuoteAmount = 0m;
+            const decimal initialPrice = 0.0009m;
+            const decimal fluctuation = 1;
 
-            var baseAmount = 1000m;
-            var quoteAmount = 0m;
-            var price = 0.001m;
-            var fluctuation = 1;
+            var baseAmount = initialBaseAmount;
+            var quoteAmount = initialQuoteAmount;
+            var price = initialPrice;
+        
 
             List<DateTime> buyTime=new List<DateTime>();
             List<DateTime> sellTime=new List<DateTime>();
@@ -81,8 +83,11 @@ namespace BinanceTrader
                 }
             }
 
-            var baseProfit = baseAmount - initialBaseAmount;
-            var quoteProfit = quoteAmount - initialQuoteAmount;
+            var initialAmount = initialBaseAmount * initialPrice + initialQuoteAmount;
+            var currentAmount = baseAmount * price + quoteAmount;
+            var profit = MathUtils.CalculateProfit(
+                initialAmount,
+                currentAmount);
         }
 
         public class Stat

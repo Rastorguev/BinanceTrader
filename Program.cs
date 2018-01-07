@@ -26,7 +26,7 @@ namespace BinanceTrader
                 "ADA",
                 "ETH",
                 "1h",
-                200);
+                500);
             monitor.Start();
         }
 
