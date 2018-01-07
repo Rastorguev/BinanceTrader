@@ -9,7 +9,7 @@ namespace BinanceTrader
 {
     public class ChartAnalyzer
     {
-        public void FindMACrossovers([NotNull] CandlesChart chart, int shortMAPeriod, int longMAPeriod)
+        public List<MATrendPoint> FindMACrossovers([NotNull] CandlesChart chart, int shortMAPeriod, int longMAPeriod)
         {
             var longMA = CalculateMA(chart, longMAPeriod);
             var shortMA = CalculateMA(chart, shortMAPeriod);
@@ -62,6 +62,8 @@ namespace BinanceTrader
             var orderedLong = longMA.OrderBy(ma => ma.Price).ToList();
             var minLong = longMA.OrderBy(ma => ma.Price).First();
             var maxLong = longMA.OrderBy(ma => ma.Price).Last();
+
+            return crossovers;
         }
 
         private static void SetPointsType(IReadOnlyList<MATrendPoint> trendPoints)
@@ -140,10 +142,7 @@ namespace BinanceTrader
         public decimal LongMAPrice { get; set; }
         public MATrendType Type { get; set; }
 
-        public decimal TrendStrength
-        {
-            get { return (ShortMAPrice - LongMAPrice) * 100 / ShortMAPrice; }
-        }
+        public decimal TrendStrength => (ShortMAPrice - LongMAPrice) * 100 / ShortMAPrice;
     }
 
     public enum MATrendType

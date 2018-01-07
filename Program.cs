@@ -24,7 +24,9 @@ namespace BinanceTrader
             var monitor = new PriceMonitor(
                 new BinanceApi(new BinanceKeyProvider(KeysFilePath)),
                 "ADA",
-                "ETH");
+                "ETH",
+                "1h",
+                200);
             monitor.Start();
         }
 
@@ -32,7 +34,7 @@ namespace BinanceTrader
         //{
         //    var trader = new Trader(
         //        new BinanceApi(new BinanceKeyProvider(KeysFilePath)),
-        //        "XVG",
+        //        "TNB",
         //        "ETH");
         //    trader.Start();
         //}

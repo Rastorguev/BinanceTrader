@@ -28,7 +28,7 @@ namespace BinanceTrader
             string baseAsset,
             string quoteAsset,
             decimal oneDealProfit = 0.1m,
-            decimal fee = 0.05m,
+            decimal fee = 0.1m,
             decimal minOrderAmount = 0.01m)
         {
             _api = api;
@@ -186,20 +186,20 @@ namespace BinanceTrader
             TimeInForceType timeInForce,
             decimal price,
             decimal amount,
-            OrderStatus succedStatus)
+            OrderStatus succeedStatus)
         {
             var order = PlaceOrder(side, timeInForce, price, amount);
-            var succed = order.Status == succedStatus;
+            var succeed = order.Status == succeedStatus;
 
             _lastOrder = order;
             _lastOrderTime = DateTime.Now;
 
-            if (succed)
+            if (succeed)
             {
                 LogOrderPlaced(side, order.Status, price);
             }
 
-            return succed;
+            return succeed;
         }
 
         private Order PlaceOrder(
@@ -234,7 +234,7 @@ namespace BinanceTrader
             var baseAmount = balances.GetBalanceFor(_baseAsset).Free;
             var quoteAmount = balances.GetBalanceFor(_quoteAsset).Free;
             var totalAmount = GetTotalAmount(balances, price);
-            var profit = CalculateProfit(_initialTotalAmount, totalAmount);
+            var profit = MathUtils.CalculateProfit(_initialTotalAmount, totalAmount);
 
             _loger.LogOrderComplited(
                 side,
@@ -246,12 +246,7 @@ namespace BinanceTrader
                 profit);
         }
 
-        private static decimal CalculateProfit(decimal initialAmount, decimal currentAmount)
-        {
-            var profit = (currentAmount - initialAmount) * 100 / initialAmount;
-
-            return profit;
-        }
+      
 
         //private static decimal CalculateProfit(decimal initialAmount, decimal price, decimal baseAmount, decimal fee)
         //{
