@@ -59,6 +59,7 @@
     <Compile Include=".Utils\MathUtils.cs" />
     <Compile Include=".Utils\UrlEncoder.cs" />
     <Compile Include="ChartAnalyzer.cs" />
+    <Compile Include="ITradingAccount.cs" />
     <Compile Include="PriceMonitor.cs" />
     <Compile Include="Entities\AccountInfo.cs" />
     <Compile Include="Entities\Candle.cs" />
