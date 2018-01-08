@@ -5,12 +5,11 @@ namespace BinanceTrader
 {
     internal class Program
     {
-        private  const string KeysFilePath = "d:/Dev/TestProjects/BinanceTrader/Keys.config";
+        private  const string KeysFilePath = "d:/Keys.config";
 
         private static void Main(string[] args)
         {
             //Trade();
-
 
             MonitorPrices();
 
@@ -23,9 +22,9 @@ namespace BinanceTrader
         {
             var monitor = new PriceMonitor(
                 new BinanceApi(new BinanceKeyProvider(KeysFilePath)),
-                "ADA",
+                "TRX",
                 "ETH",
-                "1h",
+                "15m",
                 500);
             monitor.Start();
         }

@@ -42,52 +42,58 @@ namespace BinanceTrader
                 };
 
             var analyzer = new ChartAnalyzer();
-            var crossovers = analyzer.FindMACrossovers(chart, 7, 25);
+            var crossovers = analyzer.FindMACrossovers(chart, 5, 15);
 
-            const decimal initialBaseAmount = 1000m;
-            const decimal initialQuoteAmount = 0m;
-            const decimal initialPrice = 0.0009m;
-            const decimal fluctuation = 1;
+            const decimal fluctuation = 0.2m;
 
-            var baseAmount = initialBaseAmount;
-            var quoteAmount = initialQuoteAmount;
-            var price = initialPrice;
-        
 
-            List<DateTime> buyTime=new List<DateTime>();
-            List<DateTime> sellTime=new List<DateTime>();
+            var buyTime = new List<DateTime>();
+            var sellTime = new List<DateTime>();
+
+            var ta = new MockTradingAccount(0, 1, 0, 0.1m);
 
             foreach (var point in crossovers)
             {
-                if (point.Type == MATrendType.BearishCrossover &&
-                    baseAmount != 0
-                    && point.Price > price + price.Percents(fluctuation)
-                )
+                if (point.Type == MATrendType.BearishCrossover)
                 {
-                    price = point.Price;
-                    quoteAmount = baseAmount * price;
-                    baseAmount = 0;
-                    sellTime.Add(point.Time);
+                    if (ta.CurrentBaseAmount > 0 &&
+                        point.Price > ta.LastPrice + ta.LastPrice.Percents(fluctuation))
+                    {
+                        ta.Sell(ta.CurrentBaseAmount, point.Price);
+                        sellTime.Add(point.Time);
 
+                        LogOrder(ta, point);
+                    }
                 }
-                else if (point.Type == MATrendType.BullishCrossover &&
-                         quoteAmount != 0 &&
-                         point.Price < price - price.Percents(fluctuation)
-                )
+                else if (point.Type == MATrendType.BullishCrossover)
                 {
-                    price = point.Price;
-                    baseAmount = quoteAmount / price;
-                    quoteAmount = 0;
+                    if (ta.CurrentQuoteAmount > 0 &&
+                       ( ta.LastPrice == 0 || 
+                        point.Price < ta.LastPrice - ta.LastPrice.Percents(fluctuation)))
+                    {
+                        var baseAmount = ta.CurrentQuoteAmount / point.Price;
+                        ta.Buy(baseAmount, point.Price);
+                        buyTime.Add(point.Time);
 
-                    buyTime.Add(point.Time);
+                        LogOrder(ta, point);
+                    }
                 }
             }
 
-            var initialAmount = initialBaseAmount * initialPrice + initialQuoteAmount;
-            var currentAmount = baseAmount * price + quoteAmount;
+            var initialAmount = ta.InitialBaseAmount * ta.InitialPrice + ta.InitialQuoteAmount;
+            var currentAmount = ta.CurrentBaseAmount * ta.LastPrice + ta.CurrentQuoteAmount;
             var profit = MathUtils.CalculateProfit(
                 initialAmount,
-                currentAmount);
+                currentAmount).Round();
+        }
+
+        private static void LogOrder(ITradingAccount ta, MATrendPoint point)
+        {
+            var ca = ta.CurrentBaseAmount * ta.LastPrice + ta.CurrentQuoteAmount;
+            Console.WriteLine(point.Type);
+            Console.WriteLine(point.Time);
+            Console.WriteLine(ca.Round());
+            Console.WriteLine();
         }
 
         public class Stat

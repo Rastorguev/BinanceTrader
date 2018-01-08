@@ -2,6 +2,18 @@
   "version": 3,
   "targets": {
     ".NETCoreApp,Version=v2.0": {
+      "JetBrains.Annotations/11.1.0": {
+        "type": "package",
+        "dependencies": {
+          "System.Runtime": "4.1.0"
+        },
+        "compile": {
+          "lib/netstandard1.0/JetBrains.Annotations.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard1.0/JetBrains.Annotations.dll": {}
+        }
+      },
       "Microsoft.CSharp/4.0.1": {
         "type": "package",
         "dependencies": {
@@ -1672,6 +1684,24 @@
     }
   },
   "libraries": {
+    "JetBrains.Annotations/11.1.0": {
+      "sha512": "umU4AjekbwDeUaAmzThW9m2e1u1VYL2WAcp85CnyI7QDl9EFI547dh9XRKb8ogY+1uGLxOOksQu1T+ADkQOccA==",
+      "type": "package",
+      "path": "jetbrains.annotations/11.1.0",
+      "files": [
+        "jetbrains.annotations.11.1.0.nupkg.sha512",
+        "jetbrains.annotations.nuspec",
+        "lib/net20/JetBrains.Annotations.dll",
+        "lib/net20/JetBrains.Annotations.xml",
+        "lib/netstandard1.0/JetBrains.Annotations.deps.json",
+        "lib/netstandard1.0/JetBrains.Annotations.dll",
+        "lib/netstandard1.0/JetBrains.Annotations.xml",
+        "lib/portable40-net40+sl4+win8+wp7/JetBrains.Annotations.dll",
+        "lib/portable40-net40+sl4+win8+wp7/JetBrains.Annotations.xml",
+        "lib/portable40-net40+sl5+win8+wp8+wpa81/JetBrains.Annotations.dll",
+        "lib/portable40-net40+sl5+win8+wp8+wpa81/JetBrains.Annotations.xml"
+      ]
+    },
     "Microsoft.CSharp/4.0.1": {
       "sha512": "17h8b5mXa87XYKrrVqdgZ38JefSUqLChUQpXgSnpzsM0nDOhE40FTeNWOJ/YmySGV6tG6T8+hjz6vxbknHJr6A==",
       "type": "package",
@@ -5623,6 +5653,7 @@
   "projectFileDependencyGroups": {
     ".NETCoreApp,Version=v2.0": [
       "BinanceTrader.Trader >= 1.0.0",
+      "JetBrains.Annotations >= 11.1.0",
       "Microsoft.NET.Test.Sdk >= 15.3.0",
       "Microsoft.NETCore.App >= 2.0.0",
       "xunit >= 2.2.0",
@@ -5630,7 +5661,7 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Aliaksandr_Rastarhuy\\.nuget\\packages\\": {},
+    "C:\\Users\\Rastorguev\\.nuget\\packages\\": {},
     "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder": {}
   },
   "project": {
@@ -5642,14 +5673,14 @@
       "projectUniqueName": "D:\\Dev\\TestProjects\\BinanceTrader\\BinanceTrader.Tests\\BinanceTrader.Tests.csproj",
       "projectName": "BinanceTrader.Tests",
       "projectPath": "D:\\Dev\\TestProjects\\BinanceTrader\\BinanceTrader.Tests\\BinanceTrader.Tests.csproj",
-      "packagesPath": "C:\\Users\\Aliaksandr_Rastarhuy\\.nuget\\packages\\",
+      "packagesPath": "C:\\Users\\Rastorguev\\.nuget\\packages\\",
       "outputPath": "D:\\Dev\\TestProjects\\BinanceTrader\\BinanceTrader.Tests\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
       ],
       "configFilePaths": [
-        "C:\\Users\\Aliaksandr_Rastarhuy\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\Rastorguev\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
@@ -5680,6 +5711,10 @@
           "xunit.runner.visualstudio": {
             "target": "Package",
             "version": "2.2.0"
+          },
+          "JetBrains.Annotations": {
+            "target": "Package",
+            "version": "11.1.0"
           },
           "Microsoft.NETCore.App": {
             "target": "Package",

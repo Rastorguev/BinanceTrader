@@ -119,7 +119,7 @@ namespace BinanceTrader
 
                 points.Add(new MAPoint
                 {
-                    Price = average.RoundPrice(),
+                    Price = average.Round(),
                     Time = candles[i - 1].OpenTime
                 });
             }
