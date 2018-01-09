@@ -22,7 +22,7 @@ namespace BinanceTrader
         {
             var monitor = new PriceMonitor(
                 new BinanceApi(new BinanceKeyProvider(KeysFilePath)),
-                "XVG",
+                "TRX",
                 "ETH",
                 "1m",
                 200);

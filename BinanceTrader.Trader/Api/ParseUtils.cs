@@ -49,10 +49,9 @@ namespace BinanceTrader.Api
             }
         }
 
-        public static CandlesChart ToCandles([NotNull] this List<List<object>> rawCandles)
+        public static List<Candle> ToCandles([NotNull] this List<List<object>> rawCandles)
         {
-            var candles = new CandlesChart();
-            candles.Candles.AddRange(rawCandles.Select(rc =>
+            var candles = rawCandles.Select(rc =>
                 new Candle
                 {
                     OpenTime = DateTimeOffset.FromUnixTimeMilliseconds((long) rc[0]).LocalDateTime,
@@ -63,7 +62,7 @@ namespace BinanceTrader.Api
                     LowPrice = decimal.Parse((string) rc[3], CultureInfo.InvariantCulture),
                     Volume = decimal.Parse((string) rc[5], CultureInfo.InvariantCulture),
                     NumberOfTrades = (long) rc[8]
-                }));
+                }).ToList();
 
             return candles;
         }

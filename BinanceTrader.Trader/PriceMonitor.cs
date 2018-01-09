@@ -30,52 +30,29 @@ namespace BinanceTrader
             _limit = limit;
         }
 
-        public PriceState State { get; set; }
+        //public PriceState State { get; set; }
 
         public void Start()
         {
-            var range = 500;
-            var now = DateTime.Now;
-            var start = now.AddDays(-5);
-            var end = start.AddMinutes(range);
-            var candles = new List<Candle>();
+            var candles = LoadCandles();
+            var trends = candles.DefineMATrends(3, 12);
 
-            while (start < now)
-            {
-                end = start.AddMinutes(range) <= now
-                    ? start.AddMinutes(range)
-                    : end.AddMinutes((now - start).TotalMinutes);
+            var crossovers = trends.Where(t =>
+                t.NotNull().Type == MATrendType.BearishCrossover ||
+                t.Type == MATrendType.BullishCrossover
+            ).ToList();
 
-                var cndls = _api.GetCandles(_baseAsset, _quoteAsset, _interval, start, end).NotNull().Result.NotNull().Candles.ToList();
-
-                start = start.AddMinutes(range);
-
-                candles.AddRange(cndls);
-            }
-
-            var chart =
-                new CandlesChart
-                {
-                    Candles = candles.OrderBy(c => c.OpenTime).ToList()
-
-                    //Candles = _api.GetCandles(_baseAsset, _quoteAsset, _interval, now.AddMinutes(-10), now).Result
-                    //    .Candles.OrderBy(c => c.OpenTime).ToList()
-                };
-
-            var analyzer = new ChartAnalyzer();
-            var crossovers = analyzer.FindMACrossovers(chart, 3, 12);
-
-            const decimal fluctuation = 0.5m;
-
-            var buyTime = new List<DateTime>();
-            var sellTime = new List<DateTime>();
+            const decimal fluctuation = 0.2m;
 
             var ta = new MockTradingAccount(0, 1, 0, 0.1m);
             var minQuoteAmount = 0.01m;
 
-            foreach (var point in crossovers)
+            for (var i = 0; i < trends.Count; i++)
             {
-                if (point.Type == MATrendType.BearishCrossover)
+                var point = trends[i];
+                var prev = i - 1 > 0 ? trends[i - 1] : null;
+
+                if (prev!=null && prev.Type == MATrendType.BearishCrossover)
                 {
                     var baseAmount = Math.Floor(ta.CurrentBaseAmount);
 
@@ -83,12 +60,10 @@ namespace BinanceTrader
                         point.Price > ta.LastPrice + ta.LastPrice.Percents(fluctuation))
                     {
                         ta.Sell(baseAmount, point.Price);
-                        sellTime.Add(point.Time);
-
-                        LogOrder(ta, point);
+                        LogOrder("Sell", ta, point);
                     }
                 }
-                else if (point.Type == MATrendType.BullishCrossover)
+                else if (prev != null && prev.Type == MATrendType.BullishCrossover)
                 {
                     if (ta.CurrentQuoteAmount > minQuoteAmount &&
                         (ta.LastPrice == 0 ||
@@ -98,9 +73,7 @@ namespace BinanceTrader
                         if (baseAmount > 0)
                         {
                             ta.Buy(baseAmount, point.Price);
-                            buyTime.Add(point.Time);
-
-                            LogOrder(ta, point);
+                            LogOrder("Buy", ta, point);
                         }
                     }
                 }
@@ -115,37 +88,51 @@ namespace BinanceTrader
             Console.WriteLine($"Profit {profit}");
         }
 
-        private static void LogOrder(ITradingAccount ta, MATrendPoint point)
+        [NotNull]
+        private List<Candle> LoadCandles()
+        {
+            var range = 500;
+            var now = DateTime.Now;
+            var start = now.AddHours(-5);
+            var end = start.AddMinutes(range);
+            var candles = new List<Candle>();
+
+            while (start < now)
+            {
+                end = start.AddMinutes(range) <= now
+                    ? start.AddMinutes(range)
+                    : end.AddMinutes((now - start).TotalMinutes);
+
+                var cndls = _api.GetCandles(_baseAsset, _quoteAsset, _interval, start, end).NotNull().Result.NotNull()
+                    .ToList();
+
+                start = start.AddMinutes(range);
+
+                candles.AddRange(cndls);
+            }
+
+            return candles.OrderBy(c => c.OpenTime).ToList();
+        }
+
+        private static void LogOrder(string action, [NotNull] ITradingAccount ta, [NotNull] MATrend point)
         {
             var ca = ta.CurrentBaseAmount * ta.LastPrice + ta.CurrentQuoteAmount;
-            Console.WriteLine(point.Type);
-            Console.WriteLine(point.Time);
+
+            Console.WriteLine(action);
+            Console.WriteLine($"Trend :{point.Type}");
+            Console.WriteLine(point.OpenTime);
             Console.WriteLine($"Price: {ta.LastPrice}");
             Console.WriteLine($"Base amount: {ta.CurrentBaseAmount}");
             Console.WriteLine($"Total: {ca.Round()}");
             Console.WriteLine();
         }
 
-        public class Stat
-        {
-            public DateTime Time { get; set; }
-            public decimal MA7 { get; set; }
-            public decimal MA25 { get; set; }
-            public decimal Diff { get; set; }
-        }
-
-        private decimal CalculateAveragePrice([NotNull] List<Candle> candles, int n)
-        {
-            var range = candles.GetRange(candles.Count - n, n);
-            return range.Average(c => c.ClosePrice);
-        }
-
-        public enum PriceState
-        {
-            Unknown,
-            Rising,
-            Falling,
-            Changing
-        }
+        //public enum PriceState
+        //{
+        //    Unknown,
+        //    Rising,
+        //    Falling,
+        //    Changing
+        //}
     }
 }

@@ -58,7 +58,7 @@
     <Compile Include=".Utils\HttpClientExtensions.cs" />
     <Compile Include=".Utils\MathUtils.cs" />
     <Compile Include=".Utils\UrlEncoder.cs" />
-    <Compile Include="ChartAnalyzer.cs" />
+    <Compile Include="MAAnalyzer.cs" />
     <Compile Include="ITradingAccount.cs" />
     <Compile Include="PriceMonitor.cs" />
     <Compile Include="Entities\AccountInfo.cs" />
