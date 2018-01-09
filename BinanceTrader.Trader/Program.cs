@@ -22,10 +22,10 @@ namespace BinanceTrader
         {
             var monitor = new PriceMonitor(
                 new BinanceApi(new BinanceKeyProvider(KeysFilePath)),
-                "TRX",
+                "ZRX",
                 "ETH",
-                "15m",
-                500);
+                "1m",
+                200);
             monitor.Start();
         }
 

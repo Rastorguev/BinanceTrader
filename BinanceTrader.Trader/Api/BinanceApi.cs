@@ -62,7 +62,32 @@ namespace BinanceTrader.Api
                 queryParams.Add("limit", limit.ToString(CultureInfo.InvariantCulture));
             }
 
-            var candles = (await _client.GetAsync<List<List<object>>>(CreateUri(_candlesUri, queryParams))).ToCandles();
+            var candles = (
+                    await _client.GetAsync<List<List<object>>>(CreateUri(_candlesUri, queryParams))
+                        .NotNull())
+                .ToCandles();
+            return candles;
+        }
+
+        public async Task<CandlesChart> GetCandles(
+            string baseAsset,
+            string quoteAsset,
+            string interval, 
+            DateTime startTime, 
+            DateTime endTime)
+        {
+            var queryParams = new NameValueCollection
+            {
+                {"symbol", ApiUtils.CreateCurrencySymbol(baseAsset, quoteAsset)},
+                {"interval", interval},
+                {"startTime", new DateTimeOffset(startTime).ToUnixTimeMilliseconds().ToString()},
+                {"endTime",  new DateTimeOffset(endTime).ToUnixTimeMilliseconds().ToString()}
+            };
+
+            var candles = (
+                    await _client.GetAsync<List<List<object>>>(CreateUri(_candlesUri, queryParams))
+                        .NotNull())
+                .ToCandles();
             return candles;
         }
 
@@ -169,5 +194,32 @@ namespace BinanceTrader.Api
 
             return uriBuilder.Uri;
         }
+    }
+
+
+    public static class DateTimeExtensions
+    {
+        private static readonly DateTime UnixEpoch =
+            new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        public static long GetCurrentUnixTimestampMillis(this DateTime time)
+        {
+            return (long)(time.ToUniversalTime() - UnixEpoch).TotalMilliseconds;
+        }
+
+        //public static DateTime DateTimeFromUnixTimestampMillis(long millis)
+        //{
+        //    return UnixEpoch.AddMilliseconds(millis);
+        //}
+
+        //public static long GetCurrentUnixTimestampSeconds()
+        //{
+        //    return (long)(DateTime.UtcNow - UnixEpoch).TotalSeconds;
+        //}
+
+        //public static DateTime DateTimeFromUnixTimestampSeconds(long seconds)
+        //{
+        //    return UnixEpoch.AddSeconds(seconds);
+        //}
     }
 }
