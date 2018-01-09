@@ -10,14 +10,14 @@ namespace BinanceTrader
 {
     public class PriceMonitor
     {
-        private readonly BinanceApi _api;
+        [NotNull] private readonly BinanceApi _api;
         private readonly string _baseAsset;
         private readonly string _quoteAsset;
         private readonly string _interval;
         private readonly int _limit;
 
         public PriceMonitor(
-            BinanceApi api,
+            [NotNull] BinanceApi api,
             string baseAsset,
             string quoteAsset,
             string interval,
@@ -36,22 +36,17 @@ namespace BinanceTrader
         {
             var range = 500;
             var now = DateTime.Now;
-            var start = now.AddDays(-1);
+            var start = now.AddDays(-5);
             var end = start.AddMinutes(range);
             var candles = new List<Candle>();
 
-            while (end < now)
+            while (start < now)
             {
-                if (start.AddMinutes(range) <= now)
-                {
-                    end = start.AddMinutes(range);
-                }
-                else
-                {
-                    end = end.AddMinutes((now - start).TotalMinutes);
-                }
+                end = start.AddMinutes(range) <= now
+                    ? start.AddMinutes(range)
+                    : end.AddMinutes((now - start).TotalMinutes);
 
-                var cndls = _api.GetCandles(_baseAsset, _quoteAsset, _interval, start, end).Result.Candles.ToList();
+                var cndls = _api.GetCandles(_baseAsset, _quoteAsset, _interval, start, end).NotNull().Result.NotNull().Candles.ToList();
 
                 start = start.AddMinutes(range);
 
@@ -70,13 +65,13 @@ namespace BinanceTrader
             var analyzer = new ChartAnalyzer();
             var crossovers = analyzer.FindMACrossovers(chart, 3, 12);
 
-            const decimal fluctuation = 0.2m;
+            const decimal fluctuation = 0.5m;
 
             var buyTime = new List<DateTime>();
             var sellTime = new List<DateTime>();
 
             var ta = new MockTradingAccount(0, 1, 0, 0.1m);
-            var minQuoteAmount = 0.001m;
+            var minQuoteAmount = 0.01m;
 
             foreach (var point in crossovers)
             {

@@ -6,7 +6,7 @@ using BinanceTrader.Utils;
 
 namespace BinanceTrader
 {
-    public class Trader
+    public class RabbitTrader
     {
         private readonly BinanceApi _api;
         private readonly string _baseAsset;
@@ -23,7 +23,7 @@ namespace BinanceTrader
         private Order _lastOrder;
         private DateTime _lastOrderTime;
 
-        public Trader(
+        public RabbitTrader(
             BinanceApi api,
             string baseAsset,
             string quoteAsset,

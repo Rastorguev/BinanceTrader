@@ -22,7 +22,7 @@ namespace BinanceTrader
         {
             var monitor = new PriceMonitor(
                 new BinanceApi(new BinanceKeyProvider(KeysFilePath)),
-                "ZRX",
+                "XVG",
                 "ETH",
                 "1m",
                 200);
@@ -31,7 +31,7 @@ namespace BinanceTrader
 
         //public static void Trade()
         //{
-        //    var trader = new Trader(
+        //    var trader = new RabbitTrader(
         //        new BinanceApi(new BinanceKeyProvider(KeysFilePath)),
         //        "TNB",
         //        "ETH");
