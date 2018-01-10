@@ -8,7 +8,7 @@
 
         public static decimal CalculateProfit(decimal initialAmount, decimal currentAmount)
         {
-            var profit = (currentAmount - initialAmount) * 100 / initialAmount;
+            var profit = (currentAmount - initialAmount) / initialAmount * 100;
 
             return profit;
         }

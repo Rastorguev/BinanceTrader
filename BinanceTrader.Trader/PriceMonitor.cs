@@ -22,22 +22,22 @@ namespace BinanceTrader
         public void Start()
         {
             var now = DateTime.Now;
-            var candles = LoadCandles("XVG", "ETH", now.AddHours(-10), now, CandlesInterval.Minutes30);
-            var trends = candles.DefineMATrends(3, 12);
+            var candles = LoadCandles("XRP", "ETH", now.AddHours(-1.9), now, CandlesInterval.Minutes1);
+            var trends = candles.DefineMATrends(7, 25);
 
             var crossovers = trends.Where(t =>
                 t.NotNull().Type == MATrendType.BearishCrossover ||
                 t.Type == MATrendType.BullishCrossover
             ).ToList();
 
-            const decimal fluctuation = 0.2m;
+            const decimal fluctuation = 1m;
 
             var ta = new MockTradingAccount(0, 1, 0, 0.1m);
-            var minQuoteAmount = 0.01m;
+            const decimal minQuoteAmount = 0.01m;
 
             for (var i = 0; i < trends.Count; i++)
             {
-                var point = trends[i];
+                var point = trends[i].NotNull();
                 var prev = i - 1 > 0 ? trends[i - 1] : null;
 
                 if (prev != null && prev.Type == MATrendType.BearishCrossover)
@@ -51,18 +51,15 @@ namespace BinanceTrader
                         LogOrder("Sell", ta, point);
                     }
                 }
-                else if (prev != null && prev.Type == MATrendType.BullishCrossover)
+                else if (prev != null &&
+                         prev.Type == MATrendType.BullishCrossover &&
+                         ta.CurrentQuoteAmount > minQuoteAmount)
                 {
-                    if (ta.CurrentQuoteAmount > minQuoteAmount &&
-                        (ta.LastPrice == 0 ||
-                         point.Price < ta.LastPrice - ta.LastPrice.Percents(fluctuation)))
+                    var baseAmount = Math.Floor(ta.CurrentQuoteAmount / point.Price);
+                    if (baseAmount > 0)
                     {
-                        var baseAmount = Math.Floor(ta.CurrentQuoteAmount / point.Price);
-                        if (baseAmount > 0)
-                        {
-                            ta.Buy(baseAmount, point.Price);
-                            LogOrder("Buy", ta, point);
-                        }
+                        ta.Buy(baseAmount, point.Price);
+                        LogOrder("Buy", ta, point);
                     }
                 }
             }
