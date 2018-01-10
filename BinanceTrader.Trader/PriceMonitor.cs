@@ -23,15 +23,28 @@ namespace BinanceTrader
         {
             var now = DateTime.Now;
             var candles = LoadCandles("WTC", "ETH", new DateTime(2018, 01, 10, 8, 0, 0), now, CandlesInterval.Minutes1);
-            var trends = candles.DefineMATrends(12, 26);
+            var trends = candles.DefineMATrends(12, 26, 9);
 
             var x33 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 33, 0));
             var x34 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 34, 0));
+            var x35 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 35, 0));
+            var x36 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 36, 0));
+            var x39 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 39, 0));
             var x40 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 40, 0));
             var x50 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 50, 0));
             var x52 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 52, 0));
+
+
+            var x08 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 9, 08, 0));
             var x09 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 9, 09, 0));
+            var x10 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 9, 10, 0));
             var x11 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 9, 11, 0));
+            var x12 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 9, 12, 0));
+            var x13 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 9, 13, 0));
+            var x14 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 9, 14, 0));
+
+    
+
 
             var crossovers = trends.Where(t =>
                 t.NotNull().Type == MATrendType.BearishCrossover ||
