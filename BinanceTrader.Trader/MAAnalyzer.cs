@@ -15,11 +15,13 @@ namespace BinanceTrader
             int shortPeriod,
             int longPeriod)
         {
-            var longMA = CalculateMA(candles, longPeriod);
-            var shortMA = CalculateMA(candles, shortPeriod);
+            var longMA = CalculateSMA(candles, longPeriod);
+            var shortMA = CalculateSMA(candles, shortPeriod);
+            longMA = CalculateEMA(longMA, longPeriod);
+            shortMA = CalculateEMA(shortMA, shortPeriod);
+
             shortMA = shortMA.GetRange(longPeriod - shortPeriod, longMA.Count);
             var maCandles = candles.GetRange(longPeriod - 1, longMA.Count);
-
             var trendPoints = new List<MATrend>();
 
             for (var i = 0; i < longMA.Count; i++)
@@ -30,12 +32,16 @@ namespace BinanceTrader
                 {
                     OpenTime = maCandles[i].NotNull().OpenTime,
                     Price = maCandles[i].NotNull().OpenPrice,
-                    ShortMAPrice = shortMAPoint.Price,
-                    LongMAPrice = longMAPoint.Price
+                    ShortSMA = shortMAPoint.SMA,
+                    ShortEMA = shortMAPoint.EMA,
+                    LongSMA = longMAPoint.SMA,
+                    LongEMA = longMAPoint.EMA
                 };
 
                 trendPoints.Add(current);
             }
+
+
 
             SetPointsType(trendPoints);
 
@@ -83,30 +89,59 @@ namespace BinanceTrader
 
         [NotNull]
         [ItemNotNull]
-        private static List<MAPoint> CalculateMA([NotNull] [ItemNotNull] List<Candle> candles, int period)
+        private static List<MAPoint> CalculateSMA([NotNull] [ItemNotNull] List<Candle> candles, int period)
         {
             var points = new List<MAPoint>();
             for (var i = period; i < candles.Count; i++)
             {
                 var range = candles.GetRange(i - period, period);
-                var average = range.Average(c => c.NotNull().ClosePrice);
+                var sma = range.Average(c => c.NotNull().ClosePrice);
 
-                points.Add(new MAPoint(candles[i - 1].OpenTime, average.Round()));
+                points.Add(new MAPoint
+                {
+                    OpenTime = candles[i - 1].OpenTime,
+                    ClosePrice = candles[i - 1].ClosePrice,
+                    SMA = sma.Round()
+                });
             }
 
             return points;
         }
 
+        [NotNull]
+        [ItemNotNull]
+        private static List<MAPoint> CalculateEMA([NotNull] [ItemNotNull] List<MAPoint> points, int period)
+        {
+            for (var i = 0; i < points.Count; i++)
+            {
+                var current = points[i];
+                var k = 2 / ((decimal) (period + 1)).Round();
+
+                if (i == 0)
+                {
+                    current.EMA = current.SMA;
+                }
+                else
+                {
+                    var prev = points[i - 1];
+
+                    //EMA = Price(t) * k + EMA(y) * (1 – k)
+                    //t = today, y = yesterday, N = number of days in EMA, k = 2 / (N + 1)
+                    current.EMA = current.ClosePrice * k + prev.EMA * (1 - k);
+                }
+            }
+
+            return points;
+        }
+
+       
+
         private class MAPoint
         {
-            public DateTime OpenTime { get; }
-            public decimal Price { get; }
-
-            public MAPoint(DateTime openTime, decimal price)
-            {
-                OpenTime = openTime;
-                Price = price;
-            }
+            public DateTime OpenTime { get; set; }
+            public decimal ClosePrice { get; set; }
+            public decimal SMA { get; set; }
+            public decimal EMA { get; set; }
         }
     }
 
@@ -114,10 +149,14 @@ namespace BinanceTrader
     {
         public DateTime OpenTime { get; set; }
         public decimal Price { get; set; }
-        public decimal ShortMAPrice { get; set; }
-        public decimal LongMAPrice { get; set; }
+        public decimal ShortSMA { get; set; }
+        public decimal ShortEMA { get; set; }
+        public decimal LongSMA { get; set; }
+        public decimal LongEMA { get; set; }
+       
         public MATrendType Type { get; set; }
-        public decimal TrendStrength => (ShortMAPrice - LongMAPrice) * 100 / ShortMAPrice;
+        public decimal TrendStrength => (ShortSMA - LongSMA) * 100 / ShortSMA;
+        public decimal MACD => ShortEMA - LongEMA;
     }
 
     public enum MATrendType

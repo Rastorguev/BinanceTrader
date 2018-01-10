@@ -22,8 +22,16 @@ namespace BinanceTrader
         public void Start()
         {
             var now = DateTime.Now;
-            var candles = LoadCandles("XRP", "ETH", now.AddHours(-1.9), now, CandlesInterval.Minutes1);
-            var trends = candles.DefineMATrends(7, 25);
+            var candles = LoadCandles("WTC", "ETH", new DateTime(2018, 01, 10, 8, 0, 0), now, CandlesInterval.Minutes1);
+            var trends = candles.DefineMATrends(12, 26);
+
+            var x33 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 33, 0));
+            var x34 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 34, 0));
+            var x40 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 40, 0));
+            var x50 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 50, 0));
+            var x52 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 52, 0));
+            var x09 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 9, 09, 0));
+            var x11 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 9, 11, 0));
 
             var crossovers = trends.Where(t =>
                 t.NotNull().Type == MATrendType.BearishCrossover ||
