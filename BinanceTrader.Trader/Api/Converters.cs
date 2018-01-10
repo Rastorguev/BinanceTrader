@@ -8,7 +8,7 @@ using JetBrains.Annotations;
 
 namespace BinanceTrader.Api
 {
-    public static class ParseUtils
+    public static class Converters
     {
         public static string ToRequestParam(this OrderSide type)
         {
@@ -65,6 +65,27 @@ namespace BinanceTrader.Api
                 }).ToList();
 
             return candles;
+        }
+
+        public static string ToIntervalString(this CandlesInterval interval)
+        {
+            switch (interval)
+            {
+                case CandlesInterval.Minutes1:
+                    return "1m";
+                case CandlesInterval.Minutes3:
+                    return "3m";
+                case CandlesInterval.Minutes5:
+                    return "5m";
+                case CandlesInterval.Minutes15:
+                    return "15m";
+                case CandlesInterval.Minutes30:
+                    return "30m";
+                case CandlesInterval.Hours1:
+                    return "1h";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(interval), interval, null);
+            }
         }
     }
 }

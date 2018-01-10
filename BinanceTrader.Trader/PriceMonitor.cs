@@ -11,30 +11,18 @@ namespace BinanceTrader
     public class PriceMonitor
     {
         [NotNull] private readonly BinanceApi _api;
-        private readonly string _baseAsset;
-        private readonly string _quoteAsset;
-        private readonly string _interval;
-        private readonly int _limit;
 
         public PriceMonitor(
-            [NotNull] BinanceApi api,
-            string baseAsset,
-            string quoteAsset,
-            string interval,
-            int limit)
+            [NotNull] BinanceApi api
+        )
         {
             _api = api;
-            _baseAsset = baseAsset;
-            _quoteAsset = quoteAsset;
-            _interval = interval;
-            _limit = limit;
         }
-
-        //public PriceState State { get; set; }
 
         public void Start()
         {
-            var candles = LoadCandles();
+            var now = DateTime.Now;
+            var candles = LoadCandles("XVG", "ETH", now.AddHours(-10), now, CandlesInterval.Minutes30);
             var trends = candles.DefineMATrends(3, 12);
 
             var crossovers = trends.Where(t =>
@@ -52,7 +40,7 @@ namespace BinanceTrader
                 var point = trends[i];
                 var prev = i - 1 > 0 ? trends[i - 1] : null;
 
-                if (prev!=null && prev.Type == MATrendType.BearishCrossover)
+                if (prev != null && prev.Type == MATrendType.BearishCrossover)
                 {
                     var baseAmount = Math.Floor(ta.CurrentBaseAmount);
 
@@ -89,29 +77,28 @@ namespace BinanceTrader
         }
 
         [NotNull]
-        private List<Candle> LoadCandles()
+        private List<Candle> LoadCandles(string baseAsset, string quoteAsset, DateTime start, DateTime end,
+            CandlesInterval interval)
         {
-            var range = 500;
-            var now = DateTime.Now;
-            var start = now.AddHours(-5);
-            var end = start.AddMinutes(range);
+            const int maxRange = 500;
             var candles = new List<Candle>();
 
-            while (start < now)
+            while (start < end)
             {
-                end = start.AddMinutes(range) <= now
-                    ? start.AddMinutes(range)
-                    : end.AddMinutes((now - start).TotalMinutes);
+                var intervalMinutes = maxRange * interval.ToMinutes();
+                var rangeEnd = (end - start).TotalMinutes > intervalMinutes
+                    ? start.AddMinutes(intervalMinutes)
+                    : end;
 
-                var cndls = _api.GetCandles(_baseAsset, _quoteAsset, _interval, start, end).NotNull().Result.NotNull()
+                var rangeCandles = _api.GetCandles(baseAsset, quoteAsset, interval, start, rangeEnd).NotNull()
+                    .Result.NotNull()
                     .ToList();
 
-                start = start.AddMinutes(range);
-
-                candles.AddRange(cndls);
+                candles.AddRange(rangeCandles);
+                start = rangeEnd;
             }
 
-            return candles.OrderBy(c => c.OpenTime).ToList();
+            return candles.OrderBy(c => c.NotNull().OpenTime).ToList();
         }
 
         private static void LogOrder(string action, [NotNull] ITradingAccount ta, [NotNull] MATrend point)
@@ -126,13 +113,5 @@ namespace BinanceTrader
             Console.WriteLine($"Total: {ca.Round()}");
             Console.WriteLine();
         }
-
-        //public enum PriceState
-        //{
-        //    Unknown,
-        //    Rising,
-        //    Falling,
-        //    Changing
-        //}
     }
 }

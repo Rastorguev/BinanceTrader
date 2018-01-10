@@ -5,7 +5,7 @@ namespace BinanceTrader
 {
     internal class Program
     {
-        private  const string KeysFilePath = "d:/Keys.config";
+        private const string KeysFilePath = "d:/Keys.config";
 
         private static void Main(string[] args)
         {
@@ -16,16 +16,9 @@ namespace BinanceTrader
             PreventAppClose();
         }
 
-       
-
         public static void MonitorPrices()
         {
-            var monitor = new PriceMonitor(
-                new BinanceApi(new BinanceKeyProvider(KeysFilePath)),
-                "TRX",
-                "ETH",
-                "1m",
-                200);
+            var monitor = new PriceMonitor(new BinanceApi(new BinanceKeyProvider(KeysFilePath)));
             monitor.Start();
         }
 

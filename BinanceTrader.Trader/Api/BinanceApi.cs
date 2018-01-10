@@ -48,13 +48,13 @@ namespace BinanceTrader.Api
         public async Task<List<Candle>> GetCandles(
             string baseAsset,
             string quoteAsset,
-            string interval,
-            int limit = 100)
+            CandlesInterval interval,
+            int limit = 0)
         {
             var queryParams = new NameValueCollection
             {
                 {"symbol", ApiUtils.CreateCurrencySymbol(baseAsset, quoteAsset)},
-                {"interval", interval}
+                {"interval", interval.ToIntervalString()}
             };
 
             if (limit != 0)
@@ -72,16 +72,16 @@ namespace BinanceTrader.Api
         public async Task<List<Candle>> GetCandles(
             string baseAsset,
             string quoteAsset,
-            string interval, 
-            DateTime startTime, 
+            CandlesInterval interval,
+            DateTime startTime,
             DateTime endTime)
         {
             var queryParams = new NameValueCollection
             {
                 {"symbol", ApiUtils.CreateCurrencySymbol(baseAsset, quoteAsset)},
-                {"interval", interval},
+                {"interval",  interval.ToIntervalString()},
                 {"startTime", new DateTimeOffset(startTime).ToUnixTimeMilliseconds().ToString()},
-                {"endTime",  new DateTimeOffset(endTime).ToUnixTimeMilliseconds().ToString()}
+                {"endTime", new DateTimeOffset(endTime).ToUnixTimeMilliseconds().ToString()}
             };
 
             var candles = (
@@ -196,7 +196,6 @@ namespace BinanceTrader.Api
         }
     }
 
-
     public static class DateTimeExtensions
     {
         private static readonly DateTime UnixEpoch =
@@ -204,7 +203,7 @@ namespace BinanceTrader.Api
 
         public static long GetCurrentUnixTimestampMillis(this DateTime time)
         {
-            return (long)(time.ToUniversalTime() - UnixEpoch).TotalMilliseconds;
+            return (long) (time.ToUniversalTime() - UnixEpoch).TotalMilliseconds;
         }
 
         //public static DateTime DateTimeFromUnixTimestampMillis(long millis)
