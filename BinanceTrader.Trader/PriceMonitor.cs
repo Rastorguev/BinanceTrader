@@ -24,9 +24,9 @@ namespace BinanceTrader
         {
             var now = DateTime.Now;
             var candles = LoadCandles(
-                "WTC",
+                "XRP",
                 "ETH",
-                new DateTime(2018, 01, 9, 8, 0, 0),
+                new DateTime(2018, 01, 1, 8, 0, 0),
                 now,
                 //new DateTime(2018, 01, 11, 12, 0, 0),
                 CandlesInterval.Minutes1);
@@ -37,7 +37,9 @@ namespace BinanceTrader
 
             var account = new MockTradingAccount(0, 1, 0, fee);
             const decimal minQuoteAmount = 0.01m;
-            var strategy = new BasicTradeStrategy();
+            var strategy = new AdvancedTradeStrategy();
+
+            var nextAction = TradeAction.Buy;
 
             for (var i = 0; i < macd.Count; i++)
             {
@@ -52,23 +54,26 @@ namespace BinanceTrader
                 var action = strategy.DefineTradeAction(range);
                 var price = item.Candle.NotNull().ClosePrice;
 
-                if (action == TradeAction.Buy)
+                if (nextAction == TradeAction.Buy && action == TradeAction.Buy)
                 {
                     var baseAmount = Math.Floor(account.CurrentQuoteAmount / price);
+
                     if (account.CurrentQuoteAmount > minQuoteAmount && baseAmount > 0)
                     {
                         account.Buy(baseAmount, price);
+                        nextAction = TradeAction.Sell;
                         LogOrder("Buy", account, item);
                     }
                 }
-                else if (action == TradeAction.Sell)
+                else if (nextAction == TradeAction.Sell && action == TradeAction.Sell)
                 {
                     var baseAmount = Math.Floor(account.CurrentBaseAmount);
-                    if (baseAmount > 0
-                        && price > account.LastPrice + account.LastPrice.Percents(fluctuation)
-                    )
+
+                    if (baseAmount > 0 &&
+                        price > account.LastPrice + account.LastPrice.Percents(fluctuation))
                     {
                         account.Sell(baseAmount, price);
+                        nextAction = TradeAction.Buy;
                         LogOrder("Sell", account, item);
                     }
                 }
