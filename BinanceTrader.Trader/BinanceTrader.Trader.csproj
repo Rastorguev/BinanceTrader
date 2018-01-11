@@ -59,7 +59,7 @@
     <Compile Include=".Utils\MathUtils.cs" />
     <Compile Include=".Utils\UrlEncoder.cs" />
     <Compile Include="CandlesInterval.cs" />
-    <Compile Include="MAAnalyzer.cs" />
+    <Compile Include="MACDAnalyzer.cs" />
     <Compile Include="ITradingAccount.cs" />
     <Compile Include="PriceMonitor.cs" />
     <Compile Include="Entities\AccountInfo.cs" />

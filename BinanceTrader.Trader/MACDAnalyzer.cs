@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using BinanceTrader.Entities;
 using BinanceTrader.Utils;
@@ -7,10 +6,10 @@ using JetBrains.Annotations;
 
 namespace BinanceTrader
 {
-    public static class MAAnalyzer
+    public static class MACDAnalyzer
     {
         [NotNull]
-        public static List<MATrend> DefineMATrends(
+        public static List<MACDItem> CalculateMACD(
             [NotNull] [ItemNotNull] this List<Candle> candles,
             int shortPeriod,
             int longPeriod,
@@ -24,10 +23,9 @@ namespace BinanceTrader
             var macds = CalculateMACDs(shortEMAs, longEMAs);
             var signals = CalculateEMAs(macds, signalPeriod);
 
-            return candles.Select((t, i) => new MATrend
+            return candles.Select((t, i) => new MACDItem
                 {
-                    OpenTime = t.NotNull().OpenTime,
-                    Price = t.NotNull().ClosePrice,
+                    Candle = candles[i],
                     ShortSMA = shortSMAs[i],
                     ShortEMA = shortEMAs[i],
                     LongSMA = longSMAs[i],
@@ -124,13 +122,61 @@ namespace BinanceTrader
 
             return emas;
         }
+
+        [NotNull]
+        [ItemNotNull]
+        public static List<MACDItem> GetCrossovers([NotNull] [ItemNotNull] List<MACDItem> items)
+        {
+            var crossovers = new List<MACDItem>();
+            for (var i = 0; i < items.Count; i++)
+            {
+                if (i == 0)
+                {
+                    continue;
+                }
+
+                var current = items[i];
+                var prev = items[i - 1];
+
+                if (current.GetMACDHistType() == MACDHistType.Positive &&
+                    prev.GetMACDHistType() == MACDHistType.Negative ||
+                    current.GetMACDHistType() == MACDHistType.Negative &&
+                    prev.GetMACDHistType() == MACDHistType.Positive)
+                {
+                    crossovers.Add(current);
+                }
+            }
+
+            return crossovers;
+        }
+
+        public static TradeAction DefineTradeAction([NotNull] [ItemNotNull] List<MACDItem> items)
+        {
+            if (items.Count < 2)
+            {
+                return TradeAction.Ignore;
+            }
+
+            var current = items.Last().NotNull();
+            var prev = items[items.Count - 2].NotNull();
+
+            if (current.GetMACDHistType() == MACDHistType.Positive && prev.GetMACDHistType() == MACDHistType.Negative)
+            {
+                return TradeAction.Buy;
+            }
+            if (current.GetMACDHistType() == MACDHistType.Negative && prev.GetMACDHistType() == MACDHistType.Positive)
+            {
+                return TradeAction.Sell;
+            }
+
+            return TradeAction.Ignore;
+        }
     }
 }
 
-public class MATrend
+public class MACDItem
 {
-    public DateTime OpenTime { get; set; }
-    public decimal Price { get; set; }
+    public Candle Candle { get; set; }
     public decimal? ShortSMA { get; set; }
     public decimal? ShortEMA { get; set; }
     public decimal? LongSMA { get; set; }
@@ -138,7 +184,7 @@ public class MATrend
     public decimal? MACD { get; set; }
     public decimal? Signal { get; set; }
 
-    public decimal? MACDGist
+    public decimal? MACDHist
     {
         get
         {
@@ -150,4 +196,44 @@ public class MATrend
             return null;
         }
     }
+}
+
+public static class MACDExtensions
+{
+    public static MACDHistType GetMACDHistType([NotNull] this MACDItem item)
+    {
+        if (item.MACDHist == null)
+        {
+            return MACDHistType.Undefined;
+        }
+        if (item.MACDHist.Value > 0)
+        {
+            return MACDHistType.Positive;
+        }
+        if (item.MACDHist.Value < 0)
+        {
+            return MACDHistType.Negative;
+        }
+        if (item.MACDHist.Value == 0)
+        {
+            return MACDHistType.Neutral;
+        }
+
+        return MACDHistType.Undefined;
+    }
+}
+
+public enum MACDHistType
+{
+    Undefined,
+    Positive,
+    Negative,
+    Neutral
+}
+
+public enum TradeAction
+{
+    Ignore,
+    Buy,
+    Sell
 }

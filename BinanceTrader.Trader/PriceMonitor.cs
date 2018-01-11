@@ -22,78 +22,74 @@ namespace BinanceTrader
         public void Start()
         {
             var now = DateTime.Now;
-            var candles = LoadCandles("WTC", "ETH", new DateTime(2018, 01, 10, 19, 0, 0), now, CandlesInterval.Minutes1);
-            var trends = candles.DefineMATrends(12, 26, 9);
+            var candles = LoadCandles(
+                "WTC",
+                "ETH",
+                new DateTime(2018, 01, 11, 7, 0, 0),
+                new DateTime(2018, 01, 11, 11, 0, 0),
+                CandlesInterval.Minutes1);
+
+            var macd = candles.CalculateMACD(12, 26, 9);
+
+            //var crossovers = MACDAnalyzer.GetCrossovers(macd);
+            //var bullish = crossovers
+            //    .Where(p => p.GetMACDHistType() == MACDHistType.Positive)
+            //    .Select(p => p.Candle.NotNull().OpenTime).ToList();
+
+            //var bearish = crossovers
+            //    .Where(p => p.GetMACDHistType() == MACDHistType.Negative)
+            //    .Select(p => p.Candle.NotNull().OpenTime).ToList();
 
             var s = "";
 
-            //var x33 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 33, 0));
-            //var x34 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 34, 0));
-            //var x35 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 35, 0));
-            //var x36 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 36, 0));
-            //var x39 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 39, 0));
-            //var x40 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 40, 0));
-            //var x50 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 50, 0));
-            //var x52 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 8, 52, 0));
+            const decimal fluctuation = 0.0m;
+            const decimal fee = 0.1m;
 
+            var account = new MockTradingAccount(0, 1, 0, fee);
+            const decimal minQuoteAmount = 0.01m;
 
-            //var x08 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 9, 08, 0));
-            //var x09 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 9, 09, 0));
-            //var x10 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 9, 10, 0));
-            //var x11 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 9, 11, 0));
-            //var x12 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 9, 12, 0));
-            //var x13 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 9, 13, 0));
-            //var x14 = trends.First(t => t.NotNull().OpenTime == new DateTime(2018, 01, 10, 9, 14, 0));
+            for (var i = 0; i < macd.Count; i++)
+            {
+                var item = macd[i].NotNull();
 
+                if (i == 0)
+                {
+                    continue;
+                }
 
+                var range = macd.GetRange(0, i + 1);
+                var action = MACDAnalyzer.DefineTradeAction(range);
+                var price = item.Candle.NotNull().ClosePrice;
 
+                if (action == TradeAction.Buy)
+                {
+                    var baseAmount = Math.Floor(account.CurrentQuoteAmount / price);
+                    if (account.CurrentQuoteAmount > minQuoteAmount && baseAmount > 0)
+                    {
+                        account.Buy(baseAmount, price);
+                        LogOrder("Buy", account, item);
+                    }
+                }
+                else if (action == TradeAction.Sell)
+                {
+                    var baseAmount = Math.Floor(account.CurrentBaseAmount);
+                    if (baseAmount > 0 
+                        //&& price > account.LastPrice + account.LastPrice.Percents(fluctuation)
+                        )
+                    {
+                        account.Sell(baseAmount, price);
+                        LogOrder("Sell", account, item);
+                    }
+                }
+            }
 
-            //var crossovers = trends.Where(t =>
-            //    t.NotNull().Type == MATrendType.BearishCrossover ||
-            //    t.Type == MATrendType.BullishCrossover
-            //).ToList();
+            var initialAmount = account.InitialBaseAmount * account.InitialPrice + account.InitialQuoteAmount;
+            var currentAmount = account.CurrentBaseAmount * account.LastPrice + account.CurrentQuoteAmount;
+            var profit = MathUtils.CalculateProfit(
+                initialAmount,
+                currentAmount).Round();
 
-            //const decimal fluctuation = 1m;
-
-            //var ta = new MockTradingAccount(0, 1, 0, 0.1m);
-            //const decimal minQuoteAmount = 0.01m;
-
-            //for (var i = 0; i < trends.Count; i++)
-            //{
-            //    var point = trends[i].NotNull();
-            //    var prev = i - 1 > 0 ? trends[i - 1] : null;
-
-            //    if (prev != null && prev.Type == MATrendType.BearishCrossover)
-            //    {
-            //        var baseAmount = Math.Floor(ta.CurrentBaseAmount);
-
-            //        if (baseAmount > 0 &&
-            //            point.Price > ta.LastPrice + ta.LastPrice.Percents(fluctuation))
-            //        {
-            //            ta.Sell(baseAmount, point.Price);
-            //            LogOrder("Sell", ta, point);
-            //        }
-            //    }
-            //    else if (prev != null &&
-            //             prev.Type == MATrendType.BullishCrossover &&
-            //             ta.CurrentQuoteAmount > minQuoteAmount)
-            //    {
-            //        var baseAmount = Math.Floor(ta.CurrentQuoteAmount / point.Price);
-            //        if (baseAmount > 0)
-            //        {
-            //            ta.Buy(baseAmount, point.Price);
-            //            LogOrder("Buy", ta, point);
-            //        }
-            //    }
-            //}
-
-            //var initialAmount = ta.InitialBaseAmount * ta.InitialPrice + ta.InitialQuoteAmount;
-            //var currentAmount = ta.CurrentBaseAmount * ta.LastPrice + ta.CurrentQuoteAmount;
-            //var profit = MathUtils.CalculateProfit(
-            //    initialAmount,
-            //    currentAmount).Round();
-
-            //Console.WriteLine($"Profit {profit}");
+            Console.WriteLine($"Profit {profit}");
         }
 
         [NotNull]
@@ -121,13 +117,13 @@ namespace BinanceTrader
             return candles.OrderBy(c => c.NotNull().OpenTime).ToList();
         }
 
-        private static void LogOrder(string action, [NotNull] ITradingAccount ta, [NotNull] MATrend point)
+        private static void LogOrder(string action, [NotNull] ITradingAccount ta, [NotNull] MACDItem macdItem)
         {
             var ca = ta.CurrentBaseAmount * ta.LastPrice + ta.CurrentQuoteAmount;
 
             Console.WriteLine(action);
             //Console.WriteLine($"Trend :{point.Type}");
-            Console.WriteLine(point.OpenTime);
+            Console.WriteLine(macdItem.Candle.OpenTime);
             Console.WriteLine($"Price: {ta.LastPrice}");
             Console.WriteLine($"Base amount: {ta.CurrentBaseAmount}");
             Console.WriteLine($"Total: {ca.Round()}");
