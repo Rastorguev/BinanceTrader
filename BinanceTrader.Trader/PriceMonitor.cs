@@ -24,23 +24,48 @@ namespace BinanceTrader
         {
             var now = DateTime.Now;
             var candles = LoadCandles(
-                "VEN",
+                "ADA",
                 "ETH",
                 new DateTime(2018, 01, 11, 15, 0, 0),
                 //now,
-                new DateTime(2018, 01, 11, 18, 30, 0),
+                new DateTime(2018, 01, 11, 18, 0, 0),
                 CandlesInterval.Minutes1);
 
             var macd = candles.CalculateMACD(12, 26, 9);
+
+            Console.WriteLine();
+            Console.WriteLine("--------------");
+            Console.WriteLine("Basic");
+            Console.WriteLine("--------------");
+            Console.WriteLine();
+
+            var profit1= SimulateTrade(macd, new BasicTradeStrategy());
+
+            Console.WriteLine();
+            Console.WriteLine("--------------");
+            Console.WriteLine("Advanced");
+            Console.WriteLine("--------------");
+            Console.WriteLine();
+
+            var profit2= SimulateTrade(macd, new AdvancedTradeStrategy());
+
+            Console.WriteLine();
+            Console.WriteLine("--------------");
+            Console.WriteLine("EMA");
+            Console.WriteLine("--------------");
+            Console.WriteLine();
+
+            var profit3= SimulateTrade(macd, new EMATradeStrategy());
+        }
+
+        private static decimal SimulateTrade(List<MACDItem> macd, ITradeStrategy strategy)
+        {
             const decimal fluctuation = 0.2m;
             const decimal fee = 0.1m;
+            const decimal minQuoteAmount = 0.01m;
 
             var account = new MockTradingAccount(0, 1, 0, fee);
-            const decimal minQuoteAmount = 0.01m;
-            var strategy = new EMATradeStrategy();
-
             var nextAction = TradeAction.Buy;
-            DateTime? lastTradeTime = null;
 
             for (var i = 0; i < macd.Count; i++)
             {
@@ -61,7 +86,7 @@ namespace BinanceTrader
 
                     if (account.CurrentQuoteAmount > minQuoteAmount && baseAmount > 0
                         //&& (account.LastPrice == 0 || price < account.LastPrice)
-                        )
+                    )
                     {
                         account.Buy(baseAmount, price);
                         nextAction = TradeAction.Sell;
@@ -91,6 +116,8 @@ namespace BinanceTrader
                 currentAmount).Round();
 
             Console.WriteLine($"Profit {profit}");
+
+            return profit;
         }
 
         [NotNull]
