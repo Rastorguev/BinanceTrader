@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BinanceTrader.Api;
 using BinanceTrader.Entities;
+using BinanceTrader.TradeStrategies;
 using BinanceTrader.Utils;
 using JetBrains.Annotations;
 
@@ -25,28 +26,18 @@ namespace BinanceTrader
             var candles = LoadCandles(
                 "WTC",
                 "ETH",
-                new DateTime(2018, 01, 11, 7, 0, 0),
-                new DateTime(2018, 01, 11, 11, 0, 0),
+                new DateTime(2018, 01, 9, 8, 0, 0),
+                now,
+                //new DateTime(2018, 01, 11, 12, 0, 0),
                 CandlesInterval.Minutes1);
 
             var macd = candles.CalculateMACD(12, 26, 9);
-
-            //var crossovers = MACDAnalyzer.GetCrossovers(macd);
-            //var bullish = crossovers
-            //    .Where(p => p.GetMACDHistType() == MACDHistType.Positive)
-            //    .Select(p => p.Candle.NotNull().OpenTime).ToList();
-
-            //var bearish = crossovers
-            //    .Where(p => p.GetMACDHistType() == MACDHistType.Negative)
-            //    .Select(p => p.Candle.NotNull().OpenTime).ToList();
-
-            var s = "";
-
-            const decimal fluctuation = 0.0m;
+            const decimal fluctuation = 0.2m;
             const decimal fee = 0.1m;
 
             var account = new MockTradingAccount(0, 1, 0, fee);
             const decimal minQuoteAmount = 0.01m;
+            var strategy = new BasicTradeStrategy();
 
             for (var i = 0; i < macd.Count; i++)
             {
@@ -58,7 +49,7 @@ namespace BinanceTrader
                 }
 
                 var range = macd.GetRange(0, i + 1);
-                var action = MACDAnalyzer.DefineTradeAction(range);
+                var action = strategy.DefineTradeAction(range);
                 var price = item.Candle.NotNull().ClosePrice;
 
                 if (action == TradeAction.Buy)
@@ -73,9 +64,9 @@ namespace BinanceTrader
                 else if (action == TradeAction.Sell)
                 {
                     var baseAmount = Math.Floor(account.CurrentBaseAmount);
-                    if (baseAmount > 0 
-                        //&& price > account.LastPrice + account.LastPrice.Percents(fluctuation)
-                        )
+                    if (baseAmount > 0
+                        && price > account.LastPrice + account.LastPrice.Percents(fluctuation)
+                    )
                     {
                         account.Sell(baseAmount, price);
                         LogOrder("Sell", account, item);

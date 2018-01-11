@@ -53,14 +53,18 @@
     <Compile Include=".Utils\Annotations.cs" />
     <Compile Include=".Utils\Exceptions.cs" />
     <Compile Include=".Utils\ApiUtils.cs" />
+    <Compile Include="TradeStrategies\AdvancedTradeStrategy.cs" />
     <Compile Include="Api\BinanceKeyProvider.cs" />
     <Compile Include="Api\BinanceApi.cs" />
     <Compile Include=".Utils\HttpClientExtensions.cs" />
     <Compile Include=".Utils\MathUtils.cs" />
     <Compile Include=".Utils\UrlEncoder.cs" />
+    <Compile Include="TradeStrategies\BasicTradeStrategy.cs" />
     <Compile Include="CandlesInterval.cs" />
+    <Compile Include="TradeStrategies\ITradeStrategy.cs" />
     <Compile Include="MACDAnalyzer.cs" />
     <Compile Include="ITradingAccount.cs" />
+    <Compile Include="MACDItem.cs" />
     <Compile Include="PriceMonitor.cs" />
     <Compile Include="Entities\AccountInfo.cs" />
     <Compile Include="Entities\Candle.cs" />
@@ -83,5 +87,6 @@
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
