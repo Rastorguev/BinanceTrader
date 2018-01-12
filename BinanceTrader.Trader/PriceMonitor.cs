@@ -63,7 +63,7 @@ namespace BinanceTrader
             Console.WriteLine("--------------");
             Console.WriteLine();
 
-            var profit3 = SimulateTrade(prices, new EMATradeStrategy(shortEMAPeriod, longEMAPeriod));
+            var profit3 = SimulateTrade(prices, new EMACrossingTradeStrategy(shortEMAPeriod, longEMAPeriod));
         }
 
         private static decimal SimulateTrade(List<decimal> prices, ITradeStrategy strategy)

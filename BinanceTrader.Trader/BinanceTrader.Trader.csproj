@@ -64,7 +64,7 @@
     <Compile Include=".Utils\UrlEncoder.cs" />
     <Compile Include="TradeStrategies\BasicTradeStrategy.cs" />
     <Compile Include="CandlesInterval.cs" />
-    <Compile Include="TradeStrategies\EMATradeStrategy.cs" />
+    <Compile Include="TradeStrategies\EMACrossingTradeStrategy.cs" />
     <Compile Include="TradeStrategies\ITradeStrategy.cs" />
     <Compile Include="MACDAnalyzer.cs" />
     <Compile Include="ITradingAccount.cs" />
