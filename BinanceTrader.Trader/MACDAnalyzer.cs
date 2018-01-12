@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using BinanceTrader.Entities;
+using BinanceTrader.Indicators;
 using BinanceTrader.Utils;
 using JetBrains.Annotations;
 
@@ -15,112 +16,25 @@ namespace BinanceTrader
             int longPeriod,
             int signalPeriod)
         {
-            var prices = candles.Select(c => (decimal?) c.ClosePrice).ToList();
-            var shortSMAs = CalculateSMAs(prices, shortPeriod);
-            var longSMAs = CalculateSMAs(prices, longPeriod);
-            var shortEMAs = CalculateEMAs(prices, shortPeriod);
-            var longEMAs = CalculateEMAs(prices, longPeriod);
-            var macds = CalculateMACDs(shortEMAs, longEMAs);
-            var signals = CalculateEMAs(macds, signalPeriod);
+            var prices = candles.Select(c =>  c.ClosePrice).ToList();
+            var shortSMA = SMA.Calculate(prices, shortPeriod);
+            var longSMA = SMA.Calculate(prices, longPeriod);
+            var shortEMA = EMA.Calculate(prices, shortPeriod);
+            var longEMA= EMA.Calculate(prices, longPeriod);
+            var macds = MACD.Calculate(shortEMA, longEMA);
+            var signal = EMA.Calculate(macds, signalPeriod);
 
             return candles.Select((t, i) => new MACDItem
                 {
                     Candle = candles[i],
-                    ShortSMA = shortSMAs[i],
-                    ShortEMA = shortEMAs[i],
-                    LongSMA = longSMAs[i],
-                    LongEMA = longEMAs[i],
+                    ShortSMA = shortSMA[i],
+                    ShortEMA = shortEMA[i],
+                    LongSMA = longSMA[i],
+                    LongEMA = longEMA[i],
                     MACD = macds[i],
-                    Signal = signals[i]
+                    Signal = signal[i]
                 })
                 .ToList();
-        }
-
-        [NotNull]
-        private static List<decimal?> CalculateMACDs(
-            [NotNull] List<decimal?> shortEMAs,
-            [NotNull] List<decimal?> longEMAs)
-        {
-            var macd = new List<decimal?>();
-            for (var i = 0; i < shortEMAs.Count; i++)
-            {
-                var shortEMA = shortEMAs[i];
-                var longEMA = longEMAs[i];
-
-                if (shortEMA == null || longEMA == null)
-                {
-                    macd.Add(null);
-                }
-                else
-                {
-                    macd.Add(shortEMA.Value - longEMA.Value);
-                }
-            }
-
-            return macd;
-        }
-
-        [NotNull]
-        private static List<decimal?> CalculateSMAs([NotNull] List<decimal?> values, int period)
-        {
-            var smas = new List<decimal?>();
-
-            for (var i = 0; i < values.Count; i++)
-            {
-                if (i < period - 1 || values[i] == null)
-                {
-                    smas.Add(null);
-
-                    continue;
-                }
-
-                var range = values.GetRange(i - period + 1, period);
-                if (range.Any(v => v == null))
-                {
-                    smas.Add(null);
-
-                    continue;
-                }
-
-                var sma = range.Average(p => p.Value).Round();
-                smas.Add(sma);
-            }
-
-            return smas;
-        }
-
-        [NotNull]
-        private static List<decimal?> CalculateEMAs([NotNull] List<decimal?> values, int period)
-        {
-            var emas = new List<decimal?>();
-            var k = 2 / (decimal) (period + 1);
-
-            for (var i = 0; i < values.Count; i++)
-            {
-                if (i == 0)
-                {
-                    emas.Add(values[i]);
-
-                    continue;
-                }
-
-                var current = values[i];
-                var prev = emas[i - 1];
-
-                if (current == null || prev == null)
-                {
-                    emas.Add(null);
-
-                    continue;
-                }
-
-                //EMA = Price(t) * k + EMA(y) * (1 – k)
-                //t = today, y = yesterday, N = number of days in EMA, k = 2 / (N + 1)
-                var ema = (current.Value * k + emas[i - 1].Value * (1 - k)).Round();
-                emas.Add(ema);
-            }
-
-            return emas;
         }
 
         [NotNull]

@@ -6,25 +6,14 @@ namespace BinanceTrader
     public class MACDItem
     {
         public Candle Candle { get; set; }
-        public decimal? ShortSMA { get; set; }
-        public decimal? ShortEMA { get; set; }
-        public decimal? LongSMA { get; set; }
-        public decimal? LongEMA { get; set; }
-        public decimal? MACD { get; set; }
-        public decimal? Signal { get; set; }
+        public decimal ShortSMA { get; set; }
+        public decimal ShortEMA { get; set; }
+        public decimal LongSMA { get; set; }
+        public decimal LongEMA { get; set; }
+        public decimal MACD { get; set; }
+        public decimal Signal { get; set; }
 
-        public decimal? MACDHist
-        {
-            get
-            {
-                if (MACD != null && Signal != null)
-                {
-                    return MACD.Value - Signal.Value;
-                }
-
-                return null;
-            }
-        }
+        public decimal? MACDHist => MACD - Signal;
     }
 
     public static class MACDItemExtensions

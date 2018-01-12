@@ -53,6 +53,9 @@
     <Compile Include=".Utils\Annotations.cs" />
     <Compile Include=".Utils\Exceptions.cs" />
     <Compile Include=".Utils\ApiUtils.cs" />
+    <Compile Include="Indicators\EMA.cs" />
+    <Compile Include="Indicators\SMA.cs" />
+    <Compile Include="Indicators\MACD.cs" />
     <Compile Include="TradeStrategies\AdvancedTradeStrategy.cs" />
     <Compile Include="Api\BinanceKeyProvider.cs" />
     <Compile Include="Api\BinanceApi.cs" />

@@ -24,14 +24,16 @@ namespace BinanceTrader
         {
             var now = DateTime.Now;
             var candles = LoadCandles(
-                "ADA",
+                "ENJ",
                 "ETH",
-                new DateTime(2018, 01, 11, 15, 0, 0),
+                new DateTime(2018, 01, 12, 7, 0, 0),
                 //now,
-                new DateTime(2018, 01, 11, 18, 0, 0),
+                new DateTime(2018, 01, 12, 21, 31, 0),
                 CandlesInterval.Minutes1);
 
             var macd = candles.CalculateMACD(12, 26, 9);
+
+            var mc = macd.First(m => m.Candle.OpenTime == new DateTime(2018, 01, 12, 19, 0, 0));
 
             Console.WriteLine();
             Console.WriteLine("--------------");
@@ -39,7 +41,7 @@ namespace BinanceTrader
             Console.WriteLine("--------------");
             Console.WriteLine();
 
-            var profit1= SimulateTrade(macd, new BasicTradeStrategy());
+            var profit1 = SimulateTrade(macd, new BasicTradeStrategy());
 
             Console.WriteLine();
             Console.WriteLine("--------------");
@@ -47,7 +49,7 @@ namespace BinanceTrader
             Console.WriteLine("--------------");
             Console.WriteLine();
 
-            var profit2= SimulateTrade(macd, new AdvancedTradeStrategy());
+            var profit2 = SimulateTrade(macd, new AdvancedTradeStrategy());
 
             Console.WriteLine();
             Console.WriteLine("--------------");
@@ -55,12 +57,12 @@ namespace BinanceTrader
             Console.WriteLine("--------------");
             Console.WriteLine();
 
-            var profit3= SimulateTrade(macd, new EMATradeStrategy());
+            var profit3 = SimulateTrade(macd, new EMATradeStrategy());
         }
 
         private static decimal SimulateTrade(List<MACDItem> macd, ITradeStrategy strategy)
         {
-            const decimal fluctuation = 0.2m;
+            const decimal fluctuation = 0.5m;
             const decimal fee = 0.1m;
             const decimal minQuoteAmount = 0.01m;
 
@@ -85,7 +87,7 @@ namespace BinanceTrader
                     var baseAmount = Math.Floor(account.CurrentQuoteAmount / price);
 
                     if (account.CurrentQuoteAmount > minQuoteAmount && baseAmount > 0
-                        //&& (account.LastPrice == 0 || price < account.LastPrice)
+                        //&& (account.LastPrice == 0 || price + fee <= account.LastPrice)
                     )
                     {
                         account.Buy(baseAmount, price);
