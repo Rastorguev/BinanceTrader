@@ -24,11 +24,11 @@ namespace BinanceTrader
         {
             var now = DateTime.Now;
             var candles = LoadCandles(
-                "ENJ",
+                "TRX",
                 "ETH",
-                new DateTime(2018, 01, 12, 7, 0, 0),
+                new DateTime(2018, 01, 1, 0, 0, 0 ),
                 //now,
-                new DateTime(2018, 01, 12, 19, 0, 0),
+                new DateTime(2018, 01, 13, 0, 0, 0),
                 CandlesInterval.Minutes1);
 
             var prices = candles.Select(c => c.ClosePrice).ToList();
@@ -37,25 +37,26 @@ namespace BinanceTrader
 
             //var mc = macd.First(m => m.Candle.OpenTime == new DateTime(2018, 01, 12, 19, 0, 0));
 
-            const int shortEMAPeriod = 12;
-            const int longEMAPeriod = 26;
+            const int shortEMAPeriod = 7;
+            const int longEMAPeriod = 25;
             const int signalPeriod = 9;
 
             Console.WriteLine();
             Console.WriteLine("--------------");
-            Console.WriteLine("Basic");
+            Console.WriteLine("MACDHist");
             Console.WriteLine("--------------");
             Console.WriteLine();
 
-            var profit1 = SimulateTrade(prices, new BasicTradeStrategy(shortEMAPeriod, longEMAPeriod, signalPeriod));
+            var profit1 = SimulateTrade(prices, new MACDHistStrategy(shortEMAPeriod, longEMAPeriod, signalPeriod));
 
             //Console.WriteLine();
             //Console.WriteLine("--------------");
-            //Console.WriteLine("Advanced");
+            //Console.WriteLine("OneMinScalping");
             //Console.WriteLine("--------------");
             //Console.WriteLine();
 
-            //var profit2 = SimulateTrade(macd, new AdvancedTradeStrategy());
+            //var s = (int)Math.Floor((longEMAPeriod + shortEMAPeriod) / 2m);
+            //var profit2 = SimulateTrade(prices, new OneMinScalpingStrategy(shortEMAPeriod, longEMAPeriod, s + 1));
 
             Console.WriteLine();
             Console.WriteLine("--------------");
@@ -64,6 +65,15 @@ namespace BinanceTrader
             Console.WriteLine();
 
             var profit3 = SimulateTrade(prices, new EMACrossingTradeStrategy(shortEMAPeriod, longEMAPeriod));
+
+            Console.WriteLine();
+            Console.WriteLine("--------------");
+            Console.WriteLine("SMA");
+            Console.WriteLine("--------------");
+            Console.WriteLine();
+
+            var profit4 = SimulateTrade(prices, new SMACrossingTradeStrategy(shortEMAPeriod, longEMAPeriod));
+
         }
 
         private static decimal SimulateTrade(List<decimal> prices, ITradeStrategy strategy)
@@ -84,7 +94,15 @@ namespace BinanceTrader
                     continue;
                 }
 
-                var range = prices.GetRange(0, i + 1);
+                var max = 100;
+                var start = i < max ? 0 : i - max;
+
+                var range = prices.GetRange(start, i-start + 1);
+
+                //if (range.Count > 200)
+                //{
+                //    range = range.GetRange(range.Count - 200 - 1, 200);
+                //}
                 var action = strategy.GetTradeAction(range);
                 var price = item;
 
@@ -93,7 +111,7 @@ namespace BinanceTrader
                     var baseAmount = Math.Floor(account.CurrentQuoteAmount / price);
 
                     if (account.CurrentQuoteAmount > minQuoteAmount && baseAmount > 0
-                        //&& (account.LastPrice == 0 || price + fee <= account.LastPrice)
+                    //&& (account.LastPrice == 0 || price + fee <= account.LastPrice)
                     )
                     {
                         account.Buy(baseAmount, price);

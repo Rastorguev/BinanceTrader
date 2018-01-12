@@ -3,13 +3,13 @@ using BinanceTrader.Indicators;
 
 namespace BinanceTrader.TradeStrategies
 {
-    public class BasicTradeStrategy : ITradeStrategy
+    public class MACDHistStrategy : ITradeStrategy
     {
         private readonly int _shortEMAPeriod;
         private readonly int _longEMAPeriod;
         private readonly int _signalPeriod;
 
-        public BasicTradeStrategy(int shortEMAPeriod, int longEMAPeriod, int signalPeriod)
+        public MACDHistStrategy(int shortEMAPeriod, int longEMAPeriod, int signalPeriod)
         {
             _shortEMAPeriod = shortEMAPeriod;
             _longEMAPeriod = longEMAPeriod;

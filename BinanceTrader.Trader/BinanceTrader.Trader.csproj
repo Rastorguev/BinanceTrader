@@ -62,8 +62,10 @@
     <Compile Include=".Utils\HttpClientExtensions.cs" />
     <Compile Include=".Utils\MathUtils.cs" />
     <Compile Include=".Utils\UrlEncoder.cs" />
-    <Compile Include="TradeStrategies\BasicTradeStrategy.cs" />
+    <Compile Include="TradeStrategies\MACDHistStrategy.cs" />
     <Compile Include="CandlesInterval.cs" />
+    <Compile Include="Indicators\IndicatorsUtils.cs" />
+    <Compile Include="TradeStrategies\OneMinScalpingStrategy.cs" />
     <Compile Include="TradeStrategies\EMACrossingTradeStrategy.cs" />
     <Compile Include="TradeStrategies\ITradeStrategy.cs" />
     <Compile Include="MACDAnalyzer.cs" />
@@ -86,6 +88,7 @@
     <Compile Include="RabbitTrader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TraderState.cs" />
+    <Compile Include="TradeStrategies\SMACrossingTradeStrategy.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
