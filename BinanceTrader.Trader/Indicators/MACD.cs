@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using JetBrains.Annotations;
 
 namespace BinanceTrader.Indicators
@@ -7,19 +8,15 @@ namespace BinanceTrader.Indicators
     {
         [NotNull]
         public static List<decimal> Calculate(
-            [NotNull] List<decimal> shortEMAs,
-            [NotNull] List<decimal> longEMAs)
+            [NotNull] List<decimal> shortEMA,
+            [NotNull] List<decimal> longEMA)
         {
-            var macd = new List<decimal>();
-            for (var i = 0; i < shortEMAs.Count; i++)
-            {
-                var shortEMA = shortEMAs[i];
-                var longEMA = longEMAs[i];
+            return shortEMA.Select((t, i) => t - longEMA[i]).ToList();
+        }
 
-                macd.Add(shortEMA - longEMA);
-            }
-
-            return macd;
+        public static decimal GetHistValue(decimal macd, decimal signal)
+        {
+            return macd - signal;
         }
     }
 }

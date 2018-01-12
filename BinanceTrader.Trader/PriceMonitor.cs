@@ -28,12 +28,18 @@ namespace BinanceTrader
                 "ETH",
                 new DateTime(2018, 01, 12, 7, 0, 0),
                 //now,
-                new DateTime(2018, 01, 12, 21, 31, 0),
+                new DateTime(2018, 01, 12, 19, 0, 0),
                 CandlesInterval.Minutes1);
 
-            var macd = candles.CalculateMACD(12, 26, 9);
+            var prices = candles.Select(c => c.ClosePrice).ToList();
 
-            var mc = macd.First(m => m.Candle.OpenTime == new DateTime(2018, 01, 12, 19, 0, 0));
+            //var macd = candles.CalculateMACD(12, 26, 9);
+
+            //var mc = macd.First(m => m.Candle.OpenTime == new DateTime(2018, 01, 12, 19, 0, 0));
+
+            const int shortEMAPeriod = 12;
+            const int longEMAPeriod = 26;
+            const int signalPeriod = 9;
 
             Console.WriteLine();
             Console.WriteLine("--------------");
@@ -41,15 +47,15 @@ namespace BinanceTrader
             Console.WriteLine("--------------");
             Console.WriteLine();
 
-            var profit1 = SimulateTrade(macd, new BasicTradeStrategy());
+            var profit1 = SimulateTrade(prices, new BasicTradeStrategy(shortEMAPeriod, longEMAPeriod, signalPeriod));
 
-            Console.WriteLine();
-            Console.WriteLine("--------------");
-            Console.WriteLine("Advanced");
-            Console.WriteLine("--------------");
-            Console.WriteLine();
+            //Console.WriteLine();
+            //Console.WriteLine("--------------");
+            //Console.WriteLine("Advanced");
+            //Console.WriteLine("--------------");
+            //Console.WriteLine();
 
-            var profit2 = SimulateTrade(macd, new AdvancedTradeStrategy());
+            //var profit2 = SimulateTrade(macd, new AdvancedTradeStrategy());
 
             Console.WriteLine();
             Console.WriteLine("--------------");
@@ -57,10 +63,10 @@ namespace BinanceTrader
             Console.WriteLine("--------------");
             Console.WriteLine();
 
-            var profit3 = SimulateTrade(macd, new EMATradeStrategy());
+            var profit3 = SimulateTrade(prices, new EMATradeStrategy(shortEMAPeriod, longEMAPeriod));
         }
 
-        private static decimal SimulateTrade(List<MACDItem> macd, ITradeStrategy strategy)
+        private static decimal SimulateTrade(List<decimal> prices, ITradeStrategy strategy)
         {
             const decimal fluctuation = 0.5m;
             const decimal fee = 0.1m;
@@ -69,18 +75,18 @@ namespace BinanceTrader
             var account = new MockTradingAccount(0, 1, 0, fee);
             var nextAction = TradeAction.Buy;
 
-            for (var i = 0; i < macd.Count; i++)
+            for (var i = 0; i < prices.Count; i++)
             {
-                var item = macd[i].NotNull();
+                var item = prices[i];
 
                 if (i == 0)
                 {
                     continue;
                 }
 
-                var range = macd.GetRange(0, i + 1);
-                var action = strategy.DefineTradeAction(range);
-                var price = item.Candle.NotNull().ClosePrice;
+                var range = prices.GetRange(0, i + 1);
+                var action = strategy.GetTradeAction(range);
+                var price = item;
 
                 if (nextAction == TradeAction.Buy && action == TradeAction.Buy)
                 {
@@ -147,13 +153,13 @@ namespace BinanceTrader
             return candles.OrderBy(c => c.NotNull().OpenTime).ToList();
         }
 
-        private static void LogOrder(string action, [NotNull] ITradingAccount ta, [NotNull] MACDItem macdItem)
+        private static void LogOrder(string action, [NotNull] ITradingAccount ta, decimal price)
         {
             var ca = ta.CurrentBaseAmount * ta.LastPrice + ta.CurrentQuoteAmount;
 
             Console.WriteLine(action);
             //Console.WriteLine($"Trend :{point.Type}");
-            Console.WriteLine(macdItem.Candle.OpenTime);
+            Console.WriteLine(price);
             Console.WriteLine($"Price: {ta.LastPrice}");
             Console.WriteLine($"Base amount: {ta.CurrentBaseAmount}");
             Console.WriteLine($"Total: {ca.Round()}");

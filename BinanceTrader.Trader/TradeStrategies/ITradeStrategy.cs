@@ -5,6 +5,6 @@ namespace BinanceTrader.TradeStrategies
 {
     public interface ITradeStrategy
     {
-        TradeAction DefineTradeAction([NotNull] [ItemNotNull] List<MACDItem> macd);
+        TradeAction GetTradeAction([NotNull] List<decimal> prices);
     }
 }

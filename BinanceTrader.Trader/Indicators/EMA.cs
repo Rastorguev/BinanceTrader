@@ -7,21 +7,21 @@ namespace BinanceTrader.Indicators
     public static class EMA
     {
         [NotNull]
-        public static List<decimal> Calculate([NotNull] List<decimal> values, int period)
+        public static List<decimal> Calculate([NotNull] List<decimal> prices, int period)
         {
             var ema = new List<decimal>();
             var k = 2 / (decimal) (period + 1);
 
-            for (var i = 0; i < values.Count; i++)
+            for (var i = 0; i < prices.Count; i++)
             {
                 if (i == 0)
                 {
-                    ema.Add(values[i]);
+                    ema.Add(prices[i]);
 
                     continue;
                 }
 
-                var current = values[i];
+                var current = prices[i];
                 var prev = ema[i - 1];
 
                 //EMA = Price(t) * k + EMA(y) * (1 – k)

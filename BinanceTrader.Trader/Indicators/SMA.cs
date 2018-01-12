@@ -8,21 +8,21 @@ namespace BinanceTrader.Indicators
     public static class SMA
     {
         [NotNull]
-        public static List<decimal> Calculate([NotNull] List<decimal> values, int period)
+        public static List<decimal> Calculate([NotNull] List<decimal> prices, int period)
         {
             var sma = new List<decimal>();
 
-            for (var i = 0; i < values.Count; i++)
+            for (var i = 0; i < prices.Count; i++)
             {
                 if (i == 0)
                 {
-                    sma.Add(values[i]);
+                    sma.Add(prices[i]);
                     continue;
                 }
 
                 var n = i < period ? i : period;
 
-                var average = values.GetRange(i - n, n).Average().Round();
+                var average = prices.GetRange(i - n, n).Average().Round();
                 sma.Add(average);
             }
 
