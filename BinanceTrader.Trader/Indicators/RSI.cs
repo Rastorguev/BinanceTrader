@@ -11,7 +11,7 @@ namespace BinanceTrader.Indicators
         public static List<decimal> Calculate([NotNull] List<decimal> prices, int period)
         {
             var rsi = new decimal[prices.Count];
-     
+
             if (prices.Count < period)
             {
                 return rsi.ToList();
@@ -19,8 +19,9 @@ namespace BinanceTrader.Indicators
 
             var gains = new decimal[prices.Count];
             var losses = new decimal[prices.Count];
+            var avgGains = new decimal[prices.Count];
+            var avgLosses = new decimal[prices.Count];
 
-            rsi[0] = 0m;
             for (var i = 1; i < prices.Count; i++)
             {
                 var diff = prices[i] - prices[i - 1];
@@ -34,13 +35,18 @@ namespace BinanceTrader.Indicators
                 }
             }
 
-            var avgGains = new decimal[prices.Count];
-            var avgLosses = new decimal[prices.Count];
-
-            for (var i = 1; i < prices.Count; i++)
+            for (var i = period; i < prices.Count; i++)
             {
-                avgGains[i] = (avgGains[i - 1] * (period - 1) + gains[i]) / period;
-                avgLosses[i] = (avgLosses[i - 1] * (period - 1) + losses[i]) / period;
+                if (i == period)
+                {
+                    avgGains[i] = gains.ToList().GetRange(i - period, period).Sum() / period;
+                    avgLosses[i] = losses.ToList().GetRange(i - period, period).Sum() / period;
+                }
+                else
+                {
+                    avgGains[i] = (avgGains[i - 1] * (period - 1) + gains[i]) / period;
+                    avgLosses[i] = (avgLosses[i - 1] * (period - 1) + losses[i]) / period;
+                }
 
                 if (avgLosses[i] == 0)
                 {
