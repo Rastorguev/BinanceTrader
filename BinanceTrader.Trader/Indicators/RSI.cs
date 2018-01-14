@@ -10,54 +10,47 @@ namespace BinanceTrader.Indicators
         [NotNull]
         public static List<decimal> Calculate([NotNull] List<decimal> prices, int period)
         {
-
             var rsi = new decimal[prices.Count];
-            var gain = 0.0m;
-            var loss = 0.0m;
-
+     
             if (prices.Count < period)
             {
                 return rsi.ToList();
             }
 
-            // first RSI value
+            var gains = new decimal[prices.Count];
+            var losses = new decimal[prices.Count];
+
             rsi[0] = 0m;
-            for (var i = 1; i < period; i++)
+            for (var i = 1; i < prices.Count; i++)
             {
                 var diff = prices[i] - prices[i - 1];
                 if (diff >= 0)
                 {
-                    gain += diff;
+                    gains[i] = Math.Abs(diff);
                 }
                 else
                 {
-                    loss -= diff;
+                    losses[i] = Math.Abs(diff);
                 }
             }
 
-            var avrGain = gain / period;
-            var avrLoss = loss / period;
-            var rs = gain / loss;
-            rsi[period - 1] = 100 - (100 / (1 + rs));
+            var avgGains = new decimal[prices.Count];
+            var avgLosses = new decimal[prices.Count];
 
-            for (var i = period; i < prices.Count; i++)
+            for (var i = 1; i < prices.Count; i++)
             {
-                var diff = prices[i] - prices[i - 1];
+                avgGains[i] = (avgGains[i - 1] * (period - 1) + gains[i]) / period;
+                avgLosses[i] = (avgLosses[i - 1] * (period - 1) + losses[i]) / period;
 
-                if (diff >= 0)
+                if (avgLosses[i] == 0)
                 {
-                    avrGain = ((avrGain * (period - 1)) + diff) / period;
-                    avrLoss = (avrLoss * (period - 1)) / period;
-                }
-                else
-                {
-                    avrLoss = ((avrLoss * (period - 1)) - diff) / period;
-                    avrGain = (avrGain * (period - 1)) / period;
+                    rsi[i] = 100;
+                    continue;
                 }
 
-                rs = avrGain / avrLoss;
+                var rs = avgGains[i] / avgLosses[i];
 
-                rsi[i] = 100 - (100 / (1 + rs));
+                rsi[i] = 100 - 100 / (1 + rs);
             }
 
             return rsi.ToList();
