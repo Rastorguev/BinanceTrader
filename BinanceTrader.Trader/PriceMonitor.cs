@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BinanceTrader.Api;
 using BinanceTrader.Entities;
+using BinanceTrader.Indicators;
 using BinanceTrader.TradeStrategies;
 using BinanceTrader.Utils;
 using JetBrains.Annotations;
@@ -26,10 +27,33 @@ namespace BinanceTrader
             var candles = LoadCandles(
                 "TRX",
                 "ETH",
-                new DateTime(2018, 1, 1, 0, 0, 0),
+                new DateTime(2018, 1, 14, 19, 0, 0),
                 //now,
-                new DateTime(2018, 1, 14, 12, 0, 0),
+                new DateTime(2018, 1, 14, 20, 30, 0),
                 CandlesInterval.Minutes1);
+
+            var rsi = RSI.Calculate(candles.Select(c => c.ClosePrice).ToList(), 14);
+
+            //var d1 = candles[30].OpenTime;
+            //var rsi1 = rsi[30];
+            //var s = "";
+
+
+            for (int i = 0; i < candles.Count; i++)
+            {
+
+                var d = candles[i].OpenTime;
+                var rsi1 = rsi[i];
+                Console.WriteLine(d);
+                Console.WriteLine(rsi1.Round());
+                Console.WriteLine();
+            }
+
+            //if (candles[10].OpenTime > new DateTime(2018, 1, 14, 20, 0, 0))
+            //{
+            //    var dt = candles[i].OpenTime;
+            //    var rsiLast = rsi[i];
+            //}
 
             const int shortEMAPeriod = 7;
             const int longEMAPeriod = 25;

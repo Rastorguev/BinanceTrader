@@ -54,6 +54,7 @@
     <Compile Include=".Utils\Exceptions.cs" />
     <Compile Include=".Utils\ApiUtils.cs" />
     <Compile Include="Indicators\EMA.cs" />
+    <Compile Include="Indicators\RSI.cs" />
     <Compile Include="Indicators\SMA.cs" />
     <Compile Include="Indicators\MACD.cs" />
     <Compile Include="TradeStrategies\AdvancedTradeStrategy.cs" />

@@ -22,7 +22,6 @@ namespace BinanceTrader.Indicators
                 }
 
                 var current = prices[i];
-                var prev = ema[i - 1];
 
                 //EMA = Price(t) * k + EMA(y) * (1 – k)
                 //t = today, y = yesterday, N = number of days in EMA, k = 2 / (N + 1)
