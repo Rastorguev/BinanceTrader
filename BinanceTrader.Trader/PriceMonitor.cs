@@ -26,16 +26,10 @@ namespace BinanceTrader
             var candles = LoadCandles(
                 "TRX",
                 "ETH",
-                new DateTime(2018, 01, 1, 0, 0, 0 ),
+                new DateTime(2018, 1, 1, 0, 0, 0),
                 //now,
-                new DateTime(2018, 01, 13, 0, 0, 0),
+                new DateTime(2018, 1, 14, 12, 0, 0),
                 CandlesInterval.Minutes1);
-
-            var prices = candles.Select(c => c.ClosePrice).ToList();
-
-            //var macd = candles.CalculateMACD(12, 26, 9);
-
-            //var mc = macd.First(m => m.Candle.OpenTime == new DateTime(2018, 01, 12, 19, 0, 0));
 
             const int shortEMAPeriod = 7;
             const int longEMAPeriod = 25;
@@ -47,7 +41,7 @@ namespace BinanceTrader
             Console.WriteLine("--------------");
             Console.WriteLine();
 
-            var profit1 = SimulateTrade(prices, new MACDHistStrategy(shortEMAPeriod, longEMAPeriod, signalPeriod));
+            var profit1 = SimulateTrade(candles, new MACDHistStrategy(shortEMAPeriod, longEMAPeriod, signalPeriod));
 
             //Console.WriteLine();
             //Console.WriteLine("--------------");
@@ -64,7 +58,7 @@ namespace BinanceTrader
             Console.WriteLine("--------------");
             Console.WriteLine();
 
-            var profit3 = SimulateTrade(prices, new EMACrossingTradeStrategy(shortEMAPeriod, longEMAPeriod));
+            var profit3 = SimulateTrade(candles, new EMACrossingTradeStrategy(shortEMAPeriod, longEMAPeriod));
 
             Console.WriteLine();
             Console.WriteLine("--------------");
@@ -72,52 +66,49 @@ namespace BinanceTrader
             Console.WriteLine("--------------");
             Console.WriteLine();
 
-            var profit4 = SimulateTrade(prices, new SMACrossingTradeStrategy(shortEMAPeriod, longEMAPeriod));
-
+            var profit4 = SimulateTrade(candles, new SMACrossingTradeStrategy(shortEMAPeriod, longEMAPeriod));
         }
 
-        private static decimal SimulateTrade(List<decimal> prices, ITradeStrategy strategy)
+        private static decimal SimulateTrade(List<Candle> candles, ITradeStrategy strategy)
         {
-            const decimal fluctuation = 0.5m;
+            //var prices = candles.Select(c => c.ClosePrice).ToList();
+
+            const decimal fluctuation = 0.2m;
             const decimal fee = 0.1m;
             const decimal minQuoteAmount = 0.01m;
 
             var account = new MockTradingAccount(0, 1, 0, fee);
             var nextAction = TradeAction.Buy;
 
-            for (var i = 0; i < prices.Count; i++)
+            for (var i = 0; i < candles.Count; i++)
             {
-                var item = prices[i];
-
                 if (i == 0)
                 {
                     continue;
                 }
-
-                var max = 100;
+                var price = candles[i].ClosePrice;
+                const int max = 100;
                 var start = i < max ? 0 : i - max;
+                var range = candles.GetRange(start, i - start + 1);
 
-                var range = prices.GetRange(start, i-start + 1);
-
-                //if (range.Count > 200)
-                //{
-                //    range = range.GetRange(range.Count - 200 - 1, 200);
-                //}
+                if (range.Count > 200)
+                {
+                    range = range.GetRange(range.Count - 200 - 1, 200);
+                }
                 var action = strategy.GetTradeAction(range);
-                var price = item;
 
                 if (nextAction == TradeAction.Buy && action == TradeAction.Buy)
                 {
                     var baseAmount = Math.Floor(account.CurrentQuoteAmount / price);
 
                     if (account.CurrentQuoteAmount > minQuoteAmount && baseAmount > 0
-                    //&& (account.LastPrice == 0 || price + fee <= account.LastPrice)
+                        //&& (account.LastPrice == 0 || price + fee <= account.LastPrice)
                     )
                     {
                         account.Buy(baseAmount, price);
                         nextAction = TradeAction.Sell;
 
-                        LogOrder("Buy", account, item);
+                        LogOrder("Buy", account, price, candles[i].OpenTime);
                     }
                 }
                 else if (nextAction == TradeAction.Sell && action == TradeAction.Sell)
@@ -130,7 +121,7 @@ namespace BinanceTrader
                         account.Sell(baseAmount, price);
                         nextAction = TradeAction.Buy;
 
-                        LogOrder("Sell", account, item);
+                        LogOrder("Sell", account, price, candles[i].OpenTime);
                     }
                 }
             }
@@ -171,11 +162,12 @@ namespace BinanceTrader
             return candles.OrderBy(c => c.NotNull().OpenTime).ToList();
         }
 
-        private static void LogOrder(string action, [NotNull] ITradingAccount ta, decimal price)
+        private static void LogOrder(string action, [NotNull] ITradingAccount ta, decimal price, DateTime openTime)
         {
             var ca = ta.CurrentBaseAmount * ta.LastPrice + ta.CurrentQuoteAmount;
 
             Console.WriteLine(action);
+            Console.WriteLine(openTime);
             //Console.WriteLine($"Trend :{point.Type}");
             Console.WriteLine(price);
             Console.WriteLine($"Price: {ta.LastPrice}");

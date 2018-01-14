@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
+using BinanceTrader.Entities;
 using BinanceTrader.Indicators;
 
 namespace BinanceTrader.TradeStrategies
@@ -16,8 +18,9 @@ namespace BinanceTrader.TradeStrategies
             _smaPeriod = smaPeriod;
         }
 
-        public TradeAction GetTradeAction(List<decimal> prices)
+        public TradeAction GetTradeAction(List<Candle> candles)
         {
+            var prices = candles.Select(c => c.ClosePrice).ToList();
             var shortEMA = EMA.Calculate(prices, _shortEMAPeriod);
             var longEMA = EMA.Calculate(prices, _longEMAPeriod);
             var sma = SMA.Calculate(prices, _smaPeriod);

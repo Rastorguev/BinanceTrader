@@ -22,14 +22,14 @@ namespace BinanceTrader
             monitor.Start();
         }
 
-        //public static void Trade()
-        //{
-        //    var trader = new RabbitTrader(
-        //        new BinanceApi(new BinanceKeyProvider(KeysFilePath)),
-        //        "TNB",
-        //        "ETH");
-        //    trader.Start();
-        //}
+        public static void Trade()
+        {
+            var trader = new RabbitTrader(
+                new BinanceApi(new BinanceKeyProvider(KeysFilePath)),
+                "ADA",
+                "ETH");
+            trader.Start();
+        }
 
         private static void PreventAppClose()
         {

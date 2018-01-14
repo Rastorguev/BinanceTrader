@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
+using BinanceTrader.Entities;
 using BinanceTrader.Indicators;
 
 namespace BinanceTrader.TradeStrategies
@@ -16,8 +18,10 @@ namespace BinanceTrader.TradeStrategies
             _signalPeriod = signalPeriod;
         }
 
-        public TradeAction GetTradeAction(List<decimal> prices)
+        public TradeAction GetTradeAction(List<Candle> candles)
         {
+            var prices = candles.Select(c => c.ClosePrice).ToList();
+
             if (prices.Count < 2)
             {
                 return TradeAction.Ignore;
