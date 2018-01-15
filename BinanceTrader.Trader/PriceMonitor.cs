@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using BinanceTrader.Api;
 using BinanceTrader.Entities;
-using BinanceTrader.Indicators;
 using BinanceTrader.TradeStrategies;
 using BinanceTrader.Utils;
 using JetBrains.Annotations;
@@ -23,82 +22,91 @@ namespace BinanceTrader
 
         public void Start()
         {
-            var now = DateTime.Now;
-            var candles = LoadCandles(
-                "TRX",
-                "ETH",
-                new DateTime(2018, 1, 14, 19, 0, 0),
-                //now,
-                new DateTime(2018, 1, 14, 20, 30, 0),
-                CandlesInterval.Minutes1);
+            var assets = new List<string> {"TRX", "CND", "TNB", "POE", "FUN", "XVG", "MANA", "CDT", "LEND", "DNT"};
 
-            var rsi = RSI.Calculate(candles.Select(c => c.ClosePrice).ToList(), 14);
+            var macd = 0m;
+            var sma = 0m;
 
-            //var d1 = candles[30].OpenTime;
-            //var rsi1 = rsi[30];
-            //var s = "";
-
-
-            for (int i = 0; i < candles.Count; i++)
+            foreach (var asset in assets)
             {
-
-                var d = candles[i].OpenTime;
-                var rsi1 = rsi[i];
-                Console.WriteLine(d);
-                Console.WriteLine(rsi1.Round());
-                Console.WriteLine();
+                Trade(asset, ref macd, ref sma);
             }
 
-            //if (candles[10].OpenTime > new DateTime(2018, 1, 14, 20, 0, 0))
-            //{
-            //    var dt = candles[i].OpenTime;
-            //    var rsiLast = rsi[i];
-            //}
+            Console.WriteLine("------------------------------");
+            //Console.WriteLine($"Total MACD: {macd}");
+            //Console.WriteLine($"Total SMA: {sma}");
+            //Console.WriteLine();
+            Console.WriteLine($"Average MACD: {macd / assets.Count}");
+            Console.WriteLine($"Average SMA: {sma / assets.Count}");
+            Console.WriteLine();
 
+            // var now = DateTime.Now;
+            //var candles = LoadCandles(
+            //    "GTO",
+            //    "ETH",
+            //    new DateTime(2018, 1, 14, 00, 0, 0),
+            //    //now,
+            //    new DateTime(2018, 1, 15, 10, 0, 0),
+            //    CandlesInterval.Minutes1);
+
+            //const int shortEMAPeriod = 7;
+            //const int longEMAPeriod = 25;
+            //const int signalPeriod = 9;
+
+            //Console.WriteLine();
+            //Console.WriteLine("--------------");
+            //Console.WriteLine("MACDHist");
+            //Console.WriteLine("--------------");
+            //Console.WriteLine();
+
+            //var profit1 = SimulateTrade(candles, new MACDHistStrategy(shortEMAPeriod, longEMAPeriod, signalPeriod));
+
+            //Console.WriteLine();
+            //Console.WriteLine("--------------");
+            //Console.WriteLine("EMA");
+            //Console.WriteLine("--------------");
+            //Console.WriteLine();
+
+            //var profit3 = SimulateTrade(candles, new EMACrossingTradeStrategy(shortEMAPeriod, longEMAPeriod));
+
+            //Console.WriteLine();
+            //Console.WriteLine("--------------");
+            //Console.WriteLine("SMA");
+            //Console.WriteLine("--------------");
+            //Console.WriteLine();
+
+            //var profit4 = SimulateTrade(candles, new SMACrossingTradeStrategy(shortEMAPeriod, longEMAPeriod));
+        }
+
+        private void Trade(string baseAsset, ref decimal macd, ref decimal sma)
+        {
             const int shortEMAPeriod = 7;
             const int longEMAPeriod = 25;
             const int signalPeriod = 9;
 
+            var candles = LoadCandles(
+                baseAsset,
+                "ETH",
+                new DateTime(2018, 1, 15, 00, 0, 0),
+                new DateTime(2018, 1, 15, 14, 0, 0),
+                CandlesInterval.Minutes1);
+
+            var profitMacd = SimulateTrade(candles, new MACDHistStrategy(shortEMAPeriod, longEMAPeriod, signalPeriod));
+            var profitSma = SimulateTrade(candles, new SMACrossingTradeStrategy(shortEMAPeriod, longEMAPeriod));
+
+            macd += profitMacd;
+            sma += profitSma;
+
+            Console.WriteLine(baseAsset);
+            Console.WriteLine($"MACD: {profitMacd}");
+            Console.WriteLine($"SMA: {profitSma}");
             Console.WriteLine();
-            Console.WriteLine("--------------");
-            Console.WriteLine("MACDHist");
-            Console.WriteLine("--------------");
-            Console.WriteLine();
-
-            var profit1 = SimulateTrade(candles, new MACDHistStrategy(shortEMAPeriod, longEMAPeriod, signalPeriod));
-
-            //Console.WriteLine();
-            //Console.WriteLine("--------------");
-            //Console.WriteLine("OneMinScalping");
-            //Console.WriteLine("--------------");
-            //Console.WriteLine();
-
-            //var s = (int)Math.Floor((longEMAPeriod + shortEMAPeriod) / 2m);
-            //var profit2 = SimulateTrade(prices, new OneMinScalpingStrategy(shortEMAPeriod, longEMAPeriod, s + 1));
-
-            Console.WriteLine();
-            Console.WriteLine("--------------");
-            Console.WriteLine("EMA");
-            Console.WriteLine("--------------");
-            Console.WriteLine();
-
-            var profit3 = SimulateTrade(candles, new EMACrossingTradeStrategy(shortEMAPeriod, longEMAPeriod));
-
-            Console.WriteLine();
-            Console.WriteLine("--------------");
-            Console.WriteLine("SMA");
-            Console.WriteLine("--------------");
-            Console.WriteLine();
-
-            var profit4 = SimulateTrade(candles, new SMACrossingTradeStrategy(shortEMAPeriod, longEMAPeriod));
         }
 
-        private static decimal SimulateTrade(List<Candle> candles, ITradeStrategy strategy)
+        private static decimal SimulateTrade([NotNull] [ItemNotNull] List<Candle> candles, ITradeStrategy strategy)
         {
-            //var prices = candles.Select(c => c.ClosePrice).ToList();
-
             const decimal fluctuation = 0.2m;
-            const decimal fee = 0.1m;
+            const decimal fee = 0.05m;
             const decimal minQuoteAmount = 0.01m;
 
             var account = new MockTradingAccount(0, 1, 0, fee);
@@ -132,7 +140,7 @@ namespace BinanceTrader
                         account.Buy(baseAmount, price);
                         nextAction = TradeAction.Sell;
 
-                        LogOrder("Buy", account, price, candles[i].OpenTime);
+                        //LogOrder("Buy", account, price, candles[i].OpenTime);
                     }
                 }
                 else if (nextAction == TradeAction.Sell && action == TradeAction.Sell)
@@ -145,7 +153,7 @@ namespace BinanceTrader
                         account.Sell(baseAmount, price);
                         nextAction = TradeAction.Buy;
 
-                        LogOrder("Sell", account, price, candles[i].OpenTime);
+                        //LogOrder("Sell", account, price, candles[i].OpenTime);
                     }
                 }
             }
@@ -156,7 +164,7 @@ namespace BinanceTrader
                 initialAmount,
                 currentAmount).Round();
 
-            Console.WriteLine($"Profit {profit}");
+            //Console.WriteLine($"Profit {profit}");
 
             return profit;
         }
