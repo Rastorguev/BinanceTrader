@@ -74,7 +74,7 @@ public enum MACDHistType
     Neutral
 }
 
-public enum TradeAction
+public enum TradeActionType
 {
     Ignore,
     Buy,

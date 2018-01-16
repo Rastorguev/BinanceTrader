@@ -16,13 +16,13 @@ namespace BinanceTrader.TradeStrategies
             _longSMAPeriod = longSMAPeriod;
         }
 
-        public TradeAction GetTradeAction(List<Candle> candles)
+        public TradeActionType GetTradeAction(List<Candle> candles)
         {
             var prices = candles.Select(c => c.ClosePrice).ToList();
 
             if (prices.Count < _longSMAPeriod)
             {
-                return TradeAction.Ignore;
+                return TradeActionType.Ignore;
             }
 
             var shortSMA = SMA.Calculate(prices, _shortSMAPeriod);
@@ -30,15 +30,15 @@ namespace BinanceTrader.TradeStrategies
 
             if (IndicatorsUtils.CrossesFromBelow(shortSMA, longSMA))
             {
-                return TradeAction.Buy;
+                return TradeActionType.Buy;
             }
 
             if (IndicatorsUtils.CrossesFromAbove(shortSMA, longSMA))
             {
-                return TradeAction.Sell;
+                return TradeActionType.Sell;
             }
 
-            return TradeAction.Ignore;
+            return TradeActionType.Ignore;
         }
     }
 }

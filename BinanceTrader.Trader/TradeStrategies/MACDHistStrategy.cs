@@ -18,13 +18,13 @@ namespace BinanceTrader.TradeStrategies
             _signalPeriod = signalPeriod;
         }
 
-        public TradeAction GetTradeAction(List<Candle> candles)
+        public TradeActionType GetTradeAction(List<Candle> candles)
         {
             var prices = candles.Select(c => c.ClosePrice).ToList();
 
             if (prices.Count < 2)
             {
-                return TradeAction.Ignore;
+                return TradeActionType.Ignore;
             }
 
             var shortEMA = EMA.Calculate(prices, _shortEMAPeriod);
@@ -40,14 +40,14 @@ namespace BinanceTrader.TradeStrategies
 
             if (currentHist >= 0 && prevHist < 0)
             {
-                return TradeAction.Buy;
+                return TradeActionType.Buy;
             }
             if (currentHist < 0 && prevHist >= 0)
             {
-                return TradeAction.Sell;
+                return TradeActionType.Sell;
             }
 
-            return TradeAction.Ignore;
+            return TradeActionType.Ignore;
         }
     }
 }

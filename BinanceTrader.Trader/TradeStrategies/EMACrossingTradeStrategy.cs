@@ -16,7 +16,7 @@ namespace BinanceTrader.TradeStrategies
             _longEMAPeriod = longEMAPeriod;
         }
 
-        public TradeAction GetTradeAction(List<Candle> candles)
+        public TradeActionType GetTradeAction(List<Candle> candles)
         {
             var prices = candles.Select(c => c.ClosePrice).ToList();
             var shortEMA = EMA.Calculate(prices, _shortEMAPeriod);
@@ -24,15 +24,15 @@ namespace BinanceTrader.TradeStrategies
 
             if (IndicatorsUtils.CrossesFromBelow(shortEMA, longEMA))
             {
-                return TradeAction.Buy;
+                return TradeActionType.Buy;
             }
 
             if (IndicatorsUtils.CrossesFromAbove(shortEMA, longEMA))
             {
-                return TradeAction.Sell;
+                return TradeActionType.Sell;
             }
 
-            return TradeAction.Ignore;
+            return TradeActionType.Ignore;
         }
     }
 }

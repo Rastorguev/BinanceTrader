@@ -6,6 +6,6 @@ namespace BinanceTrader.TradeStrategies
 {
     public interface ITradeStrategy
     {
-        TradeAction GetTradeAction([NotNull] List<Candle> candles);
+        TradeActionType GetTradeAction([NotNull] List<Candle> candles);
     }
 }

@@ -57,6 +57,7 @@
     <Compile Include="Indicators\RSI.cs" />
     <Compile Include="Indicators\SMA.cs" />
     <Compile Include="Indicators\MACD.cs" />
+    <Compile Include="TradeSession.cs" />
     <Compile Include="TradeStrategies\AdvancedTradeStrategy.cs" />
     <Compile Include="Api\BinanceKeyProvider.cs" />
     <Compile Include="Api\BinanceApi.cs" />
@@ -70,7 +71,7 @@
     <Compile Include="TradeStrategies\EMACrossingTradeStrategy.cs" />
     <Compile Include="TradeStrategies\ITradeStrategy.cs" />
     <Compile Include="MACDAnalyzer.cs" />
-    <Compile Include="ITradingAccount.cs" />
+    <Compile Include="ITradeAccount.cs" />
     <Compile Include="MACDItem.cs" />
     <Compile Include="PriceMonitor.cs" />
     <Compile Include="Entities\AccountInfo.cs" />
