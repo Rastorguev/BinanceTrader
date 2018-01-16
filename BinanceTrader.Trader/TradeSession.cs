@@ -25,6 +25,7 @@ namespace BinanceTrader
             _sellRule = sellRule;
         }
 
+        [NotNull]
         public ITradeAccount Run(IEnumerable<Candle> candles)
         {
             var account = new MockTradeAccount(0, _config.InitialQuoteAmount, 0, _config.Fee);
