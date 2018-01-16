@@ -1,0 +1,3 @@
+[submodule "Trady"]
+	path = Trady
+	url = https://github.com/lppkarl/Trady.git

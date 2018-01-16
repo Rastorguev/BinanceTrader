@@ -87,5 +87,19 @@ namespace BinanceTrader.Api
                     throw new ArgumentOutOfRangeException(nameof(interval), interval, null);
             }
         }
+
+        public static List<Trady.Core.Candle> ToTradyCandles([NotNull] [ItemNotNull] this IEnumerable<Candle> candles)
+        {
+            return candles.Select(c => c.ToTradyCandle()).ToList();
+        }
+
+        public static Trady.Core.Candle ToTradyCandle([NotNull] this Candle candle) =>
+            new Trady.Core.Candle(
+                candle.OpenTime,
+                candle.OpenPrice,
+                candle.HighPrice,
+                candle.LowPrice,
+                candle.ClosePrice,
+                candle.Volume);
     }
 }
