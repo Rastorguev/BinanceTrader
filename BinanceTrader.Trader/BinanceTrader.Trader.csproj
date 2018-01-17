@@ -73,7 +73,7 @@
     <Compile Include="MACDAnalyzer.cs" />
     <Compile Include="ITradeAccount.cs" />
     <Compile Include="MACDItem.cs" />
-    <Compile Include="PriceMonitor.cs" />
+    <Compile Include="StrategiesTest.cs" />
     <Compile Include="Entities\AccountInfo.cs" />
     <Compile Include="Entities\Candle.cs" />
     <Compile Include="Entities\OrderConfig.cs" />

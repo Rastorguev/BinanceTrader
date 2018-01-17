@@ -88,6 +88,7 @@ namespace BinanceTrader.Api
             }
         }
 
+        [NotNull]
         public static List<Trady.Core.Candle> ToTradyCandles([NotNull] [ItemNotNull] this IEnumerable<Candle> candles)
         {
             return candles.Select(c => c.ToTradyCandle()).ToList();

@@ -18,8 +18,8 @@ namespace BinanceTrader
 
         public static void MonitorPrices()
         {
-            var monitor = new PriceMonitor(new BinanceApi(new BinanceKeyProvider(KeysFilePath)));
-            monitor.Start();
+            var monitor = new StrategiesTest(new BinanceApi(new BinanceKeyProvider(KeysFilePath)));
+            monitor.CompareStrategies();
         }
 
         public static void Trade()
