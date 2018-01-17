@@ -11,12 +11,89 @@ using Trady.Core.Infrastructure;
 
 namespace BinanceTrader
 {
-    public class StrategiesTest
+    public class StrategiesTests
     {
         [NotNull] private readonly BinanceApi _api;
 
-        public StrategiesTest(
+        public StrategiesTests(
             [NotNull] BinanceApi api) => _api = api;
+
+        public void DmiStrategyTest()
+        {
+            var candles = LoadCandles(
+                "TRX",
+                "ETH",
+                new DateTime(2018, 1, 16, 22, 0, 0),
+                new DateTime(2018, 1, 17, 2, 20, 0),
+                CandlesInterval.Minutes1);
+
+            var period = 25;
+
+            var time = new DateTime(2018, 1, 17, 7, 50, 0);
+
+            bool Predicate(AnalyzableTick<decimal?> x) => x.NotNull().DateTime == time;
+
+            var adx = candles.Adx(period).NotNull().Select(c => c.Tick).ToList();
+            var pdi = candles.Pdi(period).NotNull().Select(c => c.Tick).ToList();
+            var mdi = candles.Mdi(period).NotNull().Select(c => c.Tick).ToList();
+            //var dmi = candles.Dmi(period).NotNull();
+            var buyCandles = new List<Candle>();
+
+            var all = new List<decimal>();
+
+            //all.AddRange(adx.Where(x=>x.Tick!=null).Select(x=>x.Tick.Value));
+            //all.AddRange(pdi.Where(x=>x.Tick!=null).Select(x=>x.Tick.Value));
+            //all.AddRange(mdi.Where(x=>x.Tick!=null).Select(x=>x.Tick.Value));
+            //var ordered = all.OrderBy(x => x);
+            //var lowerBound = ordered.First();
+            //var upperBound = ordered.Last();
+
+            for (var i = period; i < candles.Count; i++)
+            {
+                if (i == period)
+                {
+                    continue;
+                }
+
+                var prevIndex = i - 1;
+
+                //var adxTick = adx[i].NotNull().Tick;
+                //var pdiTick = pdi[i].NotNull().Tick;
+                //var mdiTick = mdi[i].NotNull().Tick;
+
+                var adxPrev = adx[prevIndex].Value;
+                var adxCurrent = adx[i].Value;
+                var pdiPrev = pdi[prevIndex].Value;
+                var pdiCurrent = pdi[i].Value;
+
+                if (adxPrev > 25 &&
+                    adxCurrent<adxPrev &&
+                    pdiPrev < 15 &&
+                    IsTrough(pdi, prevIndex))
+                {
+                    buyCandles.Add(candles[i]);
+                }
+            }
+
+            var buyDates = buyCandles.Select(x => x.DateTime).ToList();
+        }
+
+        private static bool IsTrough([NotNull] IEnumerable<decimal?> items, int index)
+        {
+            var itemsList = items.ToList();
+
+            if (index < 1 || index > itemsList.Count - 2)
+            {
+                return false;
+            }
+
+            return
+                itemsList[index] != null &&
+                itemsList[index - 1] != null &&
+                itemsList[index + 1] != null &&
+                itemsList[index].Value < itemsList[index - 1].Value &&
+                itemsList[index].Value < itemsList[index + 1].Value;
+        }
 
         public void CompareStrategies()
         {
@@ -41,13 +118,13 @@ namespace BinanceTrader
                 Rule.Create(ic => ic.IsSmaBullishCross(shortPeriod, longPeriod)),
                 Rule.Create(ic => ic.IsSmaBearishCross(shortPeriod, longPeriod)));
 
-            var advancedStrategy = ("Advanced",
-                Rule.Create(ic => ic.IsStochRsiOversold(15)),
-                Rule.Create(ic => ic.IsStochRsiOverbought(15)));
+            //var advancedStrategy = ("Advanced",
+            //    Rule.Create(ic => ic.IsStochRsiOversold(15)),
+            //    Rule.Create(ic => ic.IsStochRsiOverbought(15)));
 
             strategies.Add(macdStrategy);
             strategies.Add(smaStrategy);
-            strategies.Add(advancedStrategy);
+            //strategies.Add(advancedStrategy);
 
             foreach (var asset in assets)
             {
@@ -65,7 +142,7 @@ namespace BinanceTrader
                     var result = Trade(candles, strategy.BuyRule, strategy.SellRule);
                     var profit = result.GetProfit();
 
-                   if (strategy.Equals(macdStrategy))
+                    if (strategy.Equals(macdStrategy))
                     {
                         macdProfit += profit;
                     }
@@ -73,10 +150,10 @@ namespace BinanceTrader
                     {
                         smaProfit += profit;
                     }
-                    else if (strategy.Equals(advancedStrategy))
-                    {
-                        advancedProfit += profit;
-                    }
+                    //else if (strategy.Equals(advancedStrategy))
+                    //{
+                    //    advancedProfit += profit;
+                    //}
 
                     Console.WriteLine($" {strategy.Name}: {profit}");
                 }
