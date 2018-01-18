@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27004.2010
+VisualStudioVersion = 15.0.27130.2020
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BinanceTrader.Trader", "BinanceTrader.Trader\BinanceTrader.Trader.csproj", "{C05238AC-299C-4D97-B075-103466E47BAB}"
 EndProject
@@ -26,6 +26,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trady.Importer.Stooq", "Trady\Trady.Importer.Stooq\Trady.Importer.Stooq.csproj", "{3C6C948A-ECC3-4363-B4BD-D5B6A0EE357A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trady.Importer.Yahoo", "Trady\Trady.Importer.Yahoo\Trady.Importer.Yahoo.csproj", "{D34680D6-99D8-466F-9DF3-B33668117EFE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradyExtensions", "TradyExtensions\TradyExtensions.csproj", "{8224FDFD-9A37-4FC0-B403-4FED808F1EA6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -77,6 +79,10 @@ Global
 		{D34680D6-99D8-466F-9DF3-B33668117EFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D34680D6-99D8-466F-9DF3-B33668117EFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D34680D6-99D8-466F-9DF3-B33668117EFE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8224FDFD-9A37-4FC0-B403-4FED808F1EA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8224FDFD-9A37-4FC0-B403-4FED808F1EA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8224FDFD-9A37-4FC0-B403-4FED808F1EA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8224FDFD-9A37-4FC0-B403-4FED808F1EA6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
