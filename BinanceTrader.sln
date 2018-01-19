@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27130.2020
+VisualStudioVersion = 15.0.27004.2010
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BinanceTrader.Trader", "BinanceTrader.Trader\BinanceTrader.Trader.csproj", "{C05238AC-299C-4D97-B075-103466E47BAB}"
 EndProject
@@ -27,7 +27,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trady.Importer.Stooq", "Tra
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trady.Importer.Yahoo", "Trady\Trady.Importer.Yahoo\Trady.Importer.Yahoo.csproj", "{D34680D6-99D8-466F-9DF3-B33668117EFE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradyExtensions", "TradyExtensions\TradyExtensions.csproj", "{8224FDFD-9A37-4FC0-B403-4FED808F1EA6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Analytics", "BinanceTrader.Analytics\BinanceTrader.Analytics.csproj", "{CA8EBC31-7E5A-4E17-81CB-C49E7A6A07CD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Core", "BinanceTrader.Core\BinanceTrader.Core.csproj", "{80112D69-6E99-493B-9427-825BA3208139}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Tools", "BinanceTrader.Tools\BinanceTrader.Tools.csproj", "{05921E52-1C36-4126-941B-F158BE62C28A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Api", "BinanceTrader.Api\BinanceTrader.Api.csproj", "{DA601AAA-B999-42D2-A4DD-CB749D4FFC84}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -79,10 +85,22 @@ Global
 		{D34680D6-99D8-466F-9DF3-B33668117EFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D34680D6-99D8-466F-9DF3-B33668117EFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D34680D6-99D8-466F-9DF3-B33668117EFE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8224FDFD-9A37-4FC0-B403-4FED808F1EA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8224FDFD-9A37-4FC0-B403-4FED808F1EA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8224FDFD-9A37-4FC0-B403-4FED808F1EA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8224FDFD-9A37-4FC0-B403-4FED808F1EA6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA8EBC31-7E5A-4E17-81CB-C49E7A6A07CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA8EBC31-7E5A-4E17-81CB-C49E7A6A07CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA8EBC31-7E5A-4E17-81CB-C49E7A6A07CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA8EBC31-7E5A-4E17-81CB-C49E7A6A07CD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{80112D69-6E99-493B-9427-825BA3208139}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{80112D69-6E99-493B-9427-825BA3208139}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80112D69-6E99-493B-9427-825BA3208139}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{80112D69-6E99-493B-9427-825BA3208139}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05921E52-1C36-4126-941B-F158BE62C28A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05921E52-1C36-4126-941B-F158BE62C28A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05921E52-1C36-4126-941B-F158BE62C28A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05921E52-1C36-4126-941B-F158BE62C28A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA601AAA-B999-42D2-A4DD-CB749D4FFC84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA601AAA-B999-42D2-A4DD-CB749D4FFC84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA601AAA-B999-42D2-A4DD-CB749D4FFC84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA601AAA-B999-42D2-A4DD-CB749D4FFC84}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

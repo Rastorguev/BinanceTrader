@@ -50,56 +50,31 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include=".Utils\Annotations.cs" />
-    <Compile Include=".Utils\Exceptions.cs" />
-    <Compile Include=".Utils\ApiUtils.cs" />
-    <Compile Include="Indicators\EMA.cs" />
-    <Compile Include="Indicators\RSI.cs" />
-    <Compile Include="Indicators\SMA.cs" />
-    <Compile Include="Indicators\MACD.cs" />
-    <Compile Include="TradeSession.cs" />
-    <Compile Include="TradeStrategies\AdvancedTradeStrategy.cs" />
-    <Compile Include="Api\BinanceKeyProvider.cs" />
-    <Compile Include="Api\BinanceApi.cs" />
-    <Compile Include=".Utils\HttpClientExtensions.cs" />
-    <Compile Include=".Utils\MathUtils.cs" />
-    <Compile Include=".Utils\UrlEncoder.cs" />
-    <Compile Include="TradeStrategies\MACDHistStrategy.cs" />
-    <Compile Include="CandlesInterval.cs" />
-    <Compile Include="Indicators\IndicatorsUtils.cs" />
-    <Compile Include="TradeStrategies\OneMinScalpingStrategy.cs" />
-    <Compile Include="TradeStrategies\EMACrossingTradeStrategy.cs" />
-    <Compile Include="TradeStrategies\ITradeStrategy.cs" />
-    <Compile Include="MACDAnalyzer.cs" />
-    <Compile Include="ITradeAccount.cs" />
-    <Compile Include="MACDItem.cs" />
-    <Compile Include="StrategiesTests.cs" />
-    <Compile Include="Entities\AccountInfo.cs" />
-    <Compile Include="Entities\Candle.cs" />
-    <Compile Include="Entities\OrderConfig.cs" />
-    <Compile Include="Api\Converters.cs" />
-    <Compile Include="Entities\Order.cs" />
-    <Compile Include="Entities\Enums\OrderSide.cs" />
-    <Compile Include="Entities\Enums\OrderStatus.cs" />
-    <Compile Include="Entities\Enums\OrderType.cs" />
-    <Compile Include="Entities\PriceTicker.cs" />
-    <Compile Include="Entities\Enums\TimeInForceType.cs" />
     <Compile Include="Loger.cs" />
+    <Compile Include="TradeSession.cs" />
+    <Compile Include="ITradeAccount.cs" />
+    <Compile Include="StrategiesTests.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="TestTrader.cs" />
     <Compile Include="RabbitTrader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TraderState.cs" />
-    <Compile Include="TradeStrategies\SMACrossingTradeStrategy.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\TradyExtensions\TradyExtensions.csproj">
-      <Project>{8224fdfd-9a37-4fc0-b403-4fed808f1ea6}</Project>
-      <Name>TradyExtensions</Name>
+    <ProjectReference Include="..\BinanceTrader.Core\BinanceTrader.Core.csproj">
+      <Project>{80112d69-6e99-493b-9427-825ba3208139}</Project>
+      <Name>BinanceTrader.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BinanceTrader.Api\BinanceTrader.Api.csproj">
+      <Project>{da601aaa-b999-42d2-a4dd-cb749d4ffc84}</Project>
+      <Name>BinanceTrader.Api</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BinanceTrader.Tools\BinanceTrader.Tools.csproj">
+      <Project>{05921e52-1c36-4126-941b-f158be62c28a}</Project>
+      <Name>BinanceTrader.Tools</Name>
     </ProjectReference>
     <ProjectReference Include="..\Trady\Trady.Analysis\Trady.Analysis.csproj">
       <Project>{ad0e14b7-a227-4d4e-94cb-978990cbe1a2}</Project>

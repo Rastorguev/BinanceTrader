@@ -1,5 +1,5 @@
 ﻿using System;
-using BinanceTrader.Entities.Enums;
+using BinanceTrader.Core.Entities.Enums;
 
 namespace BinanceTrader
 {

@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using BinanceTrader.Api;
-using BinanceTrader.Utils;
+using BinanceTrader.Tools;
 using JetBrains.Annotations;
 using Trady.Analysis;
 using Trady.Analysis.Extension;
@@ -123,21 +124,20 @@ namespace BinanceTrader
         {
             var assets = new List<string>
             {
-                "TRX",
+                //"TRX",
                 "CND",
-                "TNB",
-                "POE",
-                "FUN",
-                "XVG",
-                "MANA",
-                "CDT",
-                "LEND",
-                "DNT"
+                //"TNB",
+                //"POE",
+                //"FUN",
+                //"XVG",
+                //"MANA",
+                //"CDT",
+                //"LEND",
+                //"DNT"
             };
 
             var strategies =
-                new List<(string Name, Predicate<IIndexedOhlcv> BuyRule, Predicate<IIndexedOhlcv> SellRule)
-                >();
+                new List<(string Name, Predicate<IIndexedOhlcv> BuyRule, Predicate<IIndexedOhlcv> SellRule)>();
 
             const int shortPeriod = 7;
             const int longPeriod = 25;
@@ -168,8 +168,8 @@ namespace BinanceTrader
                 var candles = LoadCandles(
                     asset,
                     "ETH",
-                    new DateTime(2018, 1, 16, 14, 0, 0),
-                    new DateTime(2018, 1, 16, 16, 30, 0),
+                    new DateTime(2018, 1, 19, 0, 0, 0),
+                    new DateTime(2018, 1, 19, 12, 0, 0),
                     CandlesInterval.Minutes1);
 
                 Console.WriteLine(asset);
@@ -228,7 +228,7 @@ namespace BinanceTrader
             CandlesInterval interval)
         {
             const int maxRange = 500;
-            var candles = new List<Entities.Candle>();
+            var candles = new List<Core.Entities.Candle>();
 
             while (start < end)
             {
@@ -238,7 +238,7 @@ namespace BinanceTrader
                     : end;
 
                 var rangeCandles = _api.GetCandles(baseAsset, quoteAsset, interval, start, rangeEnd)
-                    .NotNull()
+                    .NotNull<Task<List<Core.Entities.Candle>>>()
                     .Result.NotNull()
                     .ToList();
 
@@ -249,4 +249,24 @@ namespace BinanceTrader
             return candles.ToTradyCandles().OrderBy(c => c.NotNull().DateTime).ToList();
         }
     }
+
+    public static class Converters
+    {
+        [NotNull]
+        public static List<Candle> ToTradyCandles(
+            [NotNull] [ItemNotNull] this IEnumerable<Core.Entities.Candle> candles)
+        {
+            return candles.Select(c => c.ToTradyCandle()).ToList().NotNull();
+        }
+
+        public static Candle ToTradyCandle([NotNull] this Core.Entities.Candle candle) =>
+            new Candle(
+                candle.OpenTime,
+                candle.OpenPrice,
+                candle.HighPrice,
+                candle.LowPrice,
+                candle.ClosePrice,
+                candle.Volume);
+    }
+
 }

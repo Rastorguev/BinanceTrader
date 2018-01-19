@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BinanceTrader.Core\BinanceTrader.Core.csproj" />
+    <ProjectReference Include="..\BinanceTrader.Tools\BinanceTrader.Tools.csproj" />
+    <ProjectReference Include="..\Trady\Trady.Analysis\Trady.Analysis.csproj" />
+    <ProjectReference Include="..\Trady\Trady.Core\Trady.Core.csproj" />
+    <ProjectReference Include="..\Trady\Trady.Importer\Trady.Importer.csproj" />
+  </ItemGroup>
+
+</Project>

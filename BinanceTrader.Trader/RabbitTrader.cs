@@ -1,8 +1,9 @@
 ﻿using System;
 using BinanceTrader.Api;
-using BinanceTrader.Entities;
-using BinanceTrader.Entities.Enums;
-using BinanceTrader.Utils;
+using BinanceTrader.Core.Entities;
+using BinanceTrader.Core.Entities.Enums;
+using BinanceTrader.Tools;
+
 
 namespace BinanceTrader
 {
@@ -41,8 +42,6 @@ namespace BinanceTrader
             _loger = new Loger(baseAsset, quoteAsset);
             _fluctuation = _fee + _oneDealProfit;
         }
-
-        public TraderState State { get; } = TraderState.Idle;
 
         public void Start()
         {

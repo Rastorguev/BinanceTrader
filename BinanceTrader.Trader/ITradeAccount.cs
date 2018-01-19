@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using BinanceTrader.Utils;
+using BinanceTrader.Core;
+using BinanceTrader.Core.Entities.Enums;
+using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
 namespace BinanceTrader

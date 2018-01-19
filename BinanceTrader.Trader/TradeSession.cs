@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using BinanceTrader.Utils;
+using BinanceTrader.Core.Entities.Enums;
+using BinanceTrader.Tools;
 using JetBrains.Annotations;
 using Trady.Analysis;
 using Trady.Core;
