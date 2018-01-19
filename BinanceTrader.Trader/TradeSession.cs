@@ -29,26 +29,27 @@ namespace BinanceTrader
         [NotNull]
         public ITradeAccount Run(IEnumerable<Candle> candles)
         {
-            var account = new MockTradeAccount(0, _config.InitialQuoteAmount, 0, _config.Fee);
-            var tradeActions = DefineTradeActions(candles).NotNull();
+            var account = new MockTradeAccount(0, _config.InitialQuoteAmount, _config.InitialPrice, _config.Fee);
+            candles = candles.OrderBy(c => c.DateTime).ToList();
+            //var tradeActions = DefineTradeActions(candles).NotNull();
 
             var nextAction = TradeActionType.Buy;
-            foreach (var action in tradeActions)
+            //var prevPrice = _config.InitialPrice;
+            foreach (var candle in candles)
             {
-                var price = action.Candle.Close;
-                var candle = action.Candle;
-
-                if (nextAction == TradeActionType.Buy &&
-                    action.Type == TradeActionType.Buy)
+                var price = candle.Close;
+                
+                if (nextAction == TradeActionType.Buy )
                 {
-                    var baseAmount = Math.Floor(account.CurrentQuoteAmount / price);
-                    if (account.CurrentQuoteAmount > _config.MinQuoteAmount && baseAmount > 0)
+                    var estimatedBaseAmount = Math.Floor(account.CurrentQuoteAmount / price);
+                    if (account.CurrentQuoteAmount > _config.MinQuoteAmount && estimatedBaseAmount > 0
+                        && price + price.Percents(_config.MinProfitRatio) <= account.LastPrice)
                     {
-                        account.Buy(baseAmount, price, candle.DateTime.DateTime);
+                        account.Buy(estimatedBaseAmount, price, candle.DateTime.DateTime);
                         nextAction = TradeActionType.Sell;
                     }
                 }
-                else if (nextAction == TradeActionType.Sell && action.Type == TradeActionType.Sell)
+                else if (nextAction == TradeActionType.Sell)
                 {
                     var baseAmount = Math.Floor(account.CurrentBaseAmount);
 
@@ -64,36 +65,38 @@ namespace BinanceTrader
             return account;
         }
 
-        private List<(IOhlcv Candle, TradeActionType Type)> DefineTradeActions(IEnumerable<Candle> candles)
-        {
-            var actionCandles = new List<(IOhlcv, TradeActionType)>();
+        //private List<(IOhlcv Candle, TradeActionType Type)> DefineTradeActions(IEnumerable<Candle> candles)
+        //{
+        //    var actionCandles = new List<(IOhlcv, TradeActionType)>();
 
-            using (var ctx = new AnalyzeContext(candles))
-            {
-                var buyActions = new SimpleRuleExecutor(ctx, _buyRule).Execute().NotNull()
-                    .Select(c => ((IOhlcv) c, TradeActionType.Buy));
+        //    using (var ctx = new AnalyzeContext(candles))
+        //    {
+        //        var buyActions = new SimpleRuleExecutor(ctx, _buyRule).Execute().NotNull()
+        //            .Select(c => ((IOhlcv)c, TradeActionType.Buy));
 
-                var sellCandles = new SimpleRuleExecutor(ctx, _sellRule).Execute().NotNull()
-                    .Select(c => ((IOhlcv) c, TradeActionType.Sell));
+        //        var sellCandles = new SimpleRuleExecutor(ctx, _sellRule).Execute().NotNull()
+        //            .Select(c => ((IOhlcv)c, TradeActionType.Sell));
 
-                actionCandles.AddRange(buyActions);
-                actionCandles.AddRange(sellCandles);
-                actionCandles = actionCandles.OrderBy(c => c.Item1.NotNull().DateTime).ToList();
-            }
+        //        actionCandles.AddRange(buyActions);
+        //        actionCandles.AddRange(sellCandles);
+        //        actionCandles = actionCandles.OrderBy(c => c.Item1.NotNull().DateTime).ToList();
+        //    }
 
-            return actionCandles;
-        }
+        //    return actionCandles;
+        //}
     }
 
     public class TradeSessionConfig
     {
         public decimal InitialQuoteAmount { get; }
+        public decimal InitialPrice { get; }
         public decimal Fee { get; }
         public decimal MinQuoteAmount { get; }
         public decimal MinProfitRatio { get; }
 
         public TradeSessionConfig(
             decimal initialQuoteAmount,
+            decimal initialPrice,
             decimal fee,
             decimal minQuoteAmount,
             decimal minProfitRatio)
@@ -102,6 +105,7 @@ namespace BinanceTrader
             Fee = fee;
             MinQuoteAmount = minQuoteAmount;
             MinProfitRatio = minProfitRatio;
+            InitialPrice = initialPrice;
         }
     }
 }

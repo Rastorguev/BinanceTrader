@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using BinanceTrader.Api;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
@@ -24,8 +23,8 @@ namespace BinanceTrader
             var candles = LoadCandles(
                 "TRX",
                 "ETH",
-                new DateTime(2018, 1, 13, 0, 0, 0),
-                new DateTime(2018, 1, 17, 20, 40, 0),
+                new DateTime(2018, 1, 17, 0, 0, 0),
+                new DateTime(2018, 1, 19, 20, 40, 0),
                 CandlesInterval.Minutes1);
 
             var period = 14;
@@ -124,16 +123,18 @@ namespace BinanceTrader
         {
             var assets = new List<string>
             {
-                //"TRX",
+                //"CND"
+
+                "TRX",
                 "CND",
-                //"TNB",
-                //"POE",
-                //"FUN",
-                //"XVG",
-                //"MANA",
-                //"CDT",
-                //"LEND",
-                //"DNT"
+                "TNB",
+                "POE",
+                "FUN",
+                "XVG",
+                "MANA",
+                "CDT",
+                "LEND",
+                "DNT"
             };
 
             var strategies =
@@ -160,7 +161,7 @@ namespace BinanceTrader
             //    Rule.Create(ic => ic.IsStochRsiOverbought(15)));
 
             strategies.Add(macdStrategy);
-            strategies.Add(smaStrategy);
+            //strategies.Add(smaStrategy);
             //strategies.Add(advancedStrategy);
 
             foreach (var asset in assets)
@@ -168,31 +169,48 @@ namespace BinanceTrader
                 var candles = LoadCandles(
                     asset,
                     "ETH",
+
+                    //DateTime.Now.AddDays(-6),
+                    //DateTime.Now.AddDays(-5),
+                    new DateTime(2018, 1, 1, 0, 0, 0),
                     new DateTime(2018, 1, 19, 0, 0, 0),
-                    new DateTime(2018, 1, 19, 12, 0, 0),
                     CandlesInterval.Minutes1);
 
                 Console.WriteLine(asset);
 
                 foreach (var strategy in strategies)
                 {
+                    //var initialPrice = candles.First().Close;
                     var result = Trade(candles, strategy.BuyRule, strategy.SellRule);
-                    var profit = result.GetProfit();
+
+                    var firstPrice = candles.First().Close;
+                    var lastPrice = candles.Last().Close;
+
+                    var currentQuote = result.CurrentBaseAmount * lastPrice + result.CurrentQuoteAmount;
+                    var singleBuy = result.InitialQuoteAmount / firstPrice * lastPrice + result.InitialBaseAmount;
+
+                    var pureProfit = MathUtils.CalculateProfit(result.InitialQuoteAmount, currentQuote).Round();
+                    var profitRelatedToSingleBuy = MathUtils.CalculateProfit(singleBuy, currentQuote).Round();
+                    var singleBuyProfit = MathUtils.CalculateProfit(result.InitialQuoteAmount, singleBuy).Round();
 
                     if (strategy.Equals(macdStrategy))
                     {
-                        macdProfit += profit;
+                        macdProfit += pureProfit;
                     }
                     else if (strategy.Equals(smaStrategy))
                     {
-                        smaProfit += profit;
+                        smaProfit += pureProfit;
                     }
                     //else if (strategy.Equals(advancedStrategy))
                     //{
                     //    advancedProfit += profit;
                     //}
 
-                    Console.WriteLine($" {strategy.Name}: {profit}");
+                    Console.WriteLine($"Pure: {pureProfit}");
+                    Console.WriteLine($"Single Buy: {singleBuyProfit}");
+                    Console.WriteLine($"Single Buy Related: {profitRelatedToSingleBuy}");
+                    //Console.WriteLine($"Pure Single Buy Related Diff: {pureProfit - profitRelatedToSingleBuy}");
+
                 }
                 Console.WriteLine();
             }
@@ -212,9 +230,10 @@ namespace BinanceTrader
             var tradeSession = new TradeSession(
                 new TradeSessionConfig(
                     initialQuoteAmount: 1,
-                    fee: 0.1m,
+                    initialPrice: candles.First().Close,
+                    fee: 0.05m,
                     minQuoteAmount: 0.01m,
-                    minProfitRatio: 0.2m),
+                    minProfitRatio: 0.1m),
                 buyRule,
                 sellRule);
 
@@ -238,7 +257,7 @@ namespace BinanceTrader
                     : end;
 
                 var rangeCandles = _api.GetCandles(baseAsset, quoteAsset, interval, start, rangeEnd)
-                    .NotNull<Task<List<Core.Entities.Candle>>>()
+                    .NotNull()
                     .Result.NotNull()
                     .ToList();
 
@@ -268,5 +287,4 @@ namespace BinanceTrader
                 candle.ClosePrice,
                 candle.Volume);
     }
-
 }
