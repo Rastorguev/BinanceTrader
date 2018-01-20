@@ -7,7 +7,8 @@ namespace BinanceTrader
     {
         private static void Main(string[] args)
         {
-            var test = new StrategiesTests(new BinanceApi(new MockKeyProvider()));
+            var keyProvider = new MockKeyProvider();
+            var test = new StrategiesTests(new BinanceApi(keyProvider));
             test.CompareStrategies();
 
             PreventAppClose();

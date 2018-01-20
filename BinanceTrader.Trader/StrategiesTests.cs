@@ -2,12 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using BinanceTrader.Api;
+using BinanceTrader.Core.Entities;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
-using Trady.Analysis;
-using Trady.Analysis.Extension;
-using Trady.Core;
-using Trady.Core.Infrastructure;
 
 namespace BinanceTrader
 {
@@ -22,6 +19,8 @@ namespace BinanceTrader
         {
             var assets = new List<string>
             {
+                //"POE",
+
                 "TRX",
                 "CND",
                 "TNB",
@@ -37,7 +36,7 @@ namespace BinanceTrader
                 "FUEL",
                 "YOYO",
                 "SNGLS",
-                "RCN",
+                //"RCN",
                 "CMT",
                 "SNT",
                 "MTH",
@@ -54,65 +53,76 @@ namespace BinanceTrader
                 "LINK"
             };
 
-            var tradeProfitTotal = 0m;
-            var holdProfitTotal = 0m;
+            var initialAmountTotal = 0m;
+            var tradeAmountTotal = 0m;
+            var holdAmountTotal = 0m;
 
             foreach (var asset in assets)
             {
                 var candles = LoadCandles(
                     asset,
                     "ETH",
-                    new DateTime(2018, 1, 20, 0, 0, 0),
-                    new DateTime(2018, 1, 20, 18, 0, 0),
-
+                    new DateTime(2017, 10, 1, 0, 0, 0),
+                    new DateTime(2017, 12, 1, 0, 0, 0),
                     CandlesInterval.Minutes1);
 
+                var result = Trade(candles);
+
+                if (!candles.Any())
+                {
+                    continue;
+                }
+
+                var firstPrice = candles.First().ClosePrice;
+                var lastPrice = candles.Last().ClosePrice;
+
+                var tradeQuoteAmount = result.CurrentBaseAmount * lastPrice + result.CurrentQuoteAmount;
+                var holdQuoteAmount = result.InitialQuoteAmount / firstPrice * lastPrice + result.InitialBaseAmount;
+
+                var tradeProfitPercents =
+                    MathUtils.CalculateProfit(result.InitialQuoteAmount, tradeQuoteAmount).Round();
+                var holdProfitPercents = MathUtils.CalculateProfit(result.InitialQuoteAmount, holdQuoteAmount).Round();
+                var diffQuoteAmount = tradeQuoteAmount - holdQuoteAmount;
+                var diffPercents = tradeProfitPercents - holdProfitPercents;
+
+                initialAmountTotal += result.InitialQuoteAmount;
+                tradeAmountTotal += tradeQuoteAmount;
+                holdAmountTotal += holdQuoteAmount;
+
                 Console.WriteLine(asset);
+                Console.WriteLine();
+                Console.WriteLine($"Trade Profit %:\t {tradeProfitPercents}");
+                Console.WriteLine($"Hold Profit %:\t {holdProfitPercents}");
+                Console.WriteLine($"Diff:\t\t {diffQuoteAmount.Round()}");
+                Console.WriteLine($"Diff %:\t\t {diffPercents.Round()}");
+                Console.WriteLine($"Trades Count:\t {result.TradesLog.Count}");
+              
 
-           
-                    var result = Trade(candles);
 
-                    if (!candles.Any())
-                    {
-                        continue;
-                    }
+                if (result.TradesLog.Any())
+                {
+                    Console.WriteLine($"Last trade:\t {result.TradesLog.Last().Timestamp}");
+                }
 
-                    var firstPrice = candles.First().Close;
-                    var lastPrice = candles.Last().Close;
-
-                    var tradeQuoteAmount = result.CurrentBaseAmount * lastPrice + result.CurrentQuoteAmount;
-                    var holdQuoteAmount = result.InitialQuoteAmount / firstPrice * lastPrice + result.InitialBaseAmount;
-
-                    var tradeProfit = MathUtils.CalculateProfit(result.InitialQuoteAmount, tradeQuoteAmount).Round();
-                    var holdProfit = MathUtils.CalculateProfit(result.InitialQuoteAmount, holdQuoteAmount).Round();
-                    var diff = tradeQuoteAmount - holdQuoteAmount;
-                    var diffPercents = tradeProfit - holdProfit;
-
-                    tradeProfitTotal += tradeProfit;
-                    holdProfitTotal += holdProfit;
-
-                    Console.WriteLine($"Trade: {tradeProfit}");
-                    Console.WriteLine($"Hold: {holdProfit}");
-                    Console.WriteLine($"Diff: {diff}");
-                    Console.WriteLine($"Diff %: {diffPercents}");
-                    Console.WriteLine(result.TradesLog.Count);
-
-                    if (result.TradesLog.Any())
-                    {
-                        Console.WriteLine(result.TradesLog.Last().Timestamp);
-                    }
-            
                 Console.WriteLine();
             }
 
+            var tradeProfit = MathUtils.CalculateProfit(initialAmountTotal, tradeAmountTotal).Round();
+            var holdProfit = MathUtils.CalculateProfit(initialAmountTotal, holdAmountTotal).Round();
+
+            Console.WriteLine();
             Console.WriteLine("----------------------");
-            Console.WriteLine($"Trade Total: {tradeProfitTotal / assets.Count}");
-            Console.WriteLine($"Hold Total: {holdProfitTotal / assets.Count}");
+            Console.WriteLine();
+            Console.WriteLine($"Initial Total:\t\t {initialAmountTotal}");
+            Console.WriteLine($"Trade Total:\t\t {tradeAmountTotal.Round()}");
+            Console.WriteLine($"Hold Total:\t\t {holdAmountTotal.Round()}");
+            Console.WriteLine($"Trade Profit Total %:\t {tradeProfit}");
+            Console.WriteLine($"Hold Profit Total %:\t {holdProfit}");
         }
 
         [NotNull]
         private ITradeAccount Trade(
-            IEnumerable<Candle> candles)
+            List<Candle> candles)
         {
             var tradeSession = new TradeSession(
                 new TradeSessionConfig(
@@ -120,7 +130,7 @@ namespace BinanceTrader
                     initialPrice: 0,
                     fee: 0.1m,
                     minQuoteAmount: 0.01m,
-                    minProfitRatio: 2));
+                    minProfitRatio: 3));
 
             var result = tradeSession.Run(candles);
 
@@ -128,11 +138,15 @@ namespace BinanceTrader
         }
 
         [NotNull]
-        private List<Candle> LoadCandles(string baseAsset, string quoteAsset, DateTime start, DateTime end,
+        private List<Candle> LoadCandles(
+            string baseAsset,
+            string quoteAsset,
+            DateTime start,
+            DateTime end,
             CandlesInterval interval)
         {
             const int maxRange = 500;
-            var candles = new List<Core.Entities.Candle>();
+            var candles = new List<Candle>();
 
             while (start < end)
             {
@@ -150,26 +164,7 @@ namespace BinanceTrader
                 start = rangeEnd;
             }
 
-            return candles.ToTradyCandles().OrderBy(c => c.NotNull().DateTime).ToList();
+            return candles.OrderBy(c => c.NotNull().OpenTime).ToList();
         }
-    }
-
-    public static class Converters
-    {
-        [NotNull]
-        public static List<Candle> ToTradyCandles(
-            [NotNull] [ItemNotNull] this IEnumerable<Core.Entities.Candle> candles)
-        {
-            return candles.Select(c => c.ToTradyCandle()).ToList().NotNull();
-        }
-
-        public static Candle ToTradyCandle([NotNull] this Core.Entities.Candle candle) =>
-            new Candle(
-                candle.OpenTime,
-                candle.OpenPrice,
-                candle.HighPrice,
-                candle.LowPrice,
-                candle.ClosePrice,
-                candle.Volume);
     }
 }
