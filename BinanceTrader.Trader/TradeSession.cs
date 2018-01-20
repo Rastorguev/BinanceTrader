@@ -16,63 +16,42 @@ namespace BinanceTrader
         [NotNull] private readonly Predicate<IIndexedOhlcv> _sellRule;
 
         public TradeSession(
-            [NotNull] TradeSessionConfig config,
-            [NotNull] Predicate<IIndexedOhlcv> buyRule,
-            [NotNull] Predicate<IIndexedOhlcv> sellRule)
+            [NotNull] TradeSessionConfig config)
         {
             _config = config;
-            _buyRule = buyRule;
-            _sellRule = sellRule;
         }
 
         [NotNull]
-        public ITradeAccount Run(IEnumerable<Candle> candles)
+        public ITradeAccount Run([NotNull] [ItemNotNull] IEnumerable<Candle> candles)
         {
             var account = new MockTradeAccount(0, _config.InitialQuoteAmount, _config.InitialPrice, _config.Fee);
             candles = candles.OrderBy(c => c.DateTime).ToList();
-            //var tradeActions = DefineTradeActions(candles).NotNull();
-
-            var nextAction = TradeActionType.Buy;
-            //var prevPrice = _config.InitialPrice;
-
-            DateTime? lastActionDate = null;
-
 
             if (!candles.Any())
             {
                 return account;
             }
 
-
             var nextPrice = candles.First().Close;
+            var nextAction = TradeActionType.Buy;
+            DateTime? lastActionDate = null;
 
             foreach (var candle in candles)
             {
-                //var price = candle.Close;
-
-                var
-                    force = lastActionDate == null ||
+                var force = lastActionDate == null ||
                             candle.DateTime - lastActionDate.Value >= TimeSpan.FromHours(4);
-                //var force = false;
 
-                var fluctuation = 2;
+                var fluctuation = _config.MinProfitRatio;
 
+                var inRange = nextPrice >= candle.Low && nextPrice <= candle.High;
                 if (nextAction == TradeActionType.Buy &&
-                    (nextPrice >= candle.Low && nextPrice <= candle.High || force))
+                    (inRange || force))
                 {
-                    var price = nextPrice; //account.LastPrice - account.LastPrice.Percents(_config.MinProfitRatio);
-
+                    var price = nextPrice;
 
                     if (force)
                     {
-                        //if (Math.Abs(candle.Close - price) < price.Percents(1))
-                        //{
-                            price = candle.Close;
-                        //}
-                        //else
-                        //{
-                        //    continue;
-                        //}
+                        price = candle.High;
                     }
 
                     var estimatedBaseAmount = Math.Floor(account.CurrentQuoteAmount / price);
@@ -91,20 +70,13 @@ namespace BinanceTrader
                         lastActionDate = candle.DateTime.DateTime;
                     }
                 }
-                else if (nextAction == TradeActionType.Sell && nextPrice >= candle.Low && nextPrice <= candle.High || force)
+                else if (nextAction == TradeActionType.Sell && inRange || force)
                 {
-                    var price = nextPrice; //account.LastPrice + account.LastPrice.Percents(_config.MinProfitRatio);
+                    var price = nextPrice;
 
                     if (force)
                     {
-                        //if (Math.Abs(candle.Close - price) < price.Percents(2))
-                        //{
-                            price = candle.Close;
-                        //}
-                        //else
-                        //{
-                        //    continue;
-                        //}
+                        price = candle.Low;
                     }
 
                     var baseAmount = Math.Floor(account.CurrentBaseAmount);

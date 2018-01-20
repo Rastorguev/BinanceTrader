@@ -9,6 +9,15 @@ namespace BinanceTrader.Api
         BinanceKeys GetKeys();
     }
 
+    public class MockKeyProvider : IBinanceKeyProvider
+    {
+        public BinanceKeys GetKeys()
+        {
+            return new BinanceKeys();
+        }
+    }
+
+
     public class BinanceKeyProvider : IBinanceKeyProvider
     {
         private readonly string _keysFilePath;

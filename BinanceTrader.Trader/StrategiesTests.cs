@@ -18,113 +18,10 @@ namespace BinanceTrader
         public StrategiesTests(
             [NotNull] BinanceApi api) => _api = api;
 
-        public void DmiStrategyTest()
-        {
-            var candles = LoadCandles(
-                "TRX",
-                "ETH",
-                new DateTime(2018, 1, 17, 0, 0, 0),
-                new DateTime(2018, 1, 19, 20, 40, 0),
-                CandlesInterval.Minutes1);
-
-            var period = 14;
-
-            var adx = candles.Adx(period).NotNull();
-            var pdi = candles.Pdi(period).NotNull();
-            var mdi = candles.Mdi(period).NotNull();
-            //var dmi = candles.Dmi(period).NotNull();
-            var buyCandles = new List<Candle>();
-
-            var all = new List<decimal>();
-
-            all.AddRange(adx.Where(x => x.Tick != null).Select(x => x.Tick.Value));
-            all.AddRange(pdi.Where(x => x.Tick != null).Select(x => x.Tick.Value));
-            all.AddRange(mdi.Where(x => x.Tick != null).Select(x => x.Tick.Value));
-            var ordered = all.OrderBy(x => x);
-            var lowerBound = ordered.First();
-            var upperBound = ordered.Last();
-            var mediumBound = upperBound + lowerBound / 2;
-
-            for (var i = period; i < candles.Count; i++)
-            {
-                if (i == period)
-                {
-                    continue;
-                }
-
-                var prevIndex = i - 1;
-                if (adx[i].Tick == null)
-                {
-                    continue;
-                }
-
-                if (candles[i].DateTime == new DateTime(2018, 1, 16, 13, 19, 0))
-                {
-                }
-
-                var adxPrev = adx[prevIndex].Tick.Value;
-                var adxCurrent = adx[i].Tick.Value;
-                var pdiPrev = pdi[prevIndex].Tick.Value;
-                var pdiCurrent = pdi[i].Tick.Value;
-                var mdiPrev = mdi[prevIndex].Tick.Value;
-                var mdiCurrent = mdi[i].Tick.Value;
-
-                var isPdiTrough = IsTrough(pdi.Select(x => x.Tick), prevIndex);
-                var isAdxPeak = IsPeak(adx.Select(x => x.Tick), prevIndex);
-
-                if (adxPrev > 30 &&
-                    pdiPrev <= 10 &&
-                    isPdiTrough &&
-                    //isAdxPeak &&
-                    mdiCurrent < mdiPrev)
-                {
-                    buyCandles.Add(candles[i]);
-                }
-            }
-
-            var buyDates = buyCandles.Select(x => x.DateTime).ToList();
-        }
-
-        private static bool IsTrough([NotNull] IEnumerable<decimal?> items, int index)
-        {
-            var itemsList = items.ToList();
-
-            if (index < 1 || index > itemsList.Count - 2)
-            {
-                return false;
-            }
-
-            return
-                itemsList[index] != null &&
-                itemsList[index - 1] != null &&
-                itemsList[index + 1] != null &&
-                itemsList[index].Value < itemsList[index - 1].Value &&
-                itemsList[index].Value < itemsList[index + 1].Value;
-        }
-
-        private static bool IsPeak([NotNull] IEnumerable<decimal?> items, int index)
-        {
-            var itemsList = items.ToList();
-
-            if (index < 1 || index > itemsList.Count - 2)
-            {
-                return false;
-            }
-
-            return
-                itemsList[index] != null &&
-                itemsList[index - 1] != null &&
-                itemsList[index + 1] != null &&
-                itemsList[index].Value > itemsList[index - 1].Value &&
-                itemsList[index].Value > itemsList[index + 1].Value;
-        }
-
         public void CompareStrategies()
         {
             var assets = new List<string>
             {
-                //"TRX"
-
                 "TRX",
                 "CND",
                 "TNB",
@@ -134,54 +31,46 @@ namespace BinanceTrader
                 "MANA",
                 "CDT",
                 "LEND",
-                "DNT"
+                "DNT",
+                "TNT",
+                "ENJ",
+                "FUEL",
+                "YOYO",
+                "SNGLS",
+                "RCN",
+                "CMT",
+                "SNT",
+                "MTH",
+                "VIB",
+                "BTS",
+                "SNM",
+                "XLM",
+                "QSP",
+                "GTO",
+                "REQ",
+                "BAT",
+                "ADA",
+                "OST",
+                "LINK"
             };
-
-            var strategies =
-                new List<(string Name, Predicate<IIndexedOhlcv> BuyRule, Predicate<IIndexedOhlcv> SellRule)>();
-
-            const int shortPeriod = 7;
-            const int longPeriod = 25;
-            const int signalPeriod = 9;
 
             var tradeProfitTotal = 0m;
             var holdProfitTotal = 0m;
-
-            var macdStrategy = ("MACD",
-                Rule.Create(ic => ic.IsMacdBullishCross(shortPeriod, longPeriod, signalPeriod)),
-                Rule.Create(ic => ic.IsMacdBearishCross(shortPeriod, longPeriod, signalPeriod)));
-
-            var smaStrategy = ("SMA",
-                Rule.Create(ic => ic.IsSmaBullishCross(shortPeriod, longPeriod)),
-                Rule.Create(ic => ic.IsSmaBearishCross(shortPeriod, longPeriod)));
-
-            //var advancedStrategy = ("Advanced",
-            //    Rule.Create(ic => ic.IsStochRsiOversold(15)),
-            //    Rule.Create(ic => ic.IsStochRsiOverbought(15)));
-
-            strategies.Add(macdStrategy);
-            //strategies.Add(smaStrategy);
-            //strategies.Add(advancedStrategy);
 
             foreach (var asset in assets)
             {
                 var candles = LoadCandles(
                     asset,
                     "ETH",
+                    new DateTime(2018, 1, 20, 0, 0, 0),
+                    new DateTime(2018, 1, 20, 18, 0, 0),
 
-                    //DateTime.Now.AddDays(-6),
-                    //DateTime.Now.AddDays(-5),
-                    new DateTime(2017, 12, 1, 0, 0, 0),
-                    new DateTime(2018, 01, 20, 0, 0, 0),
-                    //DateTime.Now,
                     CandlesInterval.Minutes1);
 
                 Console.WriteLine(asset);
 
-                foreach (var strategy in strategies)
-                {
-                    //var initialPrice = candles.First().Close;
-                    var result = Trade(candles, strategy.BuyRule, strategy.SellRule);
+           
+                    var result = Trade(candles);
 
                     if (!candles.Any())
                     {
@@ -212,7 +101,7 @@ namespace BinanceTrader
                     {
                         Console.WriteLine(result.TradesLog.Last().Timestamp);
                     }
-                }
+            
                 Console.WriteLine();
             }
 
@@ -223,9 +112,7 @@ namespace BinanceTrader
 
         [NotNull]
         private ITradeAccount Trade(
-            IEnumerable<Candle> candles,
-            [NotNull] Predicate<IIndexedOhlcv> buyRule,
-            [NotNull] Predicate<IIndexedOhlcv> sellRule)
+            IEnumerable<Candle> candles)
         {
             var tradeSession = new TradeSession(
                 new TradeSessionConfig(
@@ -233,9 +120,7 @@ namespace BinanceTrader
                     initialPrice: 0,
                     fee: 0.1m,
                     minQuoteAmount: 0.01m,
-                    minProfitRatio: 0.2m),
-                buyRule,
-                sellRule);
+                    minProfitRatio: 2));
 
             var result = tradeSession.Run(candles);
 
