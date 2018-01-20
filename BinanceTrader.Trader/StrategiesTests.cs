@@ -123,7 +123,7 @@ namespace BinanceTrader
         {
             var assets = new List<string>
             {
-                //"CND"
+                //"TRX"
 
                 "TRX",
                 "CND",
@@ -144,9 +144,8 @@ namespace BinanceTrader
             const int longPeriod = 25;
             const int signalPeriod = 9;
 
-            var macdProfit = 0m;
-            var smaProfit = 0m;
-            var advancedProfit = 0m;
+            var tradeProfitTotal = 0m;
+            var holdProfitTotal = 0m;
 
             var macdStrategy = ("MACD",
                 Rule.Create(ic => ic.IsMacdBullishCross(shortPeriod, longPeriod, signalPeriod)),
@@ -172,8 +171,9 @@ namespace BinanceTrader
 
                     //DateTime.Now.AddDays(-6),
                     //DateTime.Now.AddDays(-5),
-                    new DateTime(2018, 1, 1, 0, 0, 0),
-                    new DateTime(2018, 1, 19, 0, 0, 0),
+                    new DateTime(2017, 12, 1, 0, 0, 0),
+                    new DateTime(2018, 01, 20, 0, 0, 0),
+                    //DateTime.Now,
                     CandlesInterval.Minutes1);
 
                 Console.WriteLine(asset);
@@ -183,42 +183,42 @@ namespace BinanceTrader
                     //var initialPrice = candles.First().Close;
                     var result = Trade(candles, strategy.BuyRule, strategy.SellRule);
 
+                    if (!candles.Any())
+                    {
+                        continue;
+                    }
+
                     var firstPrice = candles.First().Close;
                     var lastPrice = candles.Last().Close;
 
-                    var currentQuote = result.CurrentBaseAmount * lastPrice + result.CurrentQuoteAmount;
-                    var singleBuy = result.InitialQuoteAmount / firstPrice * lastPrice + result.InitialBaseAmount;
+                    var tradeQuoteAmount = result.CurrentBaseAmount * lastPrice + result.CurrentQuoteAmount;
+                    var holdQuoteAmount = result.InitialQuoteAmount / firstPrice * lastPrice + result.InitialBaseAmount;
 
-                    var pureProfit = MathUtils.CalculateProfit(result.InitialQuoteAmount, currentQuote).Round();
-                    var profitRelatedToSingleBuy = MathUtils.CalculateProfit(singleBuy, currentQuote).Round();
-                    var singleBuyProfit = MathUtils.CalculateProfit(result.InitialQuoteAmount, singleBuy).Round();
+                    var tradeProfit = MathUtils.CalculateProfit(result.InitialQuoteAmount, tradeQuoteAmount).Round();
+                    var holdProfit = MathUtils.CalculateProfit(result.InitialQuoteAmount, holdQuoteAmount).Round();
+                    var diff = tradeQuoteAmount - holdQuoteAmount;
+                    var diffPercents = tradeProfit - holdProfit;
 
-                    if (strategy.Equals(macdStrategy))
+                    tradeProfitTotal += tradeProfit;
+                    holdProfitTotal += holdProfit;
+
+                    Console.WriteLine($"Trade: {tradeProfit}");
+                    Console.WriteLine($"Hold: {holdProfit}");
+                    Console.WriteLine($"Diff: {diff}");
+                    Console.WriteLine($"Diff %: {diffPercents}");
+                    Console.WriteLine(result.TradesLog.Count);
+
+                    if (result.TradesLog.Any())
                     {
-                        macdProfit += pureProfit;
+                        Console.WriteLine(result.TradesLog.Last().Timestamp);
                     }
-                    else if (strategy.Equals(smaStrategy))
-                    {
-                        smaProfit += pureProfit;
-                    }
-                    //else if (strategy.Equals(advancedStrategy))
-                    //{
-                    //    advancedProfit += profit;
-                    //}
-
-                    Console.WriteLine($"Pure: {pureProfit}");
-                    Console.WriteLine($"Single Buy: {singleBuyProfit}");
-                    Console.WriteLine($"Single Buy Related: {profitRelatedToSingleBuy}");
-                    //Console.WriteLine($"Pure Single Buy Related Diff: {pureProfit - profitRelatedToSingleBuy}");
-
                 }
                 Console.WriteLine();
             }
 
             Console.WriteLine("----------------------");
-            Console.WriteLine($"MACD Avg: {macdProfit / assets.Count}");
-            Console.WriteLine($"SMA Avg: {smaProfit / assets.Count}");
-            Console.WriteLine($"Advanced Avg: {advancedProfit / assets.Count}");
+            Console.WriteLine($"Trade Total: {tradeProfitTotal / assets.Count}");
+            Console.WriteLine($"Hold Total: {holdProfitTotal / assets.Count}");
         }
 
         [NotNull]
@@ -230,10 +230,10 @@ namespace BinanceTrader
             var tradeSession = new TradeSession(
                 new TradeSessionConfig(
                     initialQuoteAmount: 1,
-                    initialPrice: candles.First().Close,
-                    fee: 0.05m,
+                    initialPrice: 0,
+                    fee: 0.1m,
                     minQuoteAmount: 0.01m,
-                    minProfitRatio: 0.1m),
+                    minProfitRatio: 0.2m),
                 buyRule,
                 sellRule);
 

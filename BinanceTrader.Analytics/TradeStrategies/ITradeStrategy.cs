@@ -3,7 +3,7 @@ using BinanceTrader.Core.Entities;
 using BinanceTrader.Core.Entities.Enums;
 using JetBrains.Annotations;
 
-namespace BinanceTrader.TradeStrategies
+namespace BinanceTrader.Analytics.TradeStrategies
 {
     public interface ITradeStrategy
     {

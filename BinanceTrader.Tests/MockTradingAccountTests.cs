@@ -1,4 +1,5 @@
 using System;
+using BinanceTrader.Core;
 using Xunit;
 
 namespace BinanceTrader.Tests

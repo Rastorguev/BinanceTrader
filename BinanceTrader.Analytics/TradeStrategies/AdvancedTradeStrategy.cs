@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using BinanceTrader.Utils;
-
-namespace BinanceTrader.TradeStrategies
+﻿namespace BinanceTrader.Analytics.TradeStrategies
 {
     //public class AdvancedTradeStrategy : ITradeStrategy
     //{

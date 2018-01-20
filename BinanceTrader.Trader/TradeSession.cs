@@ -4,7 +4,6 @@ using System.Linq;
 using BinanceTrader.Core.Entities.Enums;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
-using Trady.Analysis;
 using Trady.Core;
 using Trady.Core.Infrastructure;
 
@@ -35,29 +34,93 @@ namespace BinanceTrader
 
             var nextAction = TradeActionType.Buy;
             //var prevPrice = _config.InitialPrice;
+
+            DateTime? lastActionDate = null;
+
+
+            if (!candles.Any())
+            {
+                return account;
+            }
+
+
+            var nextPrice = candles.First().Close;
+
             foreach (var candle in candles)
             {
-                var price = candle.Close;
-                
-                if (nextAction == TradeActionType.Buy )
+                //var price = candle.Close;
+
+                var
+                    force = lastActionDate == null ||
+                            candle.DateTime - lastActionDate.Value >= TimeSpan.FromHours(4);
+                //var force = false;
+
+                var fluctuation = 2;
+
+                if (nextAction == TradeActionType.Buy &&
+                    (nextPrice >= candle.Low && nextPrice <= candle.High || force))
                 {
+                    var price = nextPrice; //account.LastPrice - account.LastPrice.Percents(_config.MinProfitRatio);
+
+
+                    if (force)
+                    {
+                        //if (Math.Abs(candle.Close - price) < price.Percents(1))
+                        //{
+                            price = candle.Close;
+                        //}
+                        //else
+                        //{
+                        //    continue;
+                        //}
+                    }
+
                     var estimatedBaseAmount = Math.Floor(account.CurrentQuoteAmount / price);
-                    if (account.CurrentQuoteAmount > _config.MinQuoteAmount && estimatedBaseAmount > 0
-                        && price + price.Percents(_config.MinProfitRatio) <= account.LastPrice)
+                    if (account.CurrentQuoteAmount > _config.MinQuoteAmount && estimatedBaseAmount > 0)
                     {
                         account.Buy(estimatedBaseAmount, price, candle.DateTime.DateTime);
+
+                        //Console.WriteLine(nextAction);
+                        //Console.WriteLine(candle.DateTime);
+                        //Console.WriteLine(price);
+                        //Console.WriteLine(account.GetProfit());
+                        //Console.WriteLine(force);
+                        //Console.WriteLine();
+                        nextPrice = price + price.Percents(fluctuation);
                         nextAction = TradeActionType.Sell;
+                        lastActionDate = candle.DateTime.DateTime;
                     }
                 }
-                else if (nextAction == TradeActionType.Sell)
+                else if (nextAction == TradeActionType.Sell && nextPrice >= candle.Low && nextPrice <= candle.High || force)
                 {
-                    var baseAmount = Math.Floor(account.CurrentBaseAmount);
+                    var price = nextPrice; //account.LastPrice + account.LastPrice.Percents(_config.MinProfitRatio);
 
-                    if (baseAmount > 0
-                        && price > account.LastPrice + account.LastPrice.Percents(_config.MinProfitRatio))
+                    if (force)
+                    {
+                        //if (Math.Abs(candle.Close - price) < price.Percents(2))
+                        //{
+                            price = candle.Close;
+                        //}
+                        //else
+                        //{
+                        //    continue;
+                        //}
+                    }
+
+                    var baseAmount = Math.Floor(account.CurrentBaseAmount);
+                    if (baseAmount > 0)
                     {
                         account.Sell(baseAmount, price, candle.DateTime.DateTime);
+
+                        //Console.WriteLine(nextAction);
+                        //Console.WriteLine(candle.DateTime);
+                        //Console.WriteLine(price);
+                        //Console.WriteLine(account.GetProfit());
+                        //Console.WriteLine(force);
+                        //Console.WriteLine();
+                        nextPrice = price - price.Percents(fluctuation);
                         nextAction = TradeActionType.Buy;
+                        lastActionDate = candle.DateTime.DateTime;
                     }
                 }
             }

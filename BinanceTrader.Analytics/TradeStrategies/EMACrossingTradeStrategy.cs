@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using BinanceTrader.Analytics.Indicators;
 using BinanceTrader.Core.Entities;
 using BinanceTrader.Core.Entities.Enums;
-using BinanceTrader.Indicators;
 
-namespace BinanceTrader.TradeStrategies
+namespace BinanceTrader.Analytics.TradeStrategies
 {
     public class EMACrossingTradeStrategy : ITradeStrategy
     {
