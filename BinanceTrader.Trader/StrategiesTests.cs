@@ -19,8 +19,31 @@ namespace BinanceTrader
         {
             var assets = new List<string>
             {
-                //"POE",
-
+                "BNT",
+                "VEN",
+                "WAVES",
+                "SALT",
+                "ICX",
+                "HSR",
+                "MCO",
+                "EOS",
+                "STRAT",
+                "BNB",
+                "OMG",
+                "GVT",
+                "LSK",
+                "NEBL",
+                "WTC",
+                //"ETC",
+                "LUN",
+                "STRAT",
+                "QTUM",
+                "PPT",
+                "BCD",
+                "XZC",
+                "NEO",
+                "DGD",
+                //"LTC"
                 "TRX",
                 "CND",
                 "TNB",
@@ -62,8 +85,8 @@ namespace BinanceTrader
                 var candles = LoadCandles(
                     asset,
                     "ETH",
-                    new DateTime(2017, 10, 1, 0, 0, 0),
-                    new DateTime(2017, 12, 1, 0, 0, 0),
+                    new DateTime(2018, 01, 21, 0, 0, 0),
+                    new DateTime(2018, 02, 4, 20, 0, 0),
                     CandlesInterval.Minutes1);
 
                 var result = Trade(candles);
@@ -91,13 +114,13 @@ namespace BinanceTrader
 
                 Console.WriteLine(asset);
                 Console.WriteLine();
+                Console.WriteLine($"Trade Amount:\t {tradeQuoteAmount.Round()}");
+                Console.WriteLine($"Hold Amount:\t {holdQuoteAmount.Round()}");
                 Console.WriteLine($"Trade Profit %:\t {tradeProfitPercents}");
                 Console.WriteLine($"Hold Profit %:\t {holdProfitPercents}");
                 Console.WriteLine($"Diff:\t\t {diffQuoteAmount.Round()}");
                 Console.WriteLine($"Diff %:\t\t {diffPercents.Round()}");
                 Console.WriteLine($"Trades Count:\t {result.TradesLog.Count}");
-              
-
 
                 if (result.TradesLog.Any())
                 {
@@ -130,7 +153,8 @@ namespace BinanceTrader
                     initialPrice: 0,
                     fee: 0.1m,
                     minQuoteAmount: 0.01m,
-                    minProfitRatio: 3));
+                    minProfitRatio: 1m,
+                    maxIdleHours: 8));
 
             var result = tradeSession.Run(candles);
 

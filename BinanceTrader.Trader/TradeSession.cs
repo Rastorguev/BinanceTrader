@@ -35,8 +35,9 @@ namespace BinanceTrader
             foreach (var candle in candles)
             {
                 var force = lastActionDate == null ||
-                            candle.CloseTime - lastActionDate.Value >= TimeSpan.FromHours(4);
+                            candle.CloseTime - lastActionDate.Value >= TimeSpan.FromHours(_config.MaxIdleHours);
 
+                //var force = false;
                 var minProfitRatio = _config.MinProfitRatio;
                 var inRange = nextPrice >= candle.LowPrice && nextPrice <= candle.HighPrice;
 
