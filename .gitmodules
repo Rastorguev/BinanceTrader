@@ -1,3 +1,6 @@
 [submodule "Trady"]
 	path = Trady
 	url = https://github.com/lppkarl/Trady.git
+[submodule "BinanceApi"]
+	path = BinanceApi
+	url = https://github.com/Rastorguev/Binance.API.Csharp.Client.git
