@@ -1,62 +1,86 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using BinanceTrader.Core.Entities;
 using BinanceTrader.Core.Entities.Enums;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
-using Trady.Analysis;
-using Trady.Core;
-using Trady.Core.Infrastructure;
 
 namespace BinanceTrader
 {
     public class TradeSession
     {
         [NotNull] private readonly TradeSessionConfig _config;
-        [NotNull] private readonly Predicate<IIndexedOhlcv> _buyRule;
-        [NotNull] private readonly Predicate<IIndexedOhlcv> _sellRule;
 
         public TradeSession(
-            [NotNull] TradeSessionConfig config,
-            [NotNull] Predicate<IIndexedOhlcv> buyRule,
-            [NotNull] Predicate<IIndexedOhlcv> sellRule)
+            [NotNull] TradeSessionConfig config)
         {
             _config = config;
-            _buyRule = buyRule;
-            _sellRule = sellRule;
         }
 
         [NotNull]
-        public ITradeAccount Run(IEnumerable<Candle> candles)
+        public ITradeAccount Run([NotNull] [ItemNotNull] List<Candle> candles)
         {
-            var account = new MockTradeAccount(0, _config.InitialQuoteAmount, 0, _config.Fee);
-            var tradeActions = DefineTradeActions(candles).NotNull();
+            var account = new MockTradeAccount(0, _config.InitialQuoteAmount, _config.InitialPrice, _config.Fee);
 
-            var nextAction = TradeActionType.Buy;
-            foreach (var action in tradeActions)
+            if (!candles.Any())
             {
-                var price = action.Candle.Close;
-                var candle = action.Candle;
+                return account;
+            }
 
-                if (nextAction == TradeActionType.Buy &&
-                    action.Type == TradeActionType.Buy)
+            var nextPrice = candles.First().ClosePrice;
+            var nextAction = TradeActionType.Buy;
+            DateTime? lastActionDate = null;
+
+            foreach (var candle in candles)
+            {
+                var force = lastActionDate == null ||
+                            candle.CloseTime - lastActionDate.Value >= TimeSpan.FromHours(_config.MaxIdleHours);
+
+                //var force = false;
+                var minProfitRatio = _config.MinProfitRatio;
+                var inRange = nextPrice >= candle.LowPrice && nextPrice <= candle.HighPrice;
+
+                if (nextAction == TradeActionType.Buy && (inRange || force))
                 {
-                    var baseAmount = Math.Floor(account.CurrentQuoteAmount / price);
-                    if (account.CurrentQuoteAmount > _config.MinQuoteAmount && baseAmount > 0)
+                    var price = nextPrice;
+
+                    if (force)
                     {
-                        account.Buy(baseAmount, price, candle.DateTime.DateTime);
+                        price = candle.HighPrice;
+                    }
+
+                    var estimatedBaseAmount = Math.Floor(account.CurrentQuoteAmount / price);
+                    if (account.CurrentQuoteAmount > _config.MinQuoteAmount && estimatedBaseAmount > 0)
+                    {
+                        account.Buy(estimatedBaseAmount, price, candle.OpenTime);
+
+                        //Log(nextAction, candle, price, account, force);
+
+                        nextPrice = price + price.Percents(minProfitRatio);
                         nextAction = TradeActionType.Sell;
+                        lastActionDate = candle.OpenTime;
                     }
                 }
-                else if (nextAction == TradeActionType.Sell && action.Type == TradeActionType.Sell)
+                else if (nextAction == TradeActionType.Sell && (inRange || force))
                 {
-                    var baseAmount = Math.Floor(account.CurrentBaseAmount);
+                    var price = nextPrice;
 
-                    if (baseAmount > 0
-                        && price > account.LastPrice + account.LastPrice.Percents(_config.MinProfitRatio))
+                    if (force)
                     {
-                        account.Sell(baseAmount, price, candle.DateTime.DateTime);
+                        price = candle.LowPrice;
+                    }
+
+                    var baseAmount = Math.Floor(account.CurrentBaseAmount);
+                    if (baseAmount > 0)
+                    {
+                        account.Sell(baseAmount, price, candle.OpenTime);
+
+                        //Log(nextAction, candle, price, account, force);
+
+                        nextPrice = price - price.Percents(minProfitRatio);
                         nextAction = TradeActionType.Buy;
+                        lastActionDate = candle.OpenTime;
                     }
                 }
             }
@@ -64,44 +88,28 @@ namespace BinanceTrader
             return account;
         }
 
-        private List<(IOhlcv Candle, TradeActionType Type)> DefineTradeActions(IEnumerable<Candle> candles)
+        private static void Log(
+            TradeActionType nextAction,
+            Candle candle,
+            decimal price,
+            ITradeAccount account,
+            bool force)
         {
-            var actionCandles = new List<(IOhlcv, TradeActionType)>();
+            Console.WriteLine(nextAction);
+            Console.WriteLine(candle.OpenTime);
+            Console.WriteLine(price.Round());
+            Console.WriteLine(account.GetProfit());
 
-            using (var ctx = new AnalyzeContext(candles))
+            if (force)
             {
-                var buyActions = new SimpleRuleExecutor(ctx, _buyRule).Execute().NotNull()
-                    .Select(c => ((IOhlcv) c, TradeActionType.Buy));
-
-                var sellCandles = new SimpleRuleExecutor(ctx, _sellRule).Execute().NotNull()
-                    .Select(c => ((IOhlcv) c, TradeActionType.Sell));
-
-                actionCandles.AddRange(buyActions);
-                actionCandles.AddRange(sellCandles);
-                actionCandles = actionCandles.OrderBy(c => c.Item1.NotNull().DateTime).ToList();
+                Console.ForegroundColor = ConsoleColor.Red;
             }
 
-            return actionCandles;
-        }
-    }
+            Console.WriteLine(force);
 
-    public class TradeSessionConfig
-    {
-        public decimal InitialQuoteAmount { get; }
-        public decimal Fee { get; }
-        public decimal MinQuoteAmount { get; }
-        public decimal MinProfitRatio { get; }
+            Console.ResetColor();
 
-        public TradeSessionConfig(
-            decimal initialQuoteAmount,
-            decimal fee,
-            decimal minQuoteAmount,
-            decimal minProfitRatio)
-        {
-            InitialQuoteAmount = initialQuoteAmount;
-            Fee = fee;
-            MinQuoteAmount = minQuoteAmount;
-            MinProfitRatio = minProfitRatio;
+            Console.WriteLine();
         }
     }
 }

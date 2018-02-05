@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using BinanceTrader.Api;
+using BinanceTrader.Core.Entities;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
-using Trady.Analysis;
-using Trady.Analysis.Extension;
-using Trady.Core;
-using Trady.Core.Infrastructure;
 
 namespace BinanceTrader
 {
@@ -19,204 +15,146 @@ namespace BinanceTrader
         public StrategiesTests(
             [NotNull] BinanceApi api) => _api = api;
 
-        public void DmiStrategyTest()
-        {
-            var candles = LoadCandles(
-                "TRX",
-                "ETH",
-                new DateTime(2018, 1, 13, 0, 0, 0),
-                new DateTime(2018, 1, 17, 20, 40, 0),
-                CandlesInterval.Minutes1);
-
-            var period = 14;
-
-            var adx = candles.Adx(period).NotNull();
-            var pdi = candles.Pdi(period).NotNull();
-            var mdi = candles.Mdi(period).NotNull();
-            //var dmi = candles.Dmi(period).NotNull();
-            var buyCandles = new List<Candle>();
-
-            var all = new List<decimal>();
-
-            all.AddRange(adx.Where(x => x.Tick != null).Select(x => x.Tick.Value));
-            all.AddRange(pdi.Where(x => x.Tick != null).Select(x => x.Tick.Value));
-            all.AddRange(mdi.Where(x => x.Tick != null).Select(x => x.Tick.Value));
-            var ordered = all.OrderBy(x => x);
-            var lowerBound = ordered.First();
-            var upperBound = ordered.Last();
-            var mediumBound = upperBound + lowerBound / 2;
-
-            for (var i = period; i < candles.Count; i++)
-            {
-                if (i == period)
-                {
-                    continue;
-                }
-
-                var prevIndex = i - 1;
-                if (adx[i].Tick == null)
-                {
-                    continue;
-                }
-
-                if (candles[i].DateTime == new DateTime(2018, 1, 16, 13, 19, 0))
-                {
-                }
-
-                var adxPrev = adx[prevIndex].Tick.Value;
-                var adxCurrent = adx[i].Tick.Value;
-                var pdiPrev = pdi[prevIndex].Tick.Value;
-                var pdiCurrent = pdi[i].Tick.Value;
-                var mdiPrev = mdi[prevIndex].Tick.Value;
-                var mdiCurrent = mdi[i].Tick.Value;
-
-                var isPdiTrough = IsTrough(pdi.Select(x => x.Tick), prevIndex);
-                var isAdxPeak = IsPeak(adx.Select(x => x.Tick), prevIndex);
-
-                if (adxPrev > 30 &&
-                    pdiPrev <= 10 &&
-                    isPdiTrough &&
-                    //isAdxPeak &&
-                    mdiCurrent < mdiPrev)
-                {
-                    buyCandles.Add(candles[i]);
-                }
-            }
-
-            var buyDates = buyCandles.Select(x => x.DateTime).ToList();
-        }
-
-        private static bool IsTrough([NotNull] IEnumerable<decimal?> items, int index)
-        {
-            var itemsList = items.ToList();
-
-            if (index < 1 || index > itemsList.Count - 2)
-            {
-                return false;
-            }
-
-            return
-                itemsList[index] != null &&
-                itemsList[index - 1] != null &&
-                itemsList[index + 1] != null &&
-                itemsList[index].Value < itemsList[index - 1].Value &&
-                itemsList[index].Value < itemsList[index + 1].Value;
-        }
-
-        private static bool IsPeak([NotNull] IEnumerable<decimal?> items, int index)
-        {
-            var itemsList = items.ToList();
-
-            if (index < 1 || index > itemsList.Count - 2)
-            {
-                return false;
-            }
-
-            return
-                itemsList[index] != null &&
-                itemsList[index - 1] != null &&
-                itemsList[index + 1] != null &&
-                itemsList[index].Value > itemsList[index - 1].Value &&
-                itemsList[index].Value > itemsList[index + 1].Value;
-        }
-
         public void CompareStrategies()
         {
             var assets = new List<string>
             {
-                //"TRX",
+                "BNT",
+                "VEN",
+                "WAVES",
+                "SALT",
+                "ICX",
+                "HSR",
+                "MCO",
+                "EOS",
+                "STRAT",
+                "BNB",
+                "OMG",
+                "GVT",
+                "LSK",
+                "NEBL",
+                "WTC",
+                //"ETC",
+                "LUN",
+                "STRAT",
+                "QTUM",
+                "PPT",
+                "BCD",
+                "XZC",
+                "NEO",
+                "DGD",
+                //"LTC"
+                "TRX",
                 "CND",
-                //"TNB",
-                //"POE",
-                //"FUN",
-                //"XVG",
-                //"MANA",
-                //"CDT",
-                //"LEND",
-                //"DNT"
+                "TNB",
+                "POE",
+                "FUN",
+                "XVG",
+                "MANA",
+                "CDT",
+                "LEND",
+                "DNT",
+                "TNT",
+                "ENJ",
+                "FUEL",
+                "YOYO",
+                "SNGLS",
+                //"RCN",
+                "CMT",
+                "SNT",
+                "MTH",
+                "VIB",
+                "BTS",
+                "SNM",
+                "XLM",
+                "QSP",
+                "GTO",
+                "REQ",
+                "BAT",
+                "ADA",
+                "OST",
+                "LINK"
             };
 
-            var strategies =
-                new List<(string Name, Predicate<IIndexedOhlcv> BuyRule, Predicate<IIndexedOhlcv> SellRule)>();
-
-            const int shortPeriod = 7;
-            const int longPeriod = 25;
-            const int signalPeriod = 9;
-
-            var macdProfit = 0m;
-            var smaProfit = 0m;
-            var advancedProfit = 0m;
-
-            var macdStrategy = ("MACD",
-                Rule.Create(ic => ic.IsMacdBullishCross(shortPeriod, longPeriod, signalPeriod)),
-                Rule.Create(ic => ic.IsMacdBearishCross(shortPeriod, longPeriod, signalPeriod)));
-
-            var smaStrategy = ("SMA",
-                Rule.Create(ic => ic.IsSmaBullishCross(shortPeriod, longPeriod)),
-                Rule.Create(ic => ic.IsSmaBearishCross(shortPeriod, longPeriod)));
-
-            //var advancedStrategy = ("Advanced",
-            //    Rule.Create(ic => ic.IsStochRsiOversold(15)),
-            //    Rule.Create(ic => ic.IsStochRsiOverbought(15)));
-
-            strategies.Add(macdStrategy);
-            strategies.Add(smaStrategy);
-            //strategies.Add(advancedStrategy);
+            var initialAmountTotal = 0m;
+            var tradeAmountTotal = 0m;
+            var holdAmountTotal = 0m;
 
             foreach (var asset in assets)
             {
                 var candles = LoadCandles(
                     asset,
                     "ETH",
-                    new DateTime(2018, 1, 19, 0, 0, 0),
-                    new DateTime(2018, 1, 19, 12, 0, 0),
+                    new DateTime(2018, 01, 21, 0, 0, 0),
+                    new DateTime(2018, 02, 4, 20, 0, 0),
                     CandlesInterval.Minutes1);
 
-                Console.WriteLine(asset);
+                var result = Trade(candles);
 
-                foreach (var strategy in strategies)
+                if (!candles.Any())
                 {
-                    var result = Trade(candles, strategy.BuyRule, strategy.SellRule);
-                    var profit = result.GetProfit();
-
-                    if (strategy.Equals(macdStrategy))
-                    {
-                        macdProfit += profit;
-                    }
-                    else if (strategy.Equals(smaStrategy))
-                    {
-                        smaProfit += profit;
-                    }
-                    //else if (strategy.Equals(advancedStrategy))
-                    //{
-                    //    advancedProfit += profit;
-                    //}
-
-                    Console.WriteLine($" {strategy.Name}: {profit}");
+                    continue;
                 }
+
+                var firstPrice = candles.First().ClosePrice;
+                var lastPrice = candles.Last().ClosePrice;
+
+                var tradeQuoteAmount = result.CurrentBaseAmount * lastPrice + result.CurrentQuoteAmount;
+                var holdQuoteAmount = result.InitialQuoteAmount / firstPrice * lastPrice + result.InitialBaseAmount;
+
+                var tradeProfitPercents =
+                    MathUtils.CalculateProfit(result.InitialQuoteAmount, tradeQuoteAmount).Round();
+                var holdProfitPercents = MathUtils.CalculateProfit(result.InitialQuoteAmount, holdQuoteAmount).Round();
+                var diffQuoteAmount = tradeQuoteAmount - holdQuoteAmount;
+                var diffPercents = tradeProfitPercents - holdProfitPercents;
+
+                initialAmountTotal += result.InitialQuoteAmount;
+                tradeAmountTotal += tradeQuoteAmount;
+                holdAmountTotal += holdQuoteAmount;
+
+                Console.WriteLine(asset);
+                Console.WriteLine();
+                Console.WriteLine($"Trade Amount:\t {tradeQuoteAmount.Round()}");
+                Console.WriteLine($"Hold Amount:\t {holdQuoteAmount.Round()}");
+                Console.WriteLine($"Trade Profit %:\t {tradeProfitPercents}");
+                Console.WriteLine($"Hold Profit %:\t {holdProfitPercents}");
+                Console.WriteLine($"Diff:\t\t {diffQuoteAmount.Round()}");
+                Console.WriteLine($"Diff %:\t\t {diffPercents.Round()}");
+                Console.WriteLine($"Trades Count:\t {result.TradesLog.Count}");
+
+                if (result.TradesLog.Any())
+                {
+                    Console.WriteLine($"Last trade:\t {result.TradesLog.Last().Timestamp}");
+                }
+
                 Console.WriteLine();
             }
 
+            var tradeProfit = MathUtils.CalculateProfit(initialAmountTotal, tradeAmountTotal).Round();
+            var holdProfit = MathUtils.CalculateProfit(initialAmountTotal, holdAmountTotal).Round();
+
+            Console.WriteLine();
             Console.WriteLine("----------------------");
-            Console.WriteLine($"MACD Avg: {macdProfit / assets.Count}");
-            Console.WriteLine($"SMA Avg: {smaProfit / assets.Count}");
-            Console.WriteLine($"Advanced Avg: {advancedProfit / assets.Count}");
+            Console.WriteLine();
+            Console.WriteLine($"Initial Total:\t\t {initialAmountTotal}");
+            Console.WriteLine($"Trade Total:\t\t {tradeAmountTotal.Round()}");
+            Console.WriteLine($"Hold Total:\t\t {holdAmountTotal.Round()}");
+            Console.WriteLine($"Trade Profit Total %:\t {tradeProfit}");
+            Console.WriteLine($"Hold Profit Total %:\t {holdProfit}");
         }
 
         [NotNull]
         private ITradeAccount Trade(
-            IEnumerable<Candle> candles,
-            [NotNull] Predicate<IIndexedOhlcv> buyRule,
-            [NotNull] Predicate<IIndexedOhlcv> sellRule)
+            List<Candle> candles)
         {
             var tradeSession = new TradeSession(
                 new TradeSessionConfig(
                     initialQuoteAmount: 1,
+                    initialPrice: 0,
                     fee: 0.1m,
                     minQuoteAmount: 0.01m,
-                    minProfitRatio: 0.2m),
-                buyRule,
-                sellRule);
+                    minProfitRatio: 1m,
+                    maxIdleHours: 8));
 
             var result = tradeSession.Run(candles);
 
@@ -224,11 +162,15 @@ namespace BinanceTrader
         }
 
         [NotNull]
-        private List<Candle> LoadCandles(string baseAsset, string quoteAsset, DateTime start, DateTime end,
+        private List<Candle> LoadCandles(
+            string baseAsset,
+            string quoteAsset,
+            DateTime start,
+            DateTime end,
             CandlesInterval interval)
         {
             const int maxRange = 500;
-            var candles = new List<Core.Entities.Candle>();
+            var candles = new List<Candle>();
 
             while (start < end)
             {
@@ -238,7 +180,7 @@ namespace BinanceTrader
                     : end;
 
                 var rangeCandles = _api.GetCandles(baseAsset, quoteAsset, interval, start, rangeEnd)
-                    .NotNull<Task<List<Core.Entities.Candle>>>()
+                    .NotNull()
                     .Result.NotNull()
                     .ToList();
 
@@ -246,27 +188,7 @@ namespace BinanceTrader
                 start = rangeEnd;
             }
 
-            return candles.ToTradyCandles().OrderBy(c => c.NotNull().DateTime).ToList();
+            return candles.OrderBy(c => c.NotNull().OpenTime).ToList();
         }
     }
-
-    public static class Converters
-    {
-        [NotNull]
-        public static List<Candle> ToTradyCandles(
-            [NotNull] [ItemNotNull] this IEnumerable<Core.Entities.Candle> candles)
-        {
-            return candles.Select(c => c.ToTradyCandle()).ToList().NotNull();
-        }
-
-        public static Candle ToTradyCandle([NotNull] this Core.Entities.Candle candle) =>
-            new Candle(
-                candle.OpenTime,
-                candle.OpenPrice,
-                candle.HighPrice,
-                candle.LowPrice,
-                candle.ClosePrice,
-                candle.Volume);
-    }
-
 }
