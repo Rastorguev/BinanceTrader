@@ -1,0 +1,3 @@
+[submodule "Submodules/BinanceApi"]
+	path = Submodules/BinanceApi
+	url = https://github.com/Rastorguev/Binance.API.Csharp.Client.git

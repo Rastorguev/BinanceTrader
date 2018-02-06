@@ -38,7 +38,7 @@ namespace BinanceTrader
                 },
                 orderUpdatedMessage =>
                 {
-                    var orders = binanceClient.GetCurrentOpenOrders().Result;
+                    var orders = binanceClient.GetCurrentOpenOrders("ETHUSDT").Result;
                 });
 
 
