@@ -7,9 +7,12 @@ namespace BinanceTrader
     {
         private static void Main(string[] args)
         {
-            var keyProvider = new MockKeyProvider();
-            var test = new StrategiesTests(new BinanceApi(keyProvider));
-            test.CompareStrategies();
+            var trader=new Trader();
+            trader.Trade();
+
+            //var keyProvider = new MockKeyProvider();
+            //var test = new StrategiesTests(new BinanceApi(keyProvider));
+            //test.CompareStrategies();
 
             PreventAppClose();
         }

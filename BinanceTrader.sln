@@ -13,6 +13,16 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Tools", "Bina
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Api", "BinanceTrader.Api\BinanceTrader.Api.csproj", "{DA601AAA-B999-42D2-A4DD-CB749D4FFC84}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Binance.API.Csharp.Client.Domain", "Submodules\BinanceApi\Binance.API.Csharp.Client.Domain\Binance.API.Csharp.Client.Domain.csproj", "{E255F763-A2FE-43A8-9331-019796C935C7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Submodules", "Submodules", "{2C5C11BF-53E6-4339-AC92-CAA95AC351D6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Binance.API.Csharp.Client", "Submodules\BinanceApi\Binance.API.Csharp.Client\Binance.API.Csharp.Client.csproj", "{EC2A020E-338A-46EE-9D08-C158CBD49C92}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Binance.API.Csharp.Client.Models", "Submodules\BinanceApi\Binance.API.Csharp.Client.Models\Binance.API.Csharp.Client.Models.csproj", "{7CF40EB8-D81D-40B5-B849-17E5662175D6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Binance.API.Csharp.Client.Test", "Submodules\BinanceApi\Binance.API.Csharp.Client.Test\Binance.API.Csharp.Client.Test.csproj", "{6F565960-4CB7-4292-9B46-17EF0E70EBBF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,9 +49,31 @@ Global
 		{DA601AAA-B999-42D2-A4DD-CB749D4FFC84}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DA601AAA-B999-42D2-A4DD-CB749D4FFC84}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DA601AAA-B999-42D2-A4DD-CB749D4FFC84}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E255F763-A2FE-43A8-9331-019796C935C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E255F763-A2FE-43A8-9331-019796C935C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E255F763-A2FE-43A8-9331-019796C935C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E255F763-A2FE-43A8-9331-019796C935C7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EC2A020E-338A-46EE-9D08-C158CBD49C92}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EC2A020E-338A-46EE-9D08-C158CBD49C92}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EC2A020E-338A-46EE-9D08-C158CBD49C92}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EC2A020E-338A-46EE-9D08-C158CBD49C92}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7CF40EB8-D81D-40B5-B849-17E5662175D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7CF40EB8-D81D-40B5-B849-17E5662175D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7CF40EB8-D81D-40B5-B849-17E5662175D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7CF40EB8-D81D-40B5-B849-17E5662175D6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F565960-4CB7-4292-9B46-17EF0E70EBBF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F565960-4CB7-4292-9B46-17EF0E70EBBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F565960-4CB7-4292-9B46-17EF0E70EBBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F565960-4CB7-4292-9B46-17EF0E70EBBF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{E255F763-A2FE-43A8-9331-019796C935C7} = {2C5C11BF-53E6-4339-AC92-CAA95AC351D6}
+		{EC2A020E-338A-46EE-9D08-C158CBD49C92} = {2C5C11BF-53E6-4339-AC92-CAA95AC351D6}
+		{7CF40EB8-D81D-40B5-B849-17E5662175D6} = {2C5C11BF-53E6-4339-AC92-CAA95AC351D6}
+		{6F565960-4CB7-4292-9B46-17EF0E70EBBF} = {2C5C11BF-53E6-4339-AC92-CAA95AC351D6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0D7E5627-8A3F-4EA2-A5DD-8249C2FAF2E8}
