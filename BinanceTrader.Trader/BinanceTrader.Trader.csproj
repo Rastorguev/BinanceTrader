@@ -77,14 +77,6 @@
       <Project>{05921e52-1c36-4126-941b-f158be62c28a}</Project>
       <Name>BinanceTrader.Tools</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Trady\Trady.Analysis\Trady.Analysis.csproj">
-      <Project>{ad0e14b7-a227-4d4e-94cb-978990cbe1a2}</Project>
-      <Name>Trady.Analysis</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Trady\Trady.Core\Trady.Core.csproj">
-      <Project>{2101b737-413c-4360-8120-4efa6e0abb2e}</Project>
-      <Name>Trady.Core</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
