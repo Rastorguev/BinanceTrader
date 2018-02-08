@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Timers;
 using Binance.API.Csharp.Client;
+using Binance.API.Csharp.Client.Models.Account;
 using Binance.API.Csharp.Client.Models.Enums;
 using BinanceTrader.Api;
 using BinanceTrader.Tools;
@@ -12,6 +14,7 @@ namespace BinanceTrader
     {
         private readonly Timer _timer;
         private readonly BinanceClient _binanceClient;
+        private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromHours(4);
 
         public Trader()
         {
@@ -20,7 +23,7 @@ namespace BinanceTrader
             var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
             _binanceClient = new BinanceClient(apiClient);
 
-            _timer = new Timer { Interval = TimeSpan.FromSeconds(1).TotalMilliseconds, AutoReset = true };
+            _timer = new Timer {Interval = TimeSpan.FromSeconds(1).TotalMilliseconds, AutoReset = true};
             //_timer.Elapsed += OnTimerElapsed;
             _timer.Start();
         }
@@ -30,35 +33,17 @@ namespace BinanceTrader
             //var prices = _binanceClient.GetAllPrices().Result;
             //var info = _binanceClient.GetAccountInfo().Result;
 
-
             try
             {
-                //var priceChangeInfo = await _binanceClient.GetPriceChange24H("TRX1ETH");
+                var priceChangeInfo = await _binanceClient.GetPriceChange24H("ADAETH");
                 var orders1 = await _binanceClient.GetCurrentOpenOrders();
                 //var newOrder = await _binanceClient.PostNewOrder("ADAETH", 10, 9, OrderSide.SELL);
             }
             catch (InvalidRequestException ex)
             {
-
-  
                 Console.WriteLine(ex);
                 throw;
             }
-         
-
-            //var id = Thread.CurrentThread.ManagedThreadId;
-
-            //var orders1 = _binanceClient.GetCurrentOpenOrders().Result;
-
-            //var listenKey = _binanceClient.ListenUserDataEndpoint(
-            //    accountUpdatedMessage => { },
-            //    orderUpdatedMessage => { },
-            //    orderUpdatedMessage =>
-            //    {
-            //        var orders = _binanceClient.GetCurrentOpenOrders().Result;
-            //    });
-
-            //var newOrder = _binanceClient.PostNewOrder("ADAETH", 10, 90, OrderSide.SELL).Result;
         }
 
         public void Start()
@@ -67,27 +52,41 @@ namespace BinanceTrader
 
         public async void OnTimerElapsed(object sender, ElapsedEventArgs elapsedEventArgs)
         {
-           
-            var dt = DateTime.Now.ToLocalTime();
-            var t = await _binanceClient.GetServerTime();
-            var time = DateTimeOffset.FromUnixTimeMilliseconds(t.ServerTime).LocalDateTime;
-            var dt1 = DateTime.Now.ToLocalTime();
+            var now = DateTime.Now;
+            var outdatedOrders = (await _binanceClient.GetCurrentOpenOrders())
+                .Where(o => now - o.GetTime() > _maxIdlePeriod);
 
-
-            var symbol = "ADAETH";
-            var openOrders = await _binanceClient.GetCurrentOpenOrders();
-            var trxOrders = openOrders.Where(o => o.Symbol == symbol);
-
-            foreach (var order in trxOrders)
+            foreach (var order in outdatedOrders)
             {
-                await _binanceClient.CancelOrder(symbol, order.OrderId);
+                await ForceAction(order);
             }
+        }
 
-            var newOrder = _binanceClient.PostNewOrder(symbol, 1, 90, OrderSide.SELL).Result;
+        private async Task ForceAction(Order order)
+        {
+            await _binanceClient.CancelOrder(order.Symbol, order.OrderId);
+            var statistic = (await _binanceClient.GetPriceChange24H(order.Symbol)).First();
 
-            //var priceChangeInfo = _binanceClient.GetPriceChange24H(symbol).Result;
-
-            //Console.WriteLine(priceChangeInfo.First().AskPrice);
+            if (order.Status == OrderStatus.New)
+            {
+                switch (order.Side)
+                {
+                    case OrderSide.Sell:
+                        await _binanceClient.PostNewOrder(
+                            order.Symbol,
+                            statistic.BidPrice,
+                            order.OrigQty,
+                            OrderSide.Sell);
+                        break;
+                    case OrderSide.Buy:
+                        await _binanceClient.PostNewOrder(
+                            order.Symbol,
+                            statistic.AskPrice,
+                            order.OrigQty,
+                            OrderSide.Buy);
+                        break;
+                }
+            }
         }
     }
 }

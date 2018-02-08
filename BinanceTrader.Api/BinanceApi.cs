@@ -198,15 +198,4 @@ namespace BinanceTrader.Api
             return uriBuilder.Uri;
         }
     }
-
-    public static class DateTimeExtensions
-    {
-        private static readonly DateTime UnixEpoch =
-            new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-
-        public static long GetCurrentUnixTimestampMillis(this DateTime time)
-        {
-            return (long) (time.ToUniversalTime() - UnixEpoch).TotalMilliseconds;
-        }
-    }
 }
