@@ -18,18 +18,33 @@ namespace BinanceTrader
             var keyProvider = new BinanceKeyProvider(@"D:/Keys.config");
             var keys = keyProvider.GetKeys().NotNull();
             var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
-            _binanceClient = new BinanceClient(apiClient, true);
+            _binanceClient = new BinanceClient(apiClient);
 
             _timer = new Timer { Interval = TimeSpan.FromSeconds(1).TotalMilliseconds, AutoReset = true };
-            _timer.Elapsed += OnTimerElapsed;
+            //_timer.Elapsed += OnTimerElapsed;
             _timer.Start();
         }
 
-        public void Trade()
+        public async void Trade()
         {
             //var prices = _binanceClient.GetAllPrices().Result;
             //var info = _binanceClient.GetAccountInfo().Result;
-            //var priceChangeInfo = _binanceClient.GetPriceChange24H("TRXETH").Result;
+
+
+            try
+            {
+                //var priceChangeInfo = await _binanceClient.GetPriceChange24H("TRX1ETH");
+                var orders1 = await _binanceClient.GetCurrentOpenOrders();
+                //var newOrder = await _binanceClient.PostNewOrder("ADAETH", 10, 9, OrderSide.SELL);
+            }
+            catch (InvalidRequestException ex)
+            {
+
+  
+                Console.WriteLine(ex);
+                throw;
+            }
+         
 
             //var id = Thread.CurrentThread.ManagedThreadId;
 
