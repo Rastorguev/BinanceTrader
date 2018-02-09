@@ -1,5 +1,7 @@
 ﻿using System;
+using Binance.API.Csharp.Client;
 using BinanceTrader.Api;
+using BinanceTrader.Tools;
 
 namespace BinanceTrader
 {
@@ -7,7 +9,13 @@ namespace BinanceTrader
     {
         private static void Main(string[] args)
         {
-            var trader=new Trader();
+            var keyProvider = new BinanceKeyProvider(@"D:/Keys.config");
+            var keys = keyProvider.GetKeys().NotNull();
+            var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
+            var binanceClient = new BinanceClient(apiClient);
+
+            var trader = new Trader(binanceClient);
+
             trader.Start();
 
             //var keyProvider = new MockKeyProvider();

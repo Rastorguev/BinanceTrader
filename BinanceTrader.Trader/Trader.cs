@@ -6,7 +6,6 @@ using Binance.API.Csharp.Client;
 using Binance.API.Csharp.Client.Models.Account;
 using Binance.API.Csharp.Client.Models.Enums;
 using Binance.API.Csharp.Client.Models.WebSocket;
-using BinanceTrader.Api;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
@@ -14,18 +13,16 @@ namespace BinanceTrader
 {
     public class Trader
     {
-        [NotNull] private readonly Timer _timer;
+        private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromMinutes(0.1);
+        private const decimal ProfitRatio = 2;
+
         [NotNull] private readonly BinanceClient _binanceClient;
         [CanBeNull] private string _listenKey;
+        [NotNull] private readonly Timer _timer;
 
-        private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromMinutes(0.1);
-
-        public Trader()
+        public Trader(BinanceClient binanceClient)
         {
-            var keyProvider = new BinanceKeyProvider(@"D:/Keys.config");
-            var keys = keyProvider.GetKeys().NotNull();
-            var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
-            _binanceClient = new BinanceClient(apiClient);
+            _binanceClient = binanceClient;
 
             _timer = new Timer {Interval = _maxIdlePeriod.TotalMilliseconds, AutoReset = true};
             _timer.Elapsed += OnTimerElapsed;
@@ -33,46 +30,66 @@ namespace BinanceTrader
 
         public async void Start()
         {
-            //_timer.Start();
-
-            await StartTradesListening();
+            _timer.Start();
+            await ExecuteScheduledTasks();
         }
 
-        private async Task StartTradesListening()
+        private async Task ExecuteScheduledTasks()
         {
             try
             {
-                if (_listenKey != null)
-                {
-                    await _binanceClient.CloseUserStream(_listenKey);
-                }
-
-                _listenKey = _binanceClient.ListenUserDataEndpoint(_ => { }, _ => { }, OrderHandler);
+                await InitOrdersUpdatesListening();
+                await CheckOutdatedOrders();
             }
-            catch (BinanceApiException e)
+            catch (BinanceApiException ex)
             {
-                Console.WriteLine(e);
+                Console.WriteLine(ex);
             }
         }
 
-        public async void OnTimerElapsed(object sender, ElapsedEventArgs elapsedEventArgs)
+        private async Task CheckOutdatedOrders()
         {
-            await StartTradesListening();
-            //var now = DateTime.Now;
-            //var outdatedOrders = (await _binanceClient.GetCurrentOpenOrders())
-            //    .Where(o => now - o.GetTime() > _maxIdlePeriod);
+            var now = DateTime.Now;
+            var outdatedOrders = (await _binanceClient.GetCurrentOpenOrders())
+                .Where(o => now - o.GetTime() > _maxIdlePeriod);
 
-            //foreach (var order in outdatedOrders)
-            //{
-            //    await ForceAction(order);
-            //}
+            foreach (var order in outdatedOrders)
+            {
+                await ForceTrade(order);
+            }
         }
 
-        private void OrderHandler(OrderOrTradeUpdatedMessage message)
+        private async Task PlaceOppositeOrder(OrderOrTradeUpdatedMessage order)
         {
+            try
+            {
+                switch (order.Side)
+                {
+                    case OrderSide.Sell:
+                    {
+                        var price = order.Price - order.Price.Percents(ProfitRatio);
+                        var amount = order.Price * order.OrigQty;
+                        var qty = Math.Floor(amount / price);
+
+                        await Buy(order.Symbol, price, qty);
+                        break;
+                    }
+                    case OrderSide.Buy:
+                    {
+                        var price = order.Price + order.Price.Percents(ProfitRatio);
+
+                        await Sell(order.Symbol, price, order.OrigQty);
+                        break;
+                    }
+                }
+            }
+            catch (BinanceApiException ex)
+            {
+                Console.WriteLine(ex);
+            }
         }
 
-        private async Task ForceAction(Order order)
+        private async Task ForceTrade(Order order)
         {
             await _binanceClient.CancelOrder(order.Symbol, order.OrderId);
             var statistic = (await _binanceClient.GetPriceChange24H(order.Symbol)).First();
@@ -81,21 +98,58 @@ namespace BinanceTrader
             {
                 switch (order.Side)
                 {
-                    case OrderSide.Sell:
-                        await _binanceClient.PostNewOrder(
-                            order.Symbol,
-                            statistic.BidPrice,
-                            order.OrigQty,
-                            OrderSide.Sell);
-                        break;
                     case OrderSide.Buy:
-                        await _binanceClient.PostNewOrder(
-                            order.Symbol,
-                            statistic.AskPrice,
-                            order.OrigQty,
-                            OrderSide.Buy);
+                    {
+                        await Buy(order.Symbol, statistic.AskPrice, order.OrigQty);
                         break;
+                    }
+                    case OrderSide.Sell:
+                    {
+                        await Sell(order.Symbol, statistic.BidPrice, order.OrigQty);
+                        break;
+                    }
                 }
+            }
+        }
+
+        private async Task InitOrdersUpdatesListening()
+        {
+            if (_listenKey != null)
+            {
+                await _binanceClient.CloseUserStream(_listenKey);
+            }
+
+            _listenKey = _binanceClient.ListenUserDataEndpoint(_ => { }, _ => { }, OnOrderChanged);
+        }
+
+        private Task<NewOrder> Buy(string symbol, decimal price, decimal quantity)
+        {
+            return _binanceClient.PostNewOrder(
+                symbol,
+                price,
+                quantity,
+                OrderSide.Buy);
+        }
+
+        private Task<NewOrder> Sell(string symbol, decimal price, decimal quantity)
+        {
+            return _binanceClient.PostNewOrder(
+                symbol,
+                price,
+                quantity,
+                OrderSide.Sell);
+        }
+
+        public async void OnTimerElapsed(object sender, ElapsedEventArgs elapsedEventArgs)
+        {
+            await ExecuteScheduledTasks();
+        }
+
+        private async void OnOrderChanged([NotNull] OrderOrTradeUpdatedMessage order)
+        {
+            if (order.Status == OrderStatus.Filled)
+            {
+                await PlaceOppositeOrder(order);
             }
         }
     }
