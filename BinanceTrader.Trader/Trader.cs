@@ -5,16 +5,20 @@ using System.Timers;
 using Binance.API.Csharp.Client;
 using Binance.API.Csharp.Client.Models.Account;
 using Binance.API.Csharp.Client.Models.Enums;
+using Binance.API.Csharp.Client.Models.WebSocket;
 using BinanceTrader.Api;
 using BinanceTrader.Tools;
+using JetBrains.Annotations;
 
 namespace BinanceTrader
 {
     public class Trader
     {
-        private readonly Timer _timer;
-        private readonly BinanceClient _binanceClient;
-        private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromHours(4);
+        [NotNull] private readonly Timer _timer;
+        [NotNull] private readonly BinanceClient _binanceClient;
+        [CanBeNull] private string _listenKey;
+
+        private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromMinutes(0.1);
 
         public Trader()
         {
@@ -23,43 +27,49 @@ namespace BinanceTrader
             var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
             _binanceClient = new BinanceClient(apiClient);
 
-            _timer = new Timer {Interval = TimeSpan.FromSeconds(1).TotalMilliseconds, AutoReset = true};
-            //_timer.Elapsed += OnTimerElapsed;
-            _timer.Start();
+            _timer = new Timer {Interval = _maxIdlePeriod.TotalMilliseconds, AutoReset = true};
+            _timer.Elapsed += OnTimerElapsed;
         }
 
-        public async void Trade()
+        public async void Start()
         {
-            //var prices = _binanceClient.GetAllPrices().Result;
-            //var info = _binanceClient.GetAccountInfo().Result;
+            //_timer.Start();
 
+            await StartTradesListening();
+        }
+
+        private async Task StartTradesListening()
+        {
             try
             {
-                var priceChangeInfo = await _binanceClient.GetPriceChange24H("ADAETH");
-                var orders1 = await _binanceClient.GetCurrentOpenOrders();
-                //var newOrder = await _binanceClient.PostNewOrder("ADAETH", 10, 9, OrderSide.SELL);
-            }
-            catch (InvalidRequestException ex)
-            {
-                Console.WriteLine(ex);
-                throw;
-            }
-        }
+                if (_listenKey != null)
+                {
+                    await _binanceClient.CloseUserStream(_listenKey);
+                }
 
-        public void Start()
-        {
+                _listenKey = _binanceClient.ListenUserDataEndpoint(_ => { }, _ => { }, OrderHandler);
+            }
+            catch (BinanceApiException e)
+            {
+                Console.WriteLine(e);
+            }
         }
 
         public async void OnTimerElapsed(object sender, ElapsedEventArgs elapsedEventArgs)
         {
-            var now = DateTime.Now;
-            var outdatedOrders = (await _binanceClient.GetCurrentOpenOrders())
-                .Where(o => now - o.GetTime() > _maxIdlePeriod);
+            await StartTradesListening();
+            //var now = DateTime.Now;
+            //var outdatedOrders = (await _binanceClient.GetCurrentOpenOrders())
+            //    .Where(o => now - o.GetTime() > _maxIdlePeriod);
 
-            foreach (var order in outdatedOrders)
-            {
-                await ForceAction(order);
-            }
+            //foreach (var order in outdatedOrders)
+            //{
+            //    await ForceAction(order);
+            //}
+        }
+
+        private void OrderHandler(OrderOrTradeUpdatedMessage message)
+        {
         }
 
         private async Task ForceAction(Order order)
