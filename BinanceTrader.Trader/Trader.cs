@@ -14,43 +14,46 @@ namespace BinanceTrader
 {
     public class Trader
     {
-        private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromMinutes(10);
-        private const decimal ProfitRatio = 0.05m;
-        private const string QuiteAsset = "ETH";
-        //private const decimal MinQuoteAmount = 0.01m;
+        private readonly TimeSpan _scheduleInterval = TimeSpan.FromMinutes(10);
+        private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromHours(4);
+        private const decimal ProfitRatio = 2m;
+        private const string QuoteAsset = "ETH";
+        private const decimal MinQuoteAmount = 0.01m;
 
-        //[NotNull] private Dictionary<string, decimal> _reserve = new Dictionary<string, decimal>();
         [NotNull] private readonly BinanceClient _binanceClient;
+        private readonly List<string> _currencies;
         [CanBeNull] private string _listenKey;
         [NotNull] private readonly Timer _timer;
+        private readonly Logger _logger;
 
-        public Trader(BinanceClient binanceClient)
+        public Trader(BinanceClient binanceClient, List<string> currencies)
         {
             _binanceClient = binanceClient;
+            _currencies = currencies;
 
             _timer = new Timer
             {
-                Interval = _maxIdlePeriod.TotalMilliseconds,
+                Interval = _scheduleInterval.TotalMilliseconds,
                 AutoReset = true
             };
             _timer.Elapsed += OnTimerElapsed;
+            _logger = new Logger();
         }
 
         public async void Start()
         {
             _timer.Start();
-            await InitOrdersUpdatesListening();
 
-            //await ExecuteScheduledTasks();
+            await ExecuteScheduledTasks();
         }
 
         private async Task ExecuteScheduledTasks()
         {
             try
             {
-                await Ping();
-                //await InitOrdersUpdatesListening();
-                //await CheckOutdatedOrders();
+                await InitOrdersUpdatesListening();
+                await CheckOutdatedOrders();
+                await CheckCompletedOrders();
             }
             catch (BinanceApiException ex)
             {
@@ -62,34 +65,88 @@ namespace BinanceTrader
         {
             var now = DateTime.Now;
             var outdatedOrders = (await _binanceClient.GetCurrentOpenOrders())
-                .Where(o => now - o.GetTime() > _maxIdlePeriod);
+                .Where(o => now - o.GetTime() > _maxIdlePeriod).ToList();
 
             foreach (var order in outdatedOrders)
             {
-                await ForceTrade(order);
+                await CancelOrder(order.Symbol, order.OrderId);
+                var priceInfo = (await _binanceClient.GetPriceChange24H(order.Symbol)).First();
+
+                if (order.Status == OrderStatus.New)
+                {
+                    switch (order.Side)
+                    {
+                        case OrderSide.Buy:
+                        {
+                            await PlaceOrder(OrderSide.Buy, order.Symbol, priceInfo.AskPrice, order.OrigQty, true);
+                            break;
+                        }
+                        case OrderSide.Sell:
+                        {
+                            await PlaceOrder(OrderSide.Sell, order.Symbol, priceInfo.BidPrice, order.OrigQty, true);
+                            break;
+                        }
+                    }
+                }
             }
+
+            _logger.Log("CheckOutdatedOrders");
         }
 
-        private async Task PlaceOppositeOrder(OrderOrTradeUpdatedMessage order)
+        private async Task CheckCompletedOrders()
+        {
+            foreach (var currency in _currencies)
+            {
+                var lastOrder = await GetLastOrder(currency);
+                if (lastOrder.Status == OrderStatus.Filled)
+                {
+                    await PlaceOppositeOrder(lastOrder);
+                }
+            }
+
+            _logger.Log("CheckCompletedOrders");
+        }
+
+        private async Task<Order> GetLastOrder(string currency)
+        {
+            var lastOrder = (await _binanceClient.GetAllOrders(currency, null, 1)).First();
+            return lastOrder;
+        }
+
+        private async Task PlaceOppositeOrder(IOrder order)
         {
             try
             {
+                var symbol = order.Symbol;
+                var orderPrice = order.Price;
+                var orderQty = order.OrigQty;
+
                 switch (order.Side)
                 {
                     case OrderSide.Sell:
                     {
-                        var price = (order.Price - order.Price.Percents(ProfitRatio)).Round();
-                        var amount = order.Price * order.OrigQty;
+                        var freeQuoteAmount = await GetFreeQuoteAmount();
+                        var amount = orderPrice * orderQty;
+                        amount = freeQuoteAmount - amount < MinQuoteAmount ? freeQuoteAmount : amount;
+                        var price = (orderPrice - orderPrice.Percents(ProfitRatio)).Round();
                         var qty = Math.Floor(amount / price);
 
-                        await PlaceOrder(OrderSide.Buy, order.Symbol, price, qty);
+                        if (amount > MinQuoteAmount && qty > 0)
+                        {
+                            await PlaceOrder(OrderSide.Buy, symbol, price, qty);
+                        }
+                        else
+                        {
+                            _logger.Log($"Insufficient balance {symbol}");
+                        }
+
                         break;
                     }
                     case OrderSide.Buy:
                     {
-                        var price = (order.Price + order.Price.Percents(ProfitRatio)).Round();
+                        var price = (orderPrice + orderPrice.Percents(ProfitRatio)).Round();
 
-                        await PlaceOrder(OrderSide.Sell, order.Symbol, price, order.OrigQty);
+                        await PlaceOrder(OrderSide.Sell, symbol, price, orderQty);
                         break;
                     }
                 }
@@ -100,27 +157,12 @@ namespace BinanceTrader
             }
         }
 
-        private async Task ForceTrade(Order order)
+        private async Task<decimal> GetFreeQuoteAmount()
         {
-            await _binanceClient.CancelOrder(order.Symbol, order.OrderId);
-            var priceInfo = (await _binanceClient.GetPriceChange24H(order.Symbol)).First();
+            var freeQuoteAmount = (await _binanceClient.GetAccountInfo()).Balances
+                .First(b => b.Asset == QuoteAsset).Free;
 
-            if (order.Status == OrderStatus.New)
-            {
-                switch (order.Side)
-                {
-                    case OrderSide.Buy:
-                    {
-                        await PlaceOrder(OrderSide.Buy, order.Symbol, priceInfo.AskPrice, order.OrigQty);
-                        break;
-                    }
-                    case OrderSide.Sell:
-                    {
-                        await PlaceOrder(OrderSide.Sell, order.Symbol, priceInfo.BidPrice, order.OrigQty);
-                        break;
-                    }
-                }
-            }
+            return freeQuoteAmount;
         }
 
         private async Task InitOrdersUpdatesListening()
@@ -132,27 +174,36 @@ namespace BinanceTrader
 
             _listenKey = _binanceClient.ListenUserDataEndpoint(_ => { }, OnOrderChanged, OnOrderChanged);
 
-            Log("InitOrdersUpdatesListening");
+            _logger.Log("InitOrdersUpdatesListening");
         }
 
-        private async Task Ping()
+        private async Task CheckConnection()
         {
-            if (_listenKey != null)
+            try
             {
-                try
+                if (_listenKey != null)
                 {
                     await _binanceClient.KeepAliveUserStream(_listenKey);
-                    Log("Ping");
+                    _logger.Log("CheckConnection");
                 }
-                catch (BinanceApiException ex)
+            }
+            catch (BinanceApiException ex1)
+            {
+                _logger.Log(ex1);
+
+                try
                 {
-                    Log(ex);
                     await InitOrdersUpdatesListening();
+                }
+                catch (BinanceApiException ex2)
+                {
+                    _logger.Log(ex2);
                 }
             }
         }
 
-        private async Task<NewOrder> PlaceOrder(OrderSide side, string symbol, decimal price, decimal qty)
+        private async Task<NewOrder> PlaceOrder(OrderSide side, string symbol, decimal price, decimal qty,
+            bool force = false)
         {
             var newOrder = await _binanceClient.PostNewOrder(
                 symbol,
@@ -160,9 +211,21 @@ namespace BinanceTrader
                 price,
                 side);
 
-            LogOrderPlaced(side, symbol, price, qty);
+            _logger.LogOrderPlaced(side, symbol, price, qty, force);
 
             return newOrder;
+        }
+
+        private async Task<CanceledOrder> CancelOrder(string symbol, long orderId)
+        {
+            var canceledOrder = await _binanceClient.CancelOrder(
+                symbol,
+                orderId
+            );
+
+            _logger.LogOrderCanceled(canceledOrder);
+
+            return canceledOrder;
         }
 
         public async void OnTimerElapsed(object sender, ElapsedEventArgs elapsedEventArgs)
@@ -174,45 +237,10 @@ namespace BinanceTrader
         {
             if (order.Status == OrderStatus.Filled)
             {
-                LogOrderCompleted(order.Side, order.Symbol, order.Status, order.Price, order.OrigQty);
+                _logger.LogOrderCompleted(order.Side, order.Symbol, order.Status, order.Price, order.OrigQty);
 
                 await PlaceOppositeOrder(order);
             }
-        }
-
-        public void LogOrderPlaced(OrderSide side, string symbol, decimal price, decimal qty)
-        {
-            Console.WriteLine("Placed");
-            Console.WriteLine($"{symbol}");
-            Console.WriteLine($"Side:\t\t {side}");
-            Console.WriteLine($"Time:\t\t {DateTime.Now.ToLongTimeString()}");
-            Console.WriteLine($"Price:\t\t {price.Round()}");
-            Console.WriteLine($"Qty:\t\t {qty.Round()}");
-            Console.WriteLine();
-        }
-
-        public void LogOrderCompleted(OrderSide side, string symbol, OrderStatus status, decimal price, decimal qty)
-        {
-            Console.WriteLine("Completed");
-            Console.WriteLine($"{symbol}");
-            Console.WriteLine($"Side:\t\t {side}");
-            Console.WriteLine($"Status:\t\t {status}");
-            Console.WriteLine($"Time:\t\t {DateTime.Now.ToLongTimeString()}");
-            Console.WriteLine($"Price:\t\t {price.Round()}");
-            Console.WriteLine($"Qty:\t\t {qty.Round()}");
-            Console.WriteLine();
-        }
-
-        public void Log(Exception ex)
-        {
-            Console.WriteLine(ex);
-            Console.WriteLine();
-        }
-
-        public void Log(string message)
-        {
-            Console.WriteLine(message);
-            Console.WriteLine();
         }
     }
 }

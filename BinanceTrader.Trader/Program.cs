@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Binance.API.Csharp.Client;
 using BinanceTrader.Api;
@@ -18,7 +19,8 @@ namespace BinanceTrader
             var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
             var binanceClient = new BinanceClient(apiClient);
 
-            var trader = new Trader(binanceClient);
+            var currencies = new List<string> {"TRXETH", "ADAETH", "XVGETH"};
+            var trader = new Trader(binanceClient, currencies);
 
             trader.Start();
 
