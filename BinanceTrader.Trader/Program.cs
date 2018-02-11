@@ -19,8 +19,10 @@ namespace BinanceTrader
             var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
             var binanceClient = new BinanceClient(apiClient);
 
-            var currencies = new List<string> {"TRXETH", "ADAETH", "XVGETH"};
-            var trader = new Trader(binanceClient, currencies);
+            var currencies = new List<string> {"TRXETH"};
+            var logger = new Logger();
+
+            var trader = new Trader(binanceClient, logger, currencies);
 
             trader.Start();
 
