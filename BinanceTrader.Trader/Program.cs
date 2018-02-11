@@ -1,6 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Globalization;
+using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
 using BinanceTrader.Api;
 using BinanceTrader.Tools;
@@ -26,19 +26,12 @@ namespace BinanceTrader
 
             trader.Start();
 
-            //var keyProvider = new MockKeyProvider();
-            //var test = new StrategiesTests(new BinanceApi(keyProvider));
-            //test.CompareStrategies();
-
             PreventAppClose();
         }
 
         private static void PreventAppClose()
         {
-            while (true)
-            {
-                Console.ReadKey();
-            }
+            Task.Delay(-1).Wait();
         }
     }
 }

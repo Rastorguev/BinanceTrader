@@ -16,9 +16,9 @@ namespace BinanceTrader
 {
     public class Trader
     {
-        private readonly TimeSpan _scheduleInterval = TimeSpan.FromMinutes(0.5);
-        private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromMinutes(2);
-        private const decimal ProfitRatio = 0.05m;
+        private readonly TimeSpan _scheduleInterval = TimeSpan.FromMinutes(10);
+        private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromHours(4);
+        private const decimal ProfitRatio = 2m;
         private const decimal MinQuoteAmount = 0.01m;
 
         [NotNull] private readonly BinanceClient _binanceClient;
@@ -87,7 +87,7 @@ namespace BinanceTrader
         {
             var now = DateTime.Now;
             var outdatedOrders = (await GetOpenOrders())
-                .Where(o => now - o.GetTime() > _maxIdlePeriod).ToList();
+                .Where(o => now.ToLocalTime() - o.GetTime().ToLocalTime() > _maxIdlePeriod).ToList();
 
             foreach (var order in outdatedOrders)
             {
@@ -231,7 +231,7 @@ namespace BinanceTrader
             {
                 await action();
             }
-            catch (BinanceApiException ex)
+            catch (Exception ex)
             {
                 _logger.Log(ex);
             }
