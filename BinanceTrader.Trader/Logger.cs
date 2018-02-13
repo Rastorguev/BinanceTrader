@@ -11,7 +11,9 @@ namespace BinanceTrader
             LogTime();
 
             Console.ForegroundColor = ConsoleColor.Green;
+
             Console.WriteLine(orderEvent);
+
             Console.ResetColor();
 
             if (order != null)
@@ -36,8 +38,13 @@ namespace BinanceTrader
         public void Log(Exception ex)
         {
             LogTime();
+
+            Console.ForegroundColor = ConsoleColor.Red;
+
             Console.WriteLine(ex);
             Console.WriteLine();
+
+            Console.ResetColor();
         }
 
         public void Log(string message)
@@ -47,9 +54,42 @@ namespace BinanceTrader
             Console.WriteLine();
         }
 
-        private static void LogTime()
+        public void LogImportant(string message)
         {
-            Console.WriteLine(DateTime.Now.ToLongTimeString());
+            LogTime();
+
+            Console.ForegroundColor = ConsoleColor.Magenta;
+
+            Console.WriteLine(message);
+            Console.WriteLine();
+
+            Console.ResetColor();
+        }
+
+        public void LogTitle(string title)
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.WriteLine($"{title.ToUpper()}");
+            Console.WriteLine();
+
+            Console.ResetColor();
+        }
+
+        public void LogSeparator()
+        {
+            Console.WriteLine();
+            Console.WriteLine("-------------------------------------------------------");
+            Console.WriteLine();
+        }
+
+        private static void LogTime(DateTime? time = null)
+        {
+            var timeToLog = time ?? DateTime.Now;
+
+            Console.WriteLine(timeToLog);
         }
     }
 }

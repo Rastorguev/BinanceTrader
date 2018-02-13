@@ -21,18 +21,18 @@ namespace BinanceTrader
         private const decimal MinQuoteAmount = 0.01m;
 
         [NotNull] private readonly BinanceClient _binanceClient;
-        [NotNull] [ItemNotNull] private readonly List<string> _currencies;
+        [NotNull] [ItemNotNull] private readonly List<string> _symbols;
         [NotNull] private readonly Timer _timer;
         [NotNull] private readonly Logger _logger;
 
         public Trader(
             [NotNull] BinanceClient binanceClient,
             [NotNull] Logger logger,
-            [NotNull] List<string> currencies)
+            [NotNull] List<string> symbols)
         {
             _logger = logger;
             _binanceClient = binanceClient;
-            _currencies = currencies;
+            _symbols = symbols;
 
             _timer = new Timer
             {
@@ -54,47 +54,42 @@ namespace BinanceTrader
             await CheckOrders();
         }
 
-        //private async void OnOrderChanged([NotNull] OrderOrTradeUpdatedMessage order)
-        //{
-        //    await ExecuteSafe(async () =>
-        //    {
-        //        if (order.Status == OrderStatus.Filled)
-        //        {
-        //            _logger.LogOrder("Completed", order, "ChangedEvent");
-
-        //            var hasOpenOrder = (await GetOpenOrders()).Any(o => o.Symbol == order.Symbol);
-        //            if (!hasOpenOrder)
-        //            {
-        //                var newOrder = await PlaceOppositeOrder(order);
-        //                _logger.LogOrder("Placed", newOrder, "ChangedEvent");
-        //            }
-        //            else
-        //            {
-        //                _logger.LogOrder("OrderAlreadyExists", order, "ChangedEvent");
-        //            }
-        //        }
-        //    });
-        //}
-
         private async Task CheckOrders()
         {
-            foreach (var currency in _currencies)
+            foreach (var symbol in _symbols)
             {
-                var now = DateTime.Now;
-                var order = await GetLastOrder(currency).NotNull();
-                var isCompleted = order.Status == OrderStatus.Filled;
-                var isNew = order.Status == OrderStatus.New;
-                var isOutdated = isNew && now.ToLocalTime() - order.GetTime().ToLocalTime() > _maxIdlePeriod;
+                try
+                {
+                    _logger.LogTitle(symbol);
 
-                if (isOutdated)
-                {
-                    await HandleExpiredOrder(order);
+                    var now = DateTime.Now;
+                    var order = await GetLastOrder(symbol).NotNull();
+                    var isCompleted = order.Status == OrderStatus.Filled;
+                    var isNew = order.Status == OrderStatus.New;
+                    var isExpired = isNew && now.ToLocalTime() - order.GetTime().ToLocalTime() > _maxIdlePeriod;
+
+                    _logger.LogOrder("Status", order);
+
+                    if (isExpired)
+                    {
+                        _logger.LogImportant("CHECK EXPIRED");
+
+                        await HandleExpiredOrder(order);
+                    }
+                    else if (isCompleted)
+                    {
+                        _logger.LogImportant("CHECK COMPLETED");
+
+                        await HandleCompletedOrder(order);
+                    }
                 }
-                else if (isCompleted)
+                catch (Exception ex)
                 {
-                    await HandleCompletedOrder(order);
+                    _logger.Log(ex);
                 }
             }
+
+            _logger.LogSeparator();
         }
 
         private async Task HandleCompletedOrder([NotNull] IOrder order)
@@ -107,11 +102,7 @@ namespace BinanceTrader
                     var price = (order.Price - order.Price.Percents(ProfitRatio)).Round();
                     var qty = Math.Floor(amount / price);
 
-                    if (IsMinNotional(price, qty))
-                    {
-                        await PlaceOrder(OrderSide.Buy, order.Symbol, price, qty);
-                    }
-
+                    await TryPlaceOrder(OrderSide.Buy, order.Symbol, price, qty);
                     break;
                 }
                 case OrderSide.Buy:
@@ -119,11 +110,7 @@ namespace BinanceTrader
                     var price = (order.Price + order.Price.Percents(ProfitRatio)).Round();
                     var qty = order.OrigQty;
 
-                    if (IsMinNotional(price, qty))
-                    {
-                        await PlaceOrder(OrderSide.Sell, order.Symbol, price, qty);
-                    }
-
+                    await TryPlaceOrder(OrderSide.Sell, order.Symbol, price, qty);
                     break;
                 }
             }
@@ -132,8 +119,12 @@ namespace BinanceTrader
         private async Task HandleExpiredOrder([NotNull] IOrder order)
         {
             await CancelOrder(order);
-            _logger.LogOrder("Canceled", order, "CheckOutdated");
 
+            await ReplaceWithActualPrice(order);
+        }
+
+        private async Task ReplaceWithActualPrice(IOrder order)
+        {
             var priceInfo = await GetPriceInfo(order.Symbol).NotNull();
 
             switch (order.Side)
@@ -144,12 +135,7 @@ namespace BinanceTrader
                     var price = priceInfo.AskPrice;
                     var qty = Math.Floor(amount / price);
 
-                    if (IsMinNotional(price, qty))
-                    {
-                        var newOrder = await PlaceOrder(OrderSide.Buy, order.Symbol, price, qty);
-                        _logger.LogOrder("Placed", newOrder, "CheckOutdated");
-                    }
-
+                    await TryPlaceOrder(OrderSide.Buy, order.Symbol, price, qty);
                     break;
                 }
                 case OrderSide.Sell:
@@ -157,27 +143,41 @@ namespace BinanceTrader
                     var price = priceInfo.BidPrice;
                     var qty = order.OrigQty;
 
-                    if (IsMinNotional(price, qty))
-                    {
-                        var newOrder = await PlaceOrder(OrderSide.Sell, order.Symbol, price, qty);
-                        _logger.LogOrder("Placed", newOrder, "CheckOutdated");
-                    }
-
+                    await TryPlaceOrder(OrderSide.Sell, order.Symbol, price, qty);
                     break;
                 }
             }
         }
 
-        private bool IsMinNotional(decimal price, decimal qty)
+        private async Task<Order> GetLastOrder(string currency)
         {
-            var isMinNotional = price * qty >= MinQuoteAmount;
+            var lastOrder = (await _binanceClient.GetAllOrders(currency, null, 1)).NotNull().First();
+            return lastOrder;
+        }
 
-            if (!isMinNotional)
+        private async Task<Result<NewOrder>> TryPlaceOrder(OrderSide side, string symbol, decimal price, decimal qty)
+        {
+            var success = false;
+            NewOrder newOrder = null;
+
+            if (IsMinNotional(price, qty))
             {
-                _logger.Log($"MIN_NOTIONAL {price} * {qty}");
+                newOrder = await _binanceClient.PostNewOrder(
+                    symbol,
+                    qty,
+                    price,
+                    side);
+
+                success = true;
+
+                _logger.LogOrder("Placed", newOrder);
+            }
+            else
+            {
+                _logger.LogImportant($"{symbol} MIN NOTIONAL ERROR {price} * {qty} = {price * qty}");
             }
 
-            return isMinNotional;
+            return new Result<NewOrder>(success, newOrder);
         }
 
         private async Task<PriceChangeInfo> GetPriceInfo(string symbol)
@@ -192,73 +192,32 @@ namespace BinanceTrader
             return _binanceClient.GetCurrentOpenOrders();
         }
 
-        //private async Task CheckCompletedOrders()
-        //{
-        //    foreach (var currency in _currencies)
-        //    {
-        //        var lastOrder = await GetLastOrder(currency).NotNull();
-        //        if (lastOrder.Status == OrderStatus.Filled)
-        //        {
-        //            var newOrder = await PlaceOppositeOrder(lastOrder);
-        //            _logger.LogOrder("Placed", newOrder, "CheckCompleted");
-        //        }
-        //    }
-
-        //    _logger.Log("CheckCompletedOrders");
-        //}
-
-        //private async Task<IOrder> PlaceOppositeOrder(IOrder order)
-        //{
-        //    switch (order.Side)
-        //    {
-        //        case OrderSide.Sell:
-        //        {
-        //            var amount = order.Price * order.OrigQty;
-        //            var price = (order.Price - order.Price.Percents(ProfitRatio)).Round();
-        //            var qty = Math.Floor(amount / price);
-
-        //            if (amount > MinQuoteAmount && qty > 0)
-        //            {
-        //                return await PlaceOrder(OrderSide.Buy, order.Symbol, price, qty);
-        //            }
-
-        //            _logger.Log($"Insufficient balance {order.Symbol}");
-
-        //            break;
-        //        }
-        //        case OrderSide.Buy:
-        //        {
-        //            var price = (order.Price + order.Price.Percents(ProfitRatio)).Round();
-
-        //            return await PlaceOrder(OrderSide.Sell, order.Symbol, price, order.OrigQty);
-        //        }
-        //    }
-
-        //    return null;
-        //}
-
-        private async Task<Order> GetLastOrder(string currency)
-        {
-            var lastOrder = (await _binanceClient.GetAllOrders(currency, null, 1)).NotNull().First();
-            return lastOrder;
-        }
-
-        private async Task<NewOrder> PlaceOrder(OrderSide side, string symbol, decimal price, decimal qty)
-        {
-            var newOrder = await _binanceClient.PostNewOrder(
-                symbol,
-                qty,
-                price,
-                side);
-
-            return newOrder;
-        }
-
         private async Task<CanceledOrder> CancelOrder([NotNull] IOrder order)
         {
             var canceledOrder = await _binanceClient.CancelOrder(order.Symbol, order.OrderId);
 
+            _logger.LogOrder("Canceled", order);
+
             return canceledOrder;
+        }
+
+        private static bool IsMinNotional(decimal price, decimal qty)
+        {
+            var isMinNotional = price * qty >= MinQuoteAmount;
+
+            return isMinNotional;
+        }
+
+        public class Result<T>
+        {
+            public bool Success { get; }
+            public T Value { get; }
+
+            public Result(bool success, T value)
+            {
+                Success = success;
+                Value = value;
+            }
         }
 
         //private async Task<decimal> GetFreeQuoteAmount()
