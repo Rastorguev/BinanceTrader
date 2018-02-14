@@ -46,10 +46,8 @@ namespace BinanceTrader
 
         public async void Start()
         {
-            var b = await GetTotalBalance();
-
-            //await CheckOrders();
-            //_timer.Start();
+            await CheckOrders();
+            _timer.Start();
         }
 
         public async void OnTimerElapsed(object sender, ElapsedEventArgs elapsedEventArgs)
@@ -90,6 +88,16 @@ namespace BinanceTrader
                 {
                     _logger.Log(ex);
                 }
+            }
+
+            try
+            {
+                var balance = await GetTotalBalance();
+                _logger.Log($"Balance: {balance} {QuoteAsset}");
+            }
+            catch (Exception ex)
+            {
+                _logger.Log(ex);
             }
 
             _logger.LogSeparator();
@@ -208,7 +216,7 @@ namespace BinanceTrader
         {
             var total = 0m;
 
-            var prices = await _binanceClient.GetAllPrices();
+            var prices = (await _binanceClient.GetAllPrices()).ToList();
             var balances = (await _binanceClient.GetAccountInfo()).NotNull()
                 .Balances.NotNull().Where(b => b.NotNull().Free + b.NotNull().Locked > 0).ToList();
 
@@ -223,12 +231,11 @@ namespace BinanceTrader
                 else
                 {
                     var symbol = $"{balance.NotNull().Asset}{QuoteAsset}";
-
                     total += assetTotal * prices.First(p => p.Symbol == symbol).Price;
                 }
             }
 
-            return total;
+            return total.Round();
         }
 
         private static bool IsMinNotional(decimal price, decimal qty)
