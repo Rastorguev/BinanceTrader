@@ -19,6 +19,7 @@ namespace BinanceTrader
         private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromHours(4);
         private const decimal ProfitRatio = 2m;
         private const decimal MinQuoteAmount = 0.01m;
+        private const string QuoteAsset = "ETH";
 
         [NotNull] private readonly BinanceClient _binanceClient;
         [NotNull] [ItemNotNull] private readonly List<string> _symbols;
@@ -45,8 +46,10 @@ namespace BinanceTrader
 
         public async void Start()
         {
-            await CheckOrders();
-            _timer.Start();
+            var b = await GetTotalBalance();
+
+            //await CheckOrders();
+            //_timer.Start();
         }
 
         public async void OnTimerElapsed(object sender, ElapsedEventArgs elapsedEventArgs)
@@ -125,7 +128,7 @@ namespace BinanceTrader
 
         private async Task ReplaceWithActualPrice(IOrder order)
         {
-            var priceInfo = await GetPriceInfo(order.Symbol).NotNull();
+            var priceInfo = await GetPrices(order.Symbol).NotNull();
 
             switch (order.Side)
             {
@@ -180,7 +183,7 @@ namespace BinanceTrader
             return new Result<NewOrder>(success, newOrder);
         }
 
-        private async Task<PriceChangeInfo> GetPriceInfo(string symbol)
+        private async Task<PriceChangeInfo> GetPrices(string symbol)
         {
             var priceInfo = (await _binanceClient.GetPriceChange24H(symbol)).NotNull().First();
 
@@ -199,6 +202,33 @@ namespace BinanceTrader
             _logger.LogOrder("Canceled", order);
 
             return canceledOrder;
+        }
+
+        private async Task<decimal> GetTotalBalance()
+        {
+            var total = 0m;
+
+            var prices = await _binanceClient.GetAllPrices();
+            var balances = (await _binanceClient.GetAccountInfo()).NotNull()
+                .Balances.NotNull().Where(b => b.NotNull().Free + b.NotNull().Locked > 0).ToList();
+
+            foreach (var balance in balances)
+            {
+                var assetTotal = balance.NotNull().Free + balance.NotNull().Locked;
+
+                if (balance.NotNull().Asset == QuoteAsset)
+                {
+                    total += assetTotal;
+                }
+                else
+                {
+                    var symbol = $"{balance.NotNull().Asset}{QuoteAsset}";
+
+                    total += assetTotal * prices.First(p => p.Symbol == symbol).Price;
+                }
+            }
+
+            return total;
         }
 
         private static bool IsMinNotional(decimal price, decimal qty)
