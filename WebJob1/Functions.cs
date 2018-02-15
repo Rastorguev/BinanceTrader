@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.WebJobs;
 
 namespace WebJob1
@@ -17,24 +16,29 @@ namespace WebJob1
             log.WriteLine(message);
         }
 
-         [NoAutomaticTriggerAttribute]
+        [NoAutomaticTrigger]
         public static async Task ProcessMethod(TextWriter log)
         {
+            var key = "792fccae-78e5-414f-8bb3-804ec0f6a4d1";
+
+            //TelemetryConfiguration.Active.InstrumentationKey =
+            //    CloudConfigurationManager.GetSetting(key);
+
+            var telemetryClient = new TelemetryClient {InstrumentationKey = key};
+
             while (true)
             {
+                //Console.WriteLine((DateTime.Now + " Test"));
 
-                log.WriteLine(DateTime.Now + " Test");
-                //Console.WriteLine(DateTime.Now + " Test");
+                //log.WriteLine(DateTime.Now + " Test");
 
-                  //try
-                  //{
-                  //    log.WriteLine("There are {0} pending requests", pendings.Count);
-                  //}
-                  //catch (Exception ex)
-                  //{
-                  //    log.WriteLine("Error occurred in processing pending altapay requests. Error : {0}", ex.Message);
-                  //}
-                  await Task.Delay(TimeSpan.FromSeconds(1));
+                //telemetryClient.TrackEvent("TestEvent1");
+                //telemetryClient.TrackTrace("TestTrace");
+                //telemetryClient.TrackException(new Exception("TEST EXCEPTION"));
+
+                telemetryClient.Flush();
+
+                await Task.Delay(TimeSpan.FromSeconds(1));
             }
         }
     }
