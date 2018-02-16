@@ -1,11 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27130.2020
+VisualStudioVersion = 15.0.27130.2027
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BinanceTrader.Trader", "BinanceTrader.Trader\BinanceTrader.Trader.csproj", "{C05238AC-299C-4D97-B075-103466E47BAB}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Tests", "BinanceTrader.Tests\BinanceTrader.Tests.csproj", "{DE5C4A0C-EEA6-4954-95E5-2744C3209CD5}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Core", "BinanceTrader.Core\BinanceTrader.Core.csproj", "{80112D69-6E99-493B-9427-825BA3208139}"
 EndProject
@@ -35,10 +33,6 @@ Global
 		{C05238AC-299C-4D97-B075-103466E47BAB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C05238AC-299C-4D97-B075-103466E47BAB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C05238AC-299C-4D97-B075-103466E47BAB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{DE5C4A0C-EEA6-4954-95E5-2744C3209CD5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DE5C4A0C-EEA6-4954-95E5-2744C3209CD5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DE5C4A0C-EEA6-4954-95E5-2744C3209CD5}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DE5C4A0C-EEA6-4954-95E5-2744C3209CD5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{80112D69-6E99-493B-9427-825BA3208139}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{80112D69-6E99-493B-9427-825BA3208139}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{80112D69-6E99-493B-9427-825BA3208139}.Release|Any CPU.ActiveCfg = Release|Any CPU
