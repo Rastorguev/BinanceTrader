@@ -16,7 +16,7 @@ namespace BinanceTrader
     public class Trader
     {
         private readonly TimeSpan _scheduleInterval = TimeSpan.FromMinutes(10);
-        private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromHours(4);
+        private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromHours(8);
         private const decimal ProfitRatio = 2m;
         private const decimal MinQuoteAmount = 0.01m;
         private const string QuoteAsset = "ETH";
