@@ -63,8 +63,15 @@ namespace BinanceTrader
                 {
                     _logger.LogTitle(symbol);
 
-                    var now = DateTime.Now;
                     var order = await GetLastOrder(symbol).NotNull();
+
+                    if (order == null)
+                    {
+                        _logger.LogImportant($"No orders for {symbol}");
+                        continue;
+                    }
+
+                    var now = DateTime.Now;
                     var isCompleted = order.Status == OrderStatus.Filled;
                     var isNew = order.Status == OrderStatus.New;
                     var isExpired = isNew && now.ToLocalTime() - order.GetTime().ToLocalTime() > _maxIdlePeriod;
@@ -111,6 +118,11 @@ namespace BinanceTrader
                 {
                     var amount = order.Price * order.OrigQty;
                     var price = (order.Price - order.Price.Percents(ProfitRatio)).Round();
+                    if (price == 0)
+                    {
+                        price = await GetActualPrice(order.Symbol, OrderSide.Buy);
+                    }
+
                     var qty = Math.Floor(amount / price);
 
                     await TryPlaceOrder(OrderSide.Buy, order.Symbol, price, qty);
@@ -119,6 +131,11 @@ namespace BinanceTrader
                 case OrderSide.Buy:
                 {
                     var price = (order.Price + order.Price.Percents(ProfitRatio)).Round();
+                    if (price == 0)
+                    {
+                        price = await GetActualPrice(order.Symbol, OrderSide.Sell);
+                    }
+
                     var qty = order.OrigQty;
 
                     await TryPlaceOrder(OrderSide.Sell, order.Symbol, price, qty);
@@ -134,16 +151,14 @@ namespace BinanceTrader
             await ReplaceWithActualPrice(order);
         }
 
-        private async Task ReplaceWithActualPrice(IOrder order)
+        private async Task ReplaceWithActualPrice([NotNull] IOrder order)
         {
-            var priceInfo = await GetPrices(order.Symbol).NotNull();
-
             switch (order.Side)
             {
                 case OrderSide.Buy:
                 {
                     var amount = order.Price * order.OrigQty;
-                    var price = priceInfo.AskPrice;
+                    var price = await GetActualPrice(order.Symbol, OrderSide.Buy);
                     var qty = Math.Floor(amount / price);
 
                     await TryPlaceOrder(OrderSide.Buy, order.Symbol, price, qty);
@@ -151,7 +166,7 @@ namespace BinanceTrader
                 }
                 case OrderSide.Sell:
                 {
-                    var price = priceInfo.BidPrice;
+                    var price = await GetActualPrice(order.Symbol, OrderSide.Sell);
                     var qty = order.OrigQty;
 
                     await TryPlaceOrder(OrderSide.Sell, order.Symbol, price, qty);
@@ -160,9 +175,25 @@ namespace BinanceTrader
             }
         }
 
+        private async Task<decimal> GetActualPrice(string symbol, OrderSide orderSide)
+        {
+            var priceInfo = await GetPrices(symbol).NotNull();
+
+            switch (orderSide)
+            {
+                case OrderSide.Buy:
+                    return priceInfo.AskPrice;
+                case OrderSide.Sell:
+                    return priceInfo.BidPrice;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(orderSide), orderSide, null);
+            }
+        }
+
         private async Task<Order> GetLastOrder(string currency)
         {
-            var lastOrder = (await _binanceClient.GetAllOrders(currency, null, 1)).NotNull().First();
+            var lastOrder = (await _binanceClient.GetAllOrders(currency, null, 1)).NotNull().FirstOrDefault();
+
             return lastOrder;
         }
 
@@ -216,8 +247,8 @@ namespace BinanceTrader
         {
             var total = 0m;
 
-            var prices = (await _binanceClient.GetAllPrices()).ToList();
-            var balances = (await _binanceClient.GetAccountInfo()).NotNull()
+            var prices = (await _binanceClient.GetAllPrices().NotNull()).ToList();
+            var balances = (await _binanceClient.GetAccountInfo().NotNull()).NotNull()
                 .Balances.NotNull().Where(b => b.NotNull().Free + b.NotNull().Locked > 0).ToList();
 
             foreach (var balance in balances)
@@ -231,7 +262,7 @@ namespace BinanceTrader
                 else
                 {
                     var symbol = $"{balance.NotNull().Asset}{QuoteAsset}";
-                    total += assetTotal * prices.First(p => p.Symbol == symbol).Price;
+                    total += assetTotal * prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
                 }
             }
 
@@ -256,13 +287,5 @@ namespace BinanceTrader
                 Value = value;
             }
         }
-
-        //private async Task<decimal> GetFreeQuoteAmount()
-        //{
-        //    var freeQuoteAmount = (await _binanceClient.GetAccountInfo()).Balances
-        //        .First(b => b.Asset == QuoteAsset).Free;
-
-        //    return freeQuoteAmount;
-        //}
     }
 }
