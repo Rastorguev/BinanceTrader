@@ -12,9 +12,9 @@ using Binance.API.Csharp.Client.Models.WebSocket;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader
+namespace BinanceTrader.Trader
 {
-    public class Trader
+    public class RabbitTrader
     {
         private readonly TimeSpan _scheduleInterval = TimeSpan.FromMinutes(10);
         private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromHours(8);
@@ -25,11 +25,11 @@ namespace BinanceTrader
         [NotNull] private readonly BinanceClient _binanceClient;
         [NotNull] [ItemNotNull] private readonly List<string> _symbols;
         [NotNull] private readonly Timer _timer;
-        [NotNull] private readonly Logger _logger;
+        [NotNull] private readonly ILogger _logger;
 
-        public Trader(
+        public RabbitTrader(
             [NotNull] BinanceClient binanceClient,
-            [NotNull] Logger logger,
+            [NotNull] ILogger logger,
             [NotNull] List<string> symbols)
         {
             _logger = logger;
@@ -116,32 +116,32 @@ namespace BinanceTrader
             switch (order.Side)
             {
                 case OrderSide.Sell:
-                {
-                    var amount = order.Price * order.OrigQty;
-                    var price = (order.Price - order.Price.Percents(ProfitRatio)).Round();
-                    if (price == 0)
                     {
-                        price = await GetActualPrice(order.Symbol, OrderSide.Buy);
+                        var amount = order.Price * order.OrigQty;
+                        var price = (order.Price - order.Price.Percents(ProfitRatio)).Round();
+                        if (price == 0)
+                        {
+                            price = await GetActualPrice(order.Symbol, OrderSide.Buy);
+                        }
+
+                        var qty = Math.Floor(amount / price);
+
+                        await TryPlaceOrder(OrderSide.Buy, order.Symbol, price, qty);
+                        break;
                     }
-
-                    var qty = Math.Floor(amount / price);
-
-                    await TryPlaceOrder(OrderSide.Buy, order.Symbol, price, qty);
-                    break;
-                }
                 case OrderSide.Buy:
-                {
-                    var price = (order.Price + order.Price.Percents(ProfitRatio)).Round();
-                    if (price == 0)
                     {
-                        price = await GetActualPrice(order.Symbol, OrderSide.Sell);
+                        var price = (order.Price + order.Price.Percents(ProfitRatio)).Round();
+                        if (price == 0)
+                        {
+                            price = await GetActualPrice(order.Symbol, OrderSide.Sell);
+                        }
+
+                        var qty = order.OrigQty;
+
+                        await TryPlaceOrder(OrderSide.Sell, order.Symbol, price, qty);
+                        break;
                     }
-
-                    var qty = order.OrigQty;
-
-                    await TryPlaceOrder(OrderSide.Sell, order.Symbol, price, qty);
-                    break;
-                }
             }
         }
 
@@ -157,22 +157,22 @@ namespace BinanceTrader
             switch (order.Side)
             {
                 case OrderSide.Buy:
-                {
-                    var amount = order.Price * order.OrigQty;
-                    var price = await GetActualPrice(order.Symbol, OrderSide.Buy);
-                    var qty = Math.Floor(amount / price);
+                    {
+                        var amount = order.Price * order.OrigQty;
+                        var price = await GetActualPrice(order.Symbol, OrderSide.Buy);
+                        var qty = Math.Floor(amount / price);
 
-                    await TryPlaceOrder(OrderSide.Buy, order.Symbol, price, qty);
-                    break;
-                }
+                        await TryPlaceOrder(OrderSide.Buy, order.Symbol, price, qty);
+                        break;
+                    }
                 case OrderSide.Sell:
-                {
-                    var price = await GetActualPrice(order.Symbol, OrderSide.Sell);
-                    var qty = order.OrigQty;
+                    {
+                        var price = await GetActualPrice(order.Symbol, OrderSide.Sell);
+                        var qty = order.OrigQty;
 
-                    await TryPlaceOrder(OrderSide.Sell, order.Symbol, price, qty);
-                    break;
-                }
+                        await TryPlaceOrder(OrderSide.Sell, order.Symbol, price, qty);
+                        break;
+                    }
             }
         }
 

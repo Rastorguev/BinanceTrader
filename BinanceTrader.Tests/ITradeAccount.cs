@@ -4,7 +4,7 @@ using Binance.API.Csharp.Client.Models.Enums;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader.Tests
+namespace BinanceTrader
 {
     public interface ITradeAccount
     {

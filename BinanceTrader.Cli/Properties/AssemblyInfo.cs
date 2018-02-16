@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("BinanceTrader.RabbitTrader")]
+[assembly: AssemblyTitle("BinanceTrader.Cli")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("BinanceTrader.RabbitTrader")]
+[assembly: AssemblyProduct("BinanceTrader.Cli")]
 [assembly: AssemblyCopyright("Copyright ©  2018")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("a0ca2194-d70d-434a-a320-5e6ca39c3c32")]
+[assembly: Guid("ee9a8612-c3ea-4bd8-8dca-6968b363b465")]
 
 // Version information for an assembly consists of the following four values:
 //

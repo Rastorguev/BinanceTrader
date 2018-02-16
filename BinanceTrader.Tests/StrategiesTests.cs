@@ -8,7 +8,7 @@ using Binance.API.Csharp.Client.Models.Market;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader.Tests
+namespace BinanceTrader
 {
     public class StrategiesTests
     {
@@ -93,7 +93,7 @@ namespace BinanceTrader.Tests
                 var candles = LoadCandles(
                     asset,
                     "ETH",
-                    new DateTime(2018, 02, 1, 0, 0, 0),
+                    new DateTime(2018, 02, 15, 0, 0, 0),
                     new DateTime(2018, 02, 16, 0, 0, 0),
                     TimeInterval.Minutes_1);
 

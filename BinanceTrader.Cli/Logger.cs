@@ -1,10 +1,11 @@
 ﻿using System;
 using Binance.API.Csharp.Client.Models.WebSocket;
 using BinanceTrader.Tools;
+using BinanceTrader.Trader;
 
-namespace BinanceTrader
+namespace BinanceTrader.Cli
 {
-    public class Logger
+    public class Logger : ILogger
     {
         public void LogOrder(string orderEvent, IOrder order, string info = null)
         {

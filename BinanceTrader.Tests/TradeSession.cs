@@ -7,7 +7,7 @@ using Binance.API.Csharp.Client.Models.Market;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader.Tests
+namespace BinanceTrader
 {
     public class TradeSession
     {

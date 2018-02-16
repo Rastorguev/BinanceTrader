@@ -2,7 +2,6 @@
 using System.Globalization;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
-using BinanceTrader.Tests;
 using BinanceTrader.Tools;
 
 namespace BinanceTrader
@@ -21,12 +20,6 @@ namespace BinanceTrader
 
             var tests = new StrategiesTests(binanceClient);
             tests.CompareStrategies();
-
-
-            //var logger = new Logger();
-            //var symbols = new List<string> {"TRXETH", "ADAETH", "XVGETH", "MANAETH", "CNDETH", "FUNETH", "ENJETH"};
-            //var trader = new Trader(binanceClient, logger, symbols);
-            //trader.Start();
 
             PreventAppClose();
         }

@@ -4,16 +4,15 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{C05238AC-299C-4D97-B075-103466E47BAB}</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>BinanceTrader</RootNamespace>
-    <AssemblyName>BinanceTrader</AssemblyName>
+    <ProjectGuid>{A0CA2194-D70D-434A-A320-5E6CA39C3C32}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>BinanceTrader.Trader</RootNamespace>
+    <AssemblyName>BinanceTrader.Trader</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -23,7 +22,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -35,13 +33,8 @@
     <Reference Include="JetBrains.Annotations, Version=11.1.0.0, Culture=neutral, PublicKeyToken=1010a0d8d6380325, processorArchitecture=MSIL">
       <HintPath>..\packages\JetBrains.Annotations.11.1.0\lib\net20\JetBrains.Annotations.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -50,19 +43,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BinanceKeyProvider.cs" />
-    <Compile Include="Logger.cs" />
-    <Compile Include="Trader.cs" />
-    <Compile Include="Tests\TradeSession.cs" />
-    <Compile Include="Tests\ITradeAccount.cs" />
-    <Compile Include="Tests\StrategiesTests.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="ILogger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Tests\TradeSessionConfig.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
-    <None Include="packages.config" />
+    <Compile Include="RabbitTrader.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BinanceTrader.Tools\BinanceTrader.Tools.csproj">
@@ -70,17 +53,20 @@
       <Name>BinanceTrader.Tools</Name>
     </ProjectReference>
     <ProjectReference Include="..\Submodules\BinanceApi\Binance.API.Csharp.Client.Domain\Binance.API.Csharp.Client.Domain.csproj">
-      <Project>{E255F763-A2FE-43A8-9331-019796C935C7}</Project>
+      <Project>{e255f763-a2fe-43a8-9331-019796c935c7}</Project>
       <Name>Binance.API.Csharp.Client.Domain</Name>
     </ProjectReference>
     <ProjectReference Include="..\Submodules\BinanceApi\Binance.API.Csharp.Client.Models\Binance.API.Csharp.Client.Models.csproj">
-      <Project>{7CF40EB8-D81D-40B5-B849-17E5662175D6}</Project>
+      <Project>{7cf40eb8-d81d-40b5-b849-17e5662175d6}</Project>
       <Name>Binance.API.Csharp.Client.Models</Name>
     </ProjectReference>
     <ProjectReference Include="..\Submodules\BinanceApi\Binance.API.Csharp.Client\Binance.API.Csharp.Client.csproj">
       <Project>{ec2a020e-338a-46ee-9d08-c158cbd49c92}</Project>
       <Name>Binance.API.Csharp.Client</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

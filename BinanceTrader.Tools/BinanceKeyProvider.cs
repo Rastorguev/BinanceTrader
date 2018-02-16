@@ -1,8 +1,7 @@
 ﻿using System.Configuration;
 using System.IO;
-using BinanceTrader.Tools;
 
-namespace BinanceTrader
+namespace BinanceTrader.Tools
 {
     public interface IBinanceKeyProvider
     {
