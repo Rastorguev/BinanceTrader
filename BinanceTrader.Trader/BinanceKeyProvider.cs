@@ -2,7 +2,7 @@
 using System.IO;
 using BinanceTrader.Tools;
 
-namespace BinanceTrader.Api
+namespace BinanceTrader
 {
     public interface IBinanceKeyProvider
     {

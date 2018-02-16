@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using Microsoft.ApplicationInsights;
-using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.Azure;
-using Microsoft.Azure.WebJobs;
+﻿using Microsoft.Azure.WebJobs;
 
 namespace WebJob1
 {

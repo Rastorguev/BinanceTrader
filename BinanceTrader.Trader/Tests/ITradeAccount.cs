@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using BinanceTrader.Core;
-using BinanceTrader.Core.Entities.Enums;
+using Binance.API.Csharp.Client.Models.Enums;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader
+namespace BinanceTrader.Tests
 {
     public interface ITradeAccount
     {
@@ -63,21 +62,21 @@ namespace BinanceTrader
             var quoteAmount = baseAmount * price;
             if (quoteAmount > CurrentQuoteAmount)
             {
-                throw new InsufficientBalanceException();
+                throw new Exception("Insufficient Balance");
             }
 
             CurrentQuoteAmount -= quoteAmount;
             CurrentBaseAmount += baseAmount - baseAmount.Percents(_fee);
             LastPrice = price;
 
-            Log(TradeActionType.Buy, timestamp);
+            Log(OrderSide.Buy, timestamp);
         }
 
         public void Sell(decimal baseAmount, decimal price, DateTime timestamp)
         {
             if (CurrentBaseAmount < baseAmount)
             {
-                throw new InsufficientBalanceException();
+                throw new Exception("Insufficient Balance");
             }
 
             var quoteAmount = baseAmount * price;
@@ -85,14 +84,14 @@ namespace BinanceTrader
             CurrentQuoteAmount += quoteAmount - quoteAmount.Percents(_fee);
             LastPrice = price;
 
-            Log(TradeActionType.Sell, timestamp);
+            Log(OrderSide.Sell, timestamp);
         }
 
-        private void Log(TradeActionType type, DateTime timestamp)
+        private void Log(OrderSide side, DateTime timestamp)
         {
             _log.Add(new TradeLogItem(
                 timestamp,
-                type,
+                side,
                 LastPrice,
                 CurrentBaseAmount, CurrentQuoteAmount,
                 this.GetProfit()));
@@ -102,7 +101,7 @@ namespace BinanceTrader
     public class TradeLogItem
     {
         public DateTime Timestamp { get; }
-        public TradeActionType Type { get; }
+        public OrderSide Side { get; }
         public decimal Price { get; }
         public decimal BaseAmount { get; }
         public decimal QuoteAmount { get; }
@@ -110,14 +109,14 @@ namespace BinanceTrader
 
         public TradeLogItem(
             DateTime timestamp,
-            TradeActionType type,
+            OrderSide side,
             decimal price,
             decimal baseAmount,
             decimal quoteAmount,
             decimal profit)
         {
             Timestamp = timestamp;
-            Type = type;
+            Side = side;
             Price = price;
             BaseAmount = baseAmount;
             QuoteAmount = quoteAmount;

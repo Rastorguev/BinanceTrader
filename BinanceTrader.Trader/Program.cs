@@ -2,7 +2,7 @@
 using System.Globalization;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
-using BinanceTrader.Api;
+using BinanceTrader.Tests;
 using BinanceTrader.Tools;
 
 namespace BinanceTrader
@@ -19,12 +19,14 @@ namespace BinanceTrader
             var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
             var binanceClient = new BinanceClient(apiClient);
 
-            var currencies = new List<string> {"TRXETH", "ADAETH", "XVGETH", "MANAETH", "CNDETH", "FUNETH", "ENJETH"};
-            var logger = new Logger();
+            var tests = new StrategiesTests(binanceClient);
+            tests.CompareStrategies();
 
-            var trader = new Trader(binanceClient, logger, currencies);
 
-            trader.Start();
+            //var logger = new Logger();
+            //var symbols = new List<string> {"TRXETH", "ADAETH", "XVGETH", "MANAETH", "CNDETH", "FUNETH", "ENJETH"};
+            //var trader = new Trader(binanceClient, logger, symbols);
+            //trader.Start();
 
             PreventAppClose();
         }

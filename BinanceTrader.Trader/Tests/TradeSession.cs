@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using BinanceTrader.Core.Entities;
-using BinanceTrader.Core.Entities.Enums;
+using Binance.API.Csharp.Client.Models;
+using Binance.API.Csharp.Client.Models.Enums;
+using Binance.API.Csharp.Client.Models.Market;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader
+namespace BinanceTrader.Tests
 {
     public class TradeSession
     {
@@ -19,7 +20,7 @@ namespace BinanceTrader
         }
 
         [NotNull]
-        public ITradeAccount Run([NotNull] [ItemNotNull] List<Candle> candles)
+        public ITradeAccount Run([NotNull] [ItemNotNull] List<Candlestick> candles)
         {
             var account = new MockTradeAccount(0, _config.InitialQuoteAmount, _config.InitialPrice, _config.Fee);
 
@@ -28,59 +29,59 @@ namespace BinanceTrader
                 return account;
             }
 
-            var nextPrice = candles.First().ClosePrice;
-            var nextAction = TradeActionType.Buy;
+            var nextPrice = candles.First().Close;
+            var nextAction = OrderSide.Buy;
             DateTime? lastActionDate = null;
 
             foreach (var candle in candles)
             {
                 var force = lastActionDate == null ||
-                            candle.CloseTime - lastActionDate.Value >= TimeSpan.FromHours(_config.MaxIdleHours);
+                            candle.CloseTime.GetTime() - lastActionDate.Value >= TimeSpan.FromHours(_config.MaxIdleHours);
 
                 //var force = false;
                 var minProfitRatio = _config.MinProfitRatio;
-                var inRange = nextPrice >= candle.LowPrice && nextPrice <= candle.HighPrice;
+                var inRange = nextPrice >= candle.Low && nextPrice <= candle.High;
 
-                if (nextAction == TradeActionType.Buy && (inRange || force))
+                if (nextAction == OrderSide.Buy && (inRange || force))
                 {
                     var price = nextPrice;
 
                     if (force)
                     {
-                        price = candle.HighPrice;
+                        price = candle.High;
                     }
 
                     var estimatedBaseAmount = Math.Floor(account.CurrentQuoteAmount / price);
                     if (account.CurrentQuoteAmount > _config.MinQuoteAmount && estimatedBaseAmount > 0)
                     {
-                        account.Buy(estimatedBaseAmount, price, candle.OpenTime);
+                        account.Buy(estimatedBaseAmount, price, candle.OpenTime.GetTime());
 
                         //Log(nextAction, candle, price, account, force);
 
                         nextPrice = price + price.Percents(minProfitRatio);
-                        nextAction = TradeActionType.Sell;
-                        lastActionDate = candle.OpenTime;
+                        nextAction = OrderSide.Sell;
+                        lastActionDate = candle.OpenTime.GetTime();
                     }
                 }
-                else if (nextAction == TradeActionType.Sell && (inRange || force))
+                else if (nextAction == OrderSide.Sell && (inRange || force))
                 {
                     var price = nextPrice;
 
                     if (force)
                     {
-                        price = candle.LowPrice;
+                        price = candle.Low;
                     }
 
                     var baseAmount = Math.Floor(account.CurrentBaseAmount);
                     if (baseAmount > 0)
                     {
-                        account.Sell(baseAmount, price, candle.OpenTime);
+                        account.Sell(baseAmount, price, candle.OpenTime.GetTime());
 
                         //Log(nextAction, candle, price, account, force);
 
                         nextPrice = price - price.Percents(minProfitRatio);
-                        nextAction = TradeActionType.Buy;
-                        lastActionDate = candle.OpenTime;
+                        nextAction = OrderSide.Buy;
+                        lastActionDate = candle.OpenTime.GetTime();
                     }
                 }
             }
@@ -89,8 +90,8 @@ namespace BinanceTrader
         }
 
         private static void Log(
-            TradeActionType nextAction,
-            Candle candle,
+            OrderSide nextAction,
+            Candlestick candle,
             decimal price,
             ITradeAccount account,
             bool force)

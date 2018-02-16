@@ -1,79 +1,87 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using BinanceTrader.Api;
-using BinanceTrader.Core.Entities;
+using Binance.API.Csharp.Client;
+using Binance.API.Csharp.Client.Models;
+using Binance.API.Csharp.Client.Models.Enums;
+using Binance.API.Csharp.Client.Models.Market;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader
+namespace BinanceTrader.Tests
 {
     public class StrategiesTests
     {
-        [NotNull] private readonly BinanceApi _api;
+        [NotNull] private readonly BinanceClient _binanceClient;
 
         public StrategiesTests(
-            [NotNull] BinanceApi api) => _api = api;
+            [NotNull] BinanceClient api) => _binanceClient = api;
 
         public void CompareStrategies()
         {
             var assets = new List<string>
             {
-                "BNT",
-                "VEN",
-                "WAVES",
-                "SALT",
-                "ICX",
-                "HSR",
-                "MCO",
-                "EOS",
-                "STRAT",
-                "BNB",
-                "OMG",
-                "GVT",
-                "LSK",
-                "NEBL",
-                "WTC",
-                //"ETC",
-                "LUN",
-                "STRAT",
-                "QTUM",
-                "PPT",
-                "BCD",
-                "XZC",
-                "NEO",
-                "DGD",
-                //"LTC"
-                "TRX",
-                "CND",
-                "TNB",
-                "POE",
                 "FUN",
-                "XVG",
-                "MANA",
-                "CDT",
-                "LEND",
-                "DNT",
-                "TNT",
+                "CND",
                 "ENJ",
-                "FUEL",
-                "YOYO",
-                "SNGLS",
-                //"RCN",
-                "CMT",
-                "SNT",
-                "MTH",
-                "VIB",
-                "BTS",
-                "SNM",
-                "XLM",
-                "QSP",
-                "GTO",
-                "REQ",
-                "BAT",
-                "ADA",
-                "OST",
-                "LINK"
+                "MANA",
+                "XVG",
+                "TRX",
+            //    "BNT",
+            //    "VEN",
+            //    "WAVES",
+            //    "SALT",
+            //    "ICX",
+            //    "HSR",
+            //    "MCO",
+            //    "EOS",
+            //    "STRAT",
+            //    "BNB",
+            //    "OMG",
+            //    "GVT",
+            //    "LSK",
+            //    "NEBL",
+            //    "WTC",
+            //    //"ETC",
+            //    "LUN",
+            //    "STRAT",
+            //    "QTUM",
+            //    "PPT",
+            //    "BCD",
+            //    "XZC",
+            //    "NEO",
+            //    "DGD",
+            //    //"LTC"
+            //    "TRX",
+            //    "CND",
+            //    "TNB",
+            //    "POE",
+            //    "FUN",
+            //    "XVG",
+            //    "MANA",
+            //    "CDT",
+            //    "LEND",
+            //    "DNT",
+            //    "TNT",
+            //    "ENJ",
+            //    "FUEL",
+            //    "YOYO",
+            //    "SNGLS",
+            //    //"RCN",
+            //    "CMT",
+            //    "SNT",
+            //    "MTH",
+            //    "VIB",
+            //    "BTS",
+            //    "SNM",
+            //    "XLM",
+            //    "QSP",
+            //    "GTO",
+            //    "REQ",
+            //    "BAT",
+            //    "ADA",
+            //    "OST",
+            //    "LINK"
             };
 
             var initialAmountTotal = 0m;
@@ -85,9 +93,9 @@ namespace BinanceTrader
                 var candles = LoadCandles(
                     asset,
                     "ETH",
-                    new DateTime(2018, 01, 21, 0, 0, 0),
-                    new DateTime(2018, 02, 4, 20, 0, 0),
-                    CandlesInterval.Minutes1);
+                    new DateTime(2018, 02, 1, 0, 0, 0),
+                    new DateTime(2018, 02, 16, 0, 0, 0),
+                    TimeInterval.Minutes_1);
 
                 var result = Trade(candles);
 
@@ -96,8 +104,8 @@ namespace BinanceTrader
                     continue;
                 }
 
-                var firstPrice = candles.First().ClosePrice;
-                var lastPrice = candles.Last().ClosePrice;
+                var firstPrice = candles.First().Close;
+                var lastPrice = candles.Last().Close;
 
                 var tradeQuoteAmount = result.CurrentBaseAmount * lastPrice + result.CurrentQuoteAmount;
                 var holdQuoteAmount = result.InitialQuoteAmount / firstPrice * lastPrice + result.InitialBaseAmount;
@@ -145,7 +153,7 @@ namespace BinanceTrader
 
         [NotNull]
         private ITradeAccount Trade(
-            List<Candle> candles)
+            List<Candlestick> candles)
         {
             var tradeSession = new TradeSession(
                 new TradeSessionConfig(
@@ -153,8 +161,8 @@ namespace BinanceTrader
                     initialPrice: 0,
                     fee: 0.1m,
                     minQuoteAmount: 0.01m,
-                    minProfitRatio: 1m,
-                    maxIdleHours: 8));
+                    minProfitRatio: 2m,
+                    maxIdleHours: 4));
 
             var result = tradeSession.Run(candles);
 
@@ -162,15 +170,15 @@ namespace BinanceTrader
         }
 
         [NotNull]
-        private List<Candle> LoadCandles(
+        private List<Candlestick> LoadCandles(
             string baseAsset,
             string quoteAsset,
             DateTime start,
             DateTime end,
-            CandlesInterval interval)
+            TimeInterval interval)
         {
             const int maxRange = 500;
-            var candles = new List<Candle>();
+            var candles = new List<Candlestick>();
 
             while (start < end)
             {
@@ -179,7 +187,8 @@ namespace BinanceTrader
                     ? start.AddMinutes(intervalMinutes)
                     : end;
 
-                var rangeCandles = _api.GetCandles(baseAsset, quoteAsset, interval, start, rangeEnd)
+                var symbol = $"{baseAsset}{quoteAsset}";
+                var rangeCandles = _binanceClient.GetCandleSticks(symbol, interval, start, rangeEnd)
                     .NotNull()
                     .Result.NotNull()
                     .ToList();
@@ -188,7 +197,8 @@ namespace BinanceTrader
                 start = rangeEnd;
             }
 
-            return candles.OrderBy(c => c.NotNull().OpenTime).ToList();
+            var orderedCandles = candles.OrderBy(c => c.NotNull().OpenTime).ToList();
+            return orderedCandles;
         }
     }
 }

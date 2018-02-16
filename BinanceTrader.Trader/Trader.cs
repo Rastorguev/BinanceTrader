@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
 using Binance.API.Csharp.Client;
+using Binance.API.Csharp.Client.Models;
 using Binance.API.Csharp.Client.Models.Account;
 using Binance.API.Csharp.Client.Models.Enums;
 using Binance.API.Csharp.Client.Models.Market;
@@ -74,7 +75,7 @@ namespace BinanceTrader
                     var now = DateTime.Now;
                     var isCompleted = order.Status == OrderStatus.Filled;
                     var isNew = order.Status == OrderStatus.New;
-                    var isExpired = isNew && now.ToLocalTime() - order.GetTime().ToLocalTime() > _maxIdlePeriod;
+                    var isExpired = isNew && now.ToLocalTime() - order.UnixTime.GetTime().ToLocalTime() > _maxIdlePeriod;
 
                     _logger.LogOrder("Status", order);
 
@@ -229,10 +230,10 @@ namespace BinanceTrader
             return priceInfo;
         }
 
-        private Task<IEnumerable<Order>> GetOpenOrders()
-        {
-            return _binanceClient.GetCurrentOpenOrders();
-        }
+        //private Task<IEnumerable<Order>> GetOpenOrders()
+        //{
+        //    return _binanceClient.GetCurrentOpenOrders();
+        //}
 
         private async Task<CanceledOrder> CancelOrder([NotNull] IOrder order)
         {
