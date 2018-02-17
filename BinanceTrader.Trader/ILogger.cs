@@ -1,15 +1,14 @@
 ﻿using System;
 using Binance.API.Csharp.Client.Models.WebSocket;
+using JetBrains.Annotations;
 
 namespace BinanceTrader.Trader
 {
     public interface ILogger
     {
-        void LogOrder(string orderEvent, IOrder order, string info = null);
-        void Log(Exception ex);
-        void Log(string message);
-        void LogImportant(string message);
-        void LogTitle(string title);
-        void LogSeparator();
+        void LogOrder([NotNull] string orderEvent, [NotNull] IOrder order);
+        void LogMessage([NotNull] string key, [NotNull] string message);
+        void LogWarning([NotNull] string key, [NotNull] string message);
+        void LogException([NotNull] Exception ex);
     }
 }

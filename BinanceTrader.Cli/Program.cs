@@ -20,8 +20,8 @@ namespace BinanceTrader.Cli
             var binanceClient = new BinanceClient(apiClient);
 
             var logger = new Logger();
-            var symbols = new List<string> {"TRXETH", "XVGETH", "MANAETH", "CNDETH", "FUNETH", "ENJETH"};
-            var trader = new RabbitTrader(binanceClient, logger, symbols);
+
+            var trader = new RabbitTrader(binanceClient, logger);
             trader.Start();
 
             PreventAppClose();
@@ -29,7 +29,7 @@ namespace BinanceTrader.Cli
 
         private static void PreventAppClose()
         {
-            Task.Delay(-1).Wait();
+            Task.Delay(-1).NotNull().Wait();
         }
     }
 }

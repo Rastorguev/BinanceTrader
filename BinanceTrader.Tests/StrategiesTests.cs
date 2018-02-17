@@ -162,7 +162,7 @@ namespace BinanceTrader
                     fee: 0.1m,
                     minQuoteAmount: 0.01m,
                     minProfitRatio: 2m,
-                    maxIdleHours: 4));
+                    maxIdleHours: 8));
 
             var result = tradeSession.Run(candles);
 
