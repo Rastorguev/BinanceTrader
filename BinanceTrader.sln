@@ -15,7 +15,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Binance.API.Csharp.Client.M
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Binance.API.Csharp.Client.Test", "Submodules\BinanceApi\Binance.API.Csharp.Client.Test\Binance.API.Csharp.Client.Test.csproj", "{6F565960-4CB7-4292-9B46-17EF0E70EBBF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BinanceTrader.WebJob", "WebJob1\BinanceTrader.WebJob.csproj", "{536E80EF-2932-4184-9AA7-D9E83B60A709}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BinanceTrader.WebJob", "BinanceTrader.WebJob\BinanceTrader.WebJob.csproj", "{536E80EF-2932-4184-9AA7-D9E83B60A709}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BinanceTrader.Tests", "BinanceTrader.Tests\BinanceTrader.Tests.csproj", "{C05238AC-299C-4D97-B075-103466E47BAB}"
 EndProject
