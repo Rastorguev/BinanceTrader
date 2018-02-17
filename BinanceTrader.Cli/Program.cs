@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
 using BinanceTrader.Tools;
@@ -14,15 +17,24 @@ namespace BinanceTrader.Cli
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
-            var keyProvider = new BinanceKeyProvider(@"D:/Keys.config");
-            var keys = keyProvider.GetKeys().NotNull();
-            var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
-            var binanceClient = new BinanceClient(apiClient);
-
             var logger = new Logger();
 
-            var trader = new RabbitTrader(binanceClient, logger);
-            trader.Start();
+            try
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var keysPath = Path.Combine(Path.GetDirectoryName(assembly.Location).NotNull(), "Keys.config");
+                var keyProvider = new BinanceKeyProvider(keysPath);
+                var keys = keyProvider.GetKeys().NotNull();
+                var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
+                var binanceClient = new BinanceClient(apiClient);
+
+                var trader = new RabbitTrader(binanceClient, logger);
+                trader.Start();
+            }
+            catch (Exception ex)
+            {
+                logger.LogException(ex);
+            }
 
             PreventAppClose();
         }

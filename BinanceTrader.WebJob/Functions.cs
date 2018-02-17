@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Reflection;
 using Binance.API.Csharp.Client;
 using BinanceTrader.Tools;
 using BinanceTrader.Trader;
@@ -16,14 +18,24 @@ namespace BinanceTrader.WebJob
         [NoAutomaticTrigger]
         public static void Start(TextWriter log)
         {
-            var keyProvider = new BinanceKeyProvider(@"D:/Keys.config");
-            var keys = keyProvider.GetKeys().NotNull();
-            var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
-            var binanceClient = new BinanceClient(apiClient);
-
             var logger = new Logger();
-            var trader = new RabbitTrader(binanceClient, logger);
-            trader.Start();
+
+            try
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var keysPath = Path.Combine(Path.GetDirectoryName(assembly.Location).NotNull(), "Keys.config");
+                var keyProvider = new BinanceKeyProvider(keysPath);
+                var keys = keyProvider.GetKeys().NotNull();
+                var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
+                var binanceClient = new BinanceClient(apiClient);
+
+                var trader = new RabbitTrader(binanceClient, logger);
+                trader.Start();
+            }
+            catch (Exception ex)
+            {
+                logger.LogException(ex);
+            }
         }
     }
 }

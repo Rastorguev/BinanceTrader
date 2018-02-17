@@ -15,7 +15,7 @@ namespace BinanceTrader.WebJob
 
         public Logger()
         {
-            const string key = "792fccae-78e5-414f-8bb3-804ec0f6a4d1";
+            const string key = "5d67a61a-6cc1-4a03-9989-5b838583d5a1";
             _client = new TelemetryClient {InstrumentationKey = key};
         }
 
@@ -29,6 +29,8 @@ namespace BinanceTrader.WebJob
                 {"Price", order.Price.Round().ToString(CultureInfo.InvariantCulture)},
                 {"Qty", order.OrigQty.Round().ToString(CultureInfo.InvariantCulture)}
             });
+
+            _client.Flush();
         }
 
         public void LogMessage(string key, string message)
@@ -37,6 +39,7 @@ namespace BinanceTrader.WebJob
             {
                 {key, message}
             });
+            _client.Flush();
         }
 
         public void LogWarning(string key, string message)
@@ -45,11 +48,14 @@ namespace BinanceTrader.WebJob
             {
                 {key, message}
             });
+
+            _client.Flush();
         }
 
         public void LogException(Exception ex)
         {
             _client.TrackException(ex);
+            _client.Flush();
         }
     }
 }
