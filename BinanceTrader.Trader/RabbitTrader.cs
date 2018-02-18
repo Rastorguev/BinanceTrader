@@ -29,12 +29,30 @@ namespace BinanceTrader.Trader
         [NotNull] [ItemNotNull] private readonly List<string> _symbols =
             new List<string>
             {
-                "TRXETH",
-                "XVGETH",
-                "MANAETH",
-                "CNDETH",
+                "IOSTETH",
                 "FUNETH",
-                "ENJETH"
+                "POEETH",
+                "TNBETH",
+                "CDTETH",
+                "DNTETH",
+                "LENDETH",
+                "MANAETH",
+                "SNGLSETH",
+                "TNTETH",
+                "FUELETH",
+                "YOYOETH",
+                "CNDETH",
+                "RCNETH",
+                "MTHETH",
+                "ENJETH",
+                "CHATETH",
+                "BTSETH",
+                "VIBETH",
+                "SNMETH",
+                "OSTETH",
+                "QSPETH",
+                "DLTETH",
+                "BATETH"
             };
 
         public RabbitTrader(
