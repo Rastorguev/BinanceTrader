@@ -30,9 +30,11 @@ namespace BinanceTrader.Trader
             new List<string>
             {
                 "IOSTETH",
+                "TRXETH",
                 "FUNETH",
                 "POEETH",
                 "TNBETH",
+                "XVGETH",
                 "CDTETH",
                 "DNTETH",
                 "LENDETH",
@@ -44,6 +46,9 @@ namespace BinanceTrader.Trader
                 "CNDETH",
                 "RCNETH",
                 "MTHETH",
+                "CMTETH",
+                "SNTETH",
+                "RPXETH",
                 "ENJETH",
                 "CHATETH",
                 "BTSETH",
