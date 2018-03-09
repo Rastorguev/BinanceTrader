@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
+using BinanceTrader.Strategies;
 using BinanceTrader.Tools;
+using BinanceTrader.TradeSessions;
 
 namespace BinanceTrader
 {
@@ -19,7 +20,30 @@ namespace BinanceTrader
             var binanceClient = new BinanceClient(apiClient);
 
             var tests = new StrategiesTests(binanceClient);
-            tests.CompareStrategies();
+
+            //ITradeSession SessionProvider() =>
+            //    new RabbitTradeSession(
+            //        new TradeSessionConfig(
+            //            initialQuoteAmount: 1,
+            //            initialPrice: 0,
+            //            fee: 0.1m,
+            //            minQuoteAmount: 0.01m,
+            //            minProfitRatio: 2m,
+            //            maxIdleHours: 8));
+
+            ITradeSession SessionProvider() =>
+                new StrategyTradeSession(
+                    new TradeSessionConfig(
+                        initialQuoteAmount: 1,
+                        initialPrice: 0,
+                        fee: 0.1m,
+                        minQuoteAmount: 0.01m,
+                        minProfitRatio: 0.2m,
+                        maxIdleHours: 8),
+                    new MACDHistStrategy(12, 26, 9)
+                );
+
+            tests.Run(SessionProvider);
 
             PreventAppClose();
         }

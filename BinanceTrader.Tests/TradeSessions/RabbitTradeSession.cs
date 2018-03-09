@@ -7,20 +7,18 @@ using Binance.API.Csharp.Client.Models.Market;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader
+namespace BinanceTrader.TradeSessions
 {
-    public class TradeSession
+    public class RabbitTradeSession : ITradeSession
     {
         [NotNull] private readonly TradeSessionConfig _config;
 
-        public TradeSession(
-            [NotNull] TradeSessionConfig config)
+        public RabbitTradeSession([NotNull] TradeSessionConfig config)
         {
             _config = config;
         }
 
-        [NotNull]
-        public ITradeAccount Run([NotNull] [ItemNotNull] List<Candlestick> candles)
+        public ITradeAccount Run(List<Candlestick> candles)
         {
             var account = new MockTradeAccount(0, _config.InitialQuoteAmount, _config.InitialPrice, _config.Fee);
 
@@ -36,7 +34,8 @@ namespace BinanceTrader
             foreach (var candle in candles)
             {
                 var force = lastActionDate == null ||
-                            candle.CloseTime.GetTime() - lastActionDate.Value >= TimeSpan.FromHours(_config.MaxIdleHours);
+                            candle.CloseTime.GetTime() - lastActionDate.Value >=
+                            TimeSpan.FromHours(_config.MaxIdleHours);
 
                 var minProfitRatio = _config.MinProfitRatio;
                 var inRange = nextPrice >= candle.Low && nextPrice <= candle.High;

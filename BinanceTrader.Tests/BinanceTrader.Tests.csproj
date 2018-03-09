@@ -50,7 +50,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="TradeSession.cs" />
+    <Compile Include="Indicators\EMA.cs" />
+    <Compile Include="Indicators\IndicatorsUtils.cs" />
+    <Compile Include="Indicators\MACD.cs" />
+    <Compile Include="Indicators\SMA.cs" />
+    <Compile Include="Strategies\EMACrossingTradeStrategy.cs" />
+    <Compile Include="Strategies\ITradeStrategy.cs" />
+    <Compile Include="Strategies\MACDHistStrategy.cs" />
+    <Compile Include="Strategies\SMACrossingTradeStrategy.cs" />
+    <Compile Include="TradeSessions\ITradeSession.cs" />
+    <Compile Include="TradeSessions\StrategyTradeSession.cs" />
+    <Compile Include="TradeSessions\RabbitTradeSession.cs" />
     <Compile Include="ITradeAccount.cs" />
     <Compile Include="StrategiesTests.cs" />
     <Compile Include="Program.cs" />
@@ -79,5 +89,6 @@
       <Name>Binance.API.Csharp.Client</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

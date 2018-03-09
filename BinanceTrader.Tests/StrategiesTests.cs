@@ -6,6 +6,7 @@ using Binance.API.Csharp.Client.Models;
 using Binance.API.Csharp.Client.Models.Enums;
 using Binance.API.Csharp.Client.Models.Market;
 using BinanceTrader.Tools;
+using BinanceTrader.TradeSessions;
 using JetBrains.Annotations;
 
 namespace BinanceTrader
@@ -17,11 +18,10 @@ namespace BinanceTrader
         public StrategiesTests(
             [NotNull] BinanceClient api) => _binanceClient = api;
 
-        public void CompareStrategies()
+        public void Run([NotNull]Func<ITradeSession> sessionProvider)
         {
             var assets = new List<string>
             {
-
                 "IOST",
                 "TRX",
                 "FUN",
@@ -66,7 +66,7 @@ namespace BinanceTrader
                     new DateTime(2018, 03, 09, 11, 0, 0),
                     TimeInterval.Minutes_1);
 
-                var result = Trade(candles);
+                var result = Trade(candles, sessionProvider().NotNull());
 
                 if (!candles.Any())
                 {
@@ -122,23 +122,16 @@ namespace BinanceTrader
 
         [NotNull]
         private ITradeAccount Trade(
-            List<Candlestick> candles)
+            [NotNull] List<Candlestick> candles,
+            [NotNull] ITradeSession tradeSession)
         {
-            var tradeSession = new TradeSession(
-                new TradeSessionConfig(
-                    initialQuoteAmount: 1,
-                    initialPrice: 0,
-                    fee: 0.1m,
-                    minQuoteAmount: 0.01m,
-                    minProfitRatio: 2m,
-                    maxIdleHours: 8));
-
             var result = tradeSession.Run(candles);
 
             return result;
         }
 
         [NotNull]
+        [ItemNotNull]
         private List<Candlestick> LoadCandles(
             string baseAsset,
             string quoteAsset,
