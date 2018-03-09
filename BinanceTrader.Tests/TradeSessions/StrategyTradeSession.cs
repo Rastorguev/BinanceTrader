@@ -22,9 +22,10 @@ namespace BinanceTrader.TradeSessions
 
         public ITradeAccount Run(List<Candlestick> candles)
         {
-            const int max = 100;
+            const int count = 200;
             var account = new MockTradeAccount(0, _config.InitialQuoteAmount, _config.InitialPrice, _config.Fee);
             var nextAction = TradeAction.Buy;
+            DateTime? lastActionDate = null;
 
             if (!candles.Any())
             {
@@ -33,32 +34,36 @@ namespace BinanceTrader.TradeSessions
 
             for (var i = 0; i < candles.Count; i++)
             {
-                if (i == 0)
+                var candle = candles[i].NotNull();
+                var force = lastActionDate == null ||
+                            candle.CloseTime.GetTime() - lastActionDate.Value >=
+                            TimeSpan.FromHours(_config.MaxIdleHours);
+
+                if (i < count)
                 {
                     continue;
                 }
 
-                var price = candles[i].NotNull().Close;
-                var time = candles[i].NotNull().OpenTime.GetTime();
-
-                var start = i < max ? 0 : i - max;
-                var range = candles.GetRange(start, i - start + 1);
-
-                if (range.Count > 200)
-                {
-                    range = range.GetRange(range.Count - 200 - 1, 200);
-                }
+                var price = candle.Close;
+                var time = candle.OpenTime.GetTime();
+                var range = candles.GetRange(i - count, count);
 
                 var action = _strategy.GetTradeAction(range);
 
-                if (nextAction == TradeAction.Buy && action == TradeAction.Buy)
+                if (nextAction == TradeAction.Buy && (action == TradeAction.Buy || force))
                 {
+                    if (force)
+                    {
+                        price = candle.High;
+                    }
+
                     var baseAmount = Math.Floor(account.CurrentQuoteAmount / price);
 
                     if (account.CurrentQuoteAmount > _config.MinQuoteAmount && baseAmount > 0)
                     {
                         account.Buy(baseAmount, price, time);
                         nextAction = TradeAction.Sell;
+                        lastActionDate = candle.OpenTime.GetTime();
                     }
                 }
                 else if (nextAction == TradeAction.Sell && action == TradeAction.Sell)
@@ -66,10 +71,16 @@ namespace BinanceTrader.TradeSessions
                     var baseAmount = Math.Floor(account.CurrentBaseAmount);
 
                     if (baseAmount > 0 &&
-                        price > account.LastPrice + account.LastPrice.Percents(_config.MinProfitRatio))
+                        price > account.LastPrice + account.LastPrice.Percents(_config.MinProfitRatio) || force)
                     {
+                        if (force)
+                        {
+                            price = candle.Low;
+                        }
+
                         account.Sell(baseAmount, price, time);
                         nextAction = TradeAction.Buy;
+                        lastActionDate = candle.OpenTime.GetTime();
                     }
                 }
             }

@@ -21,16 +21,6 @@ namespace BinanceTrader
 
             var tests = new StrategiesTests(binanceClient);
 
-            //ITradeSession SessionProvider() =>
-            //    new RabbitTradeSession(
-            //        new TradeSessionConfig(
-            //            initialQuoteAmount: 1,
-            //            initialPrice: 0,
-            //            fee: 0.1m,
-            //            minQuoteAmount: 0.01m,
-            //            minProfitRatio: 2m,
-            //            maxIdleHours: 8));
-
             ITradeSession SessionProvider() =>
                 new StrategyTradeSession(
                     new TradeSessionConfig(
@@ -38,9 +28,9 @@ namespace BinanceTrader
                         initialPrice: 0,
                         fee: 0.1m,
                         minQuoteAmount: 0.01m,
-                        minProfitRatio: 0.2m,
+                        minProfitRatio: 0.5m,
                         maxIdleHours: 8),
-                    new MACDHistStrategy(12, 26, 9)
+                    new EMACrossingTradeStrategy(7, 25)
                 );
 
             tests.Run(SessionProvider);

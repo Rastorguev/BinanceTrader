@@ -73,8 +73,8 @@ namespace BinanceTrader
                     continue;
                 }
 
-                var firstPrice = candles.First().Close;
-                var lastPrice = candles.Last().Close;
+                var firstPrice = candles.First().NotNull().Close;
+                var lastPrice = candles.Last().NotNull().Close;
 
                 var tradeQuoteAmount = result.CurrentBaseAmount * lastPrice + result.CurrentQuoteAmount;
                 var holdQuoteAmount = result.InitialQuoteAmount / firstPrice * lastPrice + result.InitialBaseAmount;
