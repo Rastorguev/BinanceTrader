@@ -29,7 +29,7 @@ namespace BinanceTrader
                 return account;
             }
 
-            var nextPrice = candles.First().Close;
+            var nextPrice = candles.First().NotNull().Close;
             var nextAction = OrderSide.Buy;
             DateTime? lastActionDate = null;
 
@@ -38,7 +38,6 @@ namespace BinanceTrader
                 var force = lastActionDate == null ||
                             candle.CloseTime.GetTime() - lastActionDate.Value >= TimeSpan.FromHours(_config.MaxIdleHours);
 
-                //var force = false;
                 var minProfitRatio = _config.MinProfitRatio;
                 var inRange = nextPrice >= candle.Low && nextPrice <= candle.High;
 
@@ -55,8 +54,6 @@ namespace BinanceTrader
                     if (account.CurrentQuoteAmount > _config.MinQuoteAmount && estimatedBaseAmount > 0)
                     {
                         account.Buy(estimatedBaseAmount, price, candle.OpenTime.GetTime());
-
-                        //Log(nextAction, candle, price, account, force);
 
                         nextPrice = price + price.Percents(minProfitRatio);
                         nextAction = OrderSide.Sell;
@@ -77,8 +74,6 @@ namespace BinanceTrader
                     {
                         account.Sell(baseAmount, price, candle.OpenTime.GetTime());
 
-                        //Log(nextAction, candle, price, account, force);
-
                         nextPrice = price - price.Percents(minProfitRatio);
                         nextAction = OrderSide.Buy;
                         lastActionDate = candle.OpenTime.GetTime();
@@ -87,30 +82,6 @@ namespace BinanceTrader
             }
 
             return account;
-        }
-
-        private static void Log(
-            OrderSide nextAction,
-            Candlestick candle,
-            decimal price,
-            ITradeAccount account,
-            bool force)
-        {
-            Console.WriteLine(nextAction);
-            Console.WriteLine(candle.OpenTime);
-            Console.WriteLine(price.Round());
-            Console.WriteLine(account.GetProfit());
-
-            if (force)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-            }
-
-            Console.WriteLine(force);
-
-            Console.ResetColor();
-
-            Console.WriteLine();
         }
     }
 }
