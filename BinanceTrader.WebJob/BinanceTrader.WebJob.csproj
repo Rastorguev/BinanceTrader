@@ -147,13 +147,13 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\BinanceTrader.Core\BinanceTrader.Core.csproj">
+      <Project>{a0ca2194-d70d-434a-a320-5e6ca39c3c32}</Project>
+      <Name>BinanceTrader.Core</Name>
+    </ProjectReference>
     <ProjectReference Include="..\BinanceTrader.Tools\BinanceTrader.Tools.csproj">
       <Project>{05921e52-1c36-4126-941b-f158be62c28a}</Project>
       <Name>BinanceTrader.Tools</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BinanceTrader.Trader\BinanceTrader.Core.csproj">
-      <Project>{a0ca2194-d70d-434a-a320-5e6ca39c3c32}</Project>
-      <Name>BinanceTrader.Core</Name>
     </ProjectReference>
     <ProjectReference Include="..\Submodules\BinanceApi\Binance.API.Csharp.Client.Domain\Binance.API.Csharp.Client.Domain.csproj">
       <Project>{e255f763-a2fe-43a8-9331-019796c935c7}</Project>
