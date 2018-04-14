@@ -42,6 +42,7 @@ namespace BinanceTrader.Cli
         public void LogMessage(string key, string message)
         {
             LogTime();
+            Console.WriteLine(key);
             Console.WriteLine(message);
             Console.WriteLine();
         }
@@ -52,6 +53,7 @@ namespace BinanceTrader.Cli
 
             Console.ForegroundColor = ConsoleColor.Yellow;
 
+            Console.WriteLine(key);
             Console.WriteLine(message);
             Console.WriteLine();
 
