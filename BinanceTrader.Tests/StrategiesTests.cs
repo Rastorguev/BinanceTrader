@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
 using Binance.API.Csharp.Client.Models;
 using Binance.API.Csharp.Client.Models.Enums;
@@ -63,7 +64,7 @@ namespace BinanceTrader
                     asset,
                     "ETH",
                     new DateTime(2018, 02, 18, 14, 0, 0),
-                    new DateTime(2018, 03, 09, 11, 0, 0),
+                    new DateTime(2018, 04, 15, 22, 0, 0),
                     TimeInterval.Minutes_1);
 
                 var result = Trade(candles);
@@ -131,7 +132,7 @@ namespace BinanceTrader
                     fee: 0.1m,
                     minQuoteAmount: 0.01m,
                     minProfitRatio: 2m,
-                    maxIdleHours: 8));
+                    maxIdleHours: 14));
 
             var result = tradeSession.Run(candles);
 
@@ -147,7 +148,9 @@ namespace BinanceTrader
             TimeInterval interval)
         {
             const int maxRange = 500;
-            var candles = new List<Candlestick>();
+
+            var tasks = new List<Task<IEnumerable<Candlestick>>>();
+
 
             while (start < end)
             {
@@ -157,14 +160,13 @@ namespace BinanceTrader
                     : end;
 
                 var symbol = $"{baseAsset}{quoteAsset}";
-                var rangeCandles = _binanceClient.GetCandleSticks(symbol, interval, start, rangeEnd)
-                    .NotNull()
-                    .Result.NotNull()
-                    .ToList();
 
-                candles.AddRange(rangeCandles);
+
+                tasks.Add(_binanceClient.GetCandleSticks(symbol, interval, start, rangeEnd));
                 start = rangeEnd;
             }
+
+            var candles = Task.WhenAll<IEnumerable<Candlestick>>(tasks).NotNull().Result.NotNull().SelectMany(c => c).ToList();
 
             var orderedCandles = candles.OrderBy(c => c.NotNull().OpenTime).ToList();
             return orderedCandles;
