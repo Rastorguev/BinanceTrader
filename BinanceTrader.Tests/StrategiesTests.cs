@@ -132,7 +132,7 @@ namespace BinanceTrader
                     fee: 0.1m,
                     minQuoteAmount: 0.01m,
                     minProfitRatio: 2m,
-                    maxIdleHours: 14));
+                    maxIdleHours: 12));
 
             var result = tradeSession.Run(candles);
 
@@ -140,6 +140,7 @@ namespace BinanceTrader
         }
 
         [NotNull]
+        [ItemNotNull]
         private List<Candlestick> LoadCandles(
             string baseAsset,
             string quoteAsset,
@@ -166,7 +167,7 @@ namespace BinanceTrader
                 start = rangeEnd;
             }
 
-            var candles = Task.WhenAll<IEnumerable<Candlestick>>(tasks).NotNull().Result.NotNull().SelectMany(c => c).ToList();
+            var candles = Task.WhenAll(tasks).NotNull().Result.NotNull().SelectMany(c => c).ToList();
 
             var orderedCandles = candles.OrderBy(c => c.NotNull().OpenTime).ToList();
             return orderedCandles;

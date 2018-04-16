@@ -9,9 +9,9 @@ namespace BinanceTrader
 {
     internal class Program
     {
-        private static void Main(string[] args)
+        private static void Main()
         {
-            ServicePointManager.DefaultConnectionLimit = 10;
+            ServicePointManager.DefaultConnectionLimit = 15;
 
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
