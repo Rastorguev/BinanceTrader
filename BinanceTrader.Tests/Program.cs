@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Net;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
 using BinanceTrader.Strategies;
@@ -9,8 +10,10 @@ namespace BinanceTrader
 {
     internal class Program
     {
-        private static void Main(string[] args)
+        private static void Main()
         {
+            ServicePointManager.DefaultConnectionLimit = 15;
+
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 

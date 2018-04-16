@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
 using Binance.API.Csharp.Client.Models;
 using Binance.API.Csharp.Client.Models.Enums;
@@ -16,9 +17,12 @@ namespace BinanceTrader
         [NotNull] private readonly BinanceClient _binanceClient;
 
         public StrategiesTests(
-            [NotNull] BinanceClient api) => _binanceClient = api;
+            [NotNull] BinanceClient api)
+        {
+            _binanceClient = api;
+        }
 
-        public void Run([NotNull]Func<ITradeSession> sessionProvider)
+        public void Run([NotNull] Func<ITradeSession> sessionProvider)
         {
             var assets = new List<string>
             {
@@ -140,7 +144,8 @@ namespace BinanceTrader
             TimeInterval interval)
         {
             const int maxRange = 500;
-            var candles = new List<Candlestick>();
+
+            var tasks = new List<Task<IEnumerable<Candlestick>>>();
 
             while (start < end)
             {
@@ -150,14 +155,12 @@ namespace BinanceTrader
                     : end;
 
                 var symbol = $"{baseAsset}{quoteAsset}";
-                var rangeCandles = _binanceClient.GetCandleSticks(symbol, interval, start, rangeEnd)
-                    .NotNull()
-                    .Result.NotNull()
-                    .ToList();
 
-                candles.AddRange(rangeCandles);
+                tasks.Add(_binanceClient.GetCandleSticks(symbol, interval, start, rangeEnd));
                 start = rangeEnd;
             }
+
+            var candles = Task.WhenAll(tasks).NotNull().Result.NotNull().SelectMany(c => c).ToList();
 
             var orderedCandles = candles.OrderBy(c => c.NotNull().OpenTime).ToList();
             return orderedCandles;
