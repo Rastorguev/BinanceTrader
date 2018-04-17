@@ -191,7 +191,7 @@ namespace BinanceTrader.Trader
                     var price = await GetActualPrice(order.Symbol, OrderSide.Buy);
                     var qty = Math.Floor(amount / price);
 
-                    await TryPlaceOrder(OrderSide.Buy, order.Symbol, price, qty, true);
+                    await TryPlaceOrder(OrderSide.Buy, order.Symbol, price, qty, forced: true);
                     break;
                 }
                 case OrderSide.Sell:
@@ -199,7 +199,7 @@ namespace BinanceTrader.Trader
                     var price = await GetActualPrice(order.Symbol, OrderSide.Sell);
                     var qty = order.OrigQty;
 
-                    await TryPlaceOrder(OrderSide.Sell, order.Symbol, price, qty, true);
+                    await TryPlaceOrder(OrderSide.Sell, order.Symbol, price, qty, forced: true);
                     break;
                 }
             }
@@ -232,6 +232,7 @@ namespace BinanceTrader.Trader
             string symbol,
             decimal price,
             decimal qty,
+            TimeInForce timeInForce = TimeInForce.GTC,
             bool forced = false)
         {
             var success = false;
@@ -243,7 +244,8 @@ namespace BinanceTrader.Trader
                         symbol,
                         qty,
                         price,
-                        side)
+                        side,
+                        timeInForce: timeInForce)
                     .NotNull();
 
                 success = true;
@@ -318,8 +320,7 @@ namespace BinanceTrader.Trader
             var feeSymbol = GetCurrencySymbol(FeeAsset, QuoteAsset);
 
             var lastOrder = await GetLastOrder(feeSymbol).NotNull();
-            if (lastOrder.Status == OrderStatus.New ||
-                lastOrder.Status == OrderStatus.PartiallyFilled)
+            if (lastOrder.Status != OrderStatus.Filled)
             {
                 await CancelOrder(lastOrder);
             }
@@ -332,7 +333,7 @@ namespace BinanceTrader.Trader
 
             if (feeAssetAmmount < 1 && qouteAssetAmmount >= price * qty)
             {
-                var order = await TryPlaceOrder(OrderSide.Buy, feeSymbol, price, qty).NotNull();
+                var order = await TryPlaceOrder(OrderSide.Buy, feeSymbol, price, qty, TimeInForce.IOC).NotNull();
                 var success = order.Success && order.Value != null && order.Value.Status == OrderStatus.Filled;
 
                 _logger.LogMessage("BuyFeeCurrrency", $"Success {success}, Quantity {qty}, Price {price}");
