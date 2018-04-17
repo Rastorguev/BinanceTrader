@@ -338,8 +338,10 @@ namespace BinanceTrader.Trader
                 if (result.Value != null)
                 {
                     var status = result.Value.Status;
+                    var executedQty = result.Value.ExecutedQty;
+
                     _logger.LogMessage("BuyFeeCurrrency",
-                        $"Status {status}, Quantity {result.Value.NotNull().Status}, Price {price}");
+                        $"Status {status}, Quantity {executedQty}, Price {price}");
                 }
             }
         }
