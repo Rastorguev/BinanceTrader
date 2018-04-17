@@ -320,7 +320,8 @@ namespace BinanceTrader.Trader
             var feeSymbol = GetCurrencySymbol(FeeAsset, QuoteAsset);
 
             var lastOrder = await GetLastOrder(feeSymbol).NotNull();
-            if (lastOrder.Status != OrderStatus.Filled)
+            if (lastOrder.Status == OrderStatus.New ||
+                lastOrder.Status == OrderStatus.PartiallyFilled)
             {
                 await CancelOrder(lastOrder);
             }
@@ -333,10 +334,13 @@ namespace BinanceTrader.Trader
 
             if (feeAssetAmmount < 1 && qouteAssetAmmount >= price * qty)
             {
-                var order = await TryPlaceOrder(OrderSide.Buy, feeSymbol, price, qty, TimeInForce.IOC).NotNull();
-                var success = order.Success && order.Value != null && order.Value.Status == OrderStatus.Filled;
-
-                _logger.LogMessage("BuyFeeCurrrency", $"Success {success}, Quantity {qty}, Price {price}");
+                var result = await TryPlaceOrder(OrderSide.Buy, feeSymbol, price, qty, TimeInForce.IOC).NotNull();
+                if (result.Value != null)
+                {
+                    var status = result.Value.Status;
+                    _logger.LogMessage("BuyFeeCurrrency",
+                        $"Status {status}, Quantity {result.Value.NotNull().Status}, Price {price}");
+                }
             }
         }
 
