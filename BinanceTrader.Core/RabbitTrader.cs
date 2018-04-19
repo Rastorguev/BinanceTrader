@@ -116,6 +116,7 @@ namespace BinanceTrader.Trader
                     else if (isCompleted)
                     {
                         await HandleCompletedOrder(order);
+                        _logger.LogOrder("Completed", order);
                     }
                     else if (order.Status != OrderStatus.New &&
                              order.Status != OrderStatus.Filled)
@@ -191,7 +192,7 @@ namespace BinanceTrader.Trader
                     var price = await GetActualPrice(order.Symbol, OrderSide.Buy);
                     var qty = Math.Floor(amount / price);
 
-                    await TryPlaceOrder(OrderSide.Buy, order.Symbol, price, qty, forced: true);
+                    await TryPlaceOrder(OrderSide.Buy, order.Symbol, price, qty);
                     break;
                 }
                 case OrderSide.Sell:
@@ -199,7 +200,7 @@ namespace BinanceTrader.Trader
                     var price = await GetActualPrice(order.Symbol, OrderSide.Sell);
                     var qty = order.OrigQty;
 
-                    await TryPlaceOrder(OrderSide.Sell, order.Symbol, price, qty, forced: true);
+                    await TryPlaceOrder(OrderSide.Sell, order.Symbol, price, qty);
                     break;
                 }
             }
@@ -232,8 +233,7 @@ namespace BinanceTrader.Trader
             string symbol,
             decimal price,
             decimal qty,
-            TimeInForce timeInForce = TimeInForce.GTC,
-            bool forced = false)
+            TimeInForce timeInForce = TimeInForce.GTC)
         {
             var success = false;
             NewOrder newOrder = null;
@@ -250,7 +250,7 @@ namespace BinanceTrader.Trader
 
                 success = true;
 
-                _logger.LogOrder(forced ? "Forced" : "Placed", newOrder);
+                _logger.LogOrder("Placed", newOrder);
             }
             else
             {
@@ -340,7 +340,7 @@ namespace BinanceTrader.Trader
                     var status = result.Value.Status;
                     var executedQty = result.Value.ExecutedQty;
 
-                    _logger.LogMessage("BuyFeeCurrrency",
+                    _logger.LogMessage("BuyFeeCurrency",
                         $"Status {status}, Quantity {executedQty}, Price {price}");
                 }
             }
