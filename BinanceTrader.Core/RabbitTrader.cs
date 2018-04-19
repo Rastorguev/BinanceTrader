@@ -16,7 +16,7 @@ namespace BinanceTrader.Trader
 {
     public class RabbitTrader
     {
-        private readonly TimeSpan _scheduleInterval = TimeSpan.FromMinutes(5);
+        private readonly TimeSpan _scheduleInterval = TimeSpan.FromMinutes(1);
         private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromHours(12);
         private const decimal ProfitRatio = 2m;
         private const decimal MinQuoteAmount = 0.01m;
