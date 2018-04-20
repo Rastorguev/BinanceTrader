@@ -23,7 +23,9 @@ namespace BinanceTrader
             var assets = new List<string>
             {
 
+                "NCASH",
                 "IOST",
+                "STORM",
                 "TRX",
                 "FUN",
                 "POE",
@@ -64,7 +66,7 @@ namespace BinanceTrader
                     asset,
                     "ETH",
                     new DateTime(2018, 02, 18, 14, 0, 0),
-                    new DateTime(2018, 04, 15, 22, 0, 0),
+                    new DateTime(2018, 04, 20, 21, 0, 0),
                     TimeInterval.Minutes_1);
 
                 var result = Trade(candles);

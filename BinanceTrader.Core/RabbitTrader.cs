@@ -31,7 +31,9 @@ namespace BinanceTrader.Trader
         [NotNull] [ItemNotNull] private readonly List<string> _symbols =
             new List<string>
             {
+                "NCASHETH",
                 "IOSTETH",
+                "STORMETH",
                 "TRXETH",
                 "FUNETH",
                 "POEETH",
