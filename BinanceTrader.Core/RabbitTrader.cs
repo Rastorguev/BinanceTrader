@@ -302,7 +302,6 @@ namespace BinanceTrader.Trader
             }
 
             var quoteUsdtSymbol = GetCurrencySymbol(QuoteAsset, UsdtAsset);
-            //var balanceQuote = total.Round();
             var balanceUsdt = total * prices.First(p => p.NotNull().Symbol == quoteUsdtSymbol).NotNull().Price;
 
             _logger.LogMessage("Balance",
