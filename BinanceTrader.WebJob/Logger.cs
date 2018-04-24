@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using Binance.API.Csharp.Client.Models.WebSocket;
@@ -55,7 +56,13 @@ namespace BinanceTrader.WebJob
 
         public void LogException(Exception ex)
         {
-            _client.TrackException(ex);
+            var properties = new Dictionary<string, string>();
+            foreach (DictionaryEntry d in ex.Data)
+            {
+                properties.Add(d.Key.ToString(), d.Value.ToString());
+            }
+
+            _client.TrackException(ex, properties);
             _client.Flush();
         }
     }
