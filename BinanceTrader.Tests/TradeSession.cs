@@ -12,6 +12,10 @@ namespace BinanceTrader
     public class TradeSession
     {
         [NotNull] private readonly TradeSessionConfig _config;
+        [NotNull ]private MockTradeAccount _account;
+        private decimal _nextPrice;
+        private OrderSide _nextAction;
+        private DateTime? _lastActionDate;
 
         public TradeSession(
             [NotNull] TradeSessionConfig config)
@@ -22,71 +26,93 @@ namespace BinanceTrader
         [NotNull]
         public ITradeAccount Run([NotNull] [ItemNotNull] List<Candlestick> candles)
         {
-            var account = new MockTradeAccount(0, _config.InitialQuoteAmount, _config.InitialPrice, _config.Fee);
+            _account = new MockTradeAccount(0, _config.InitialQuoteAmount, _config.InitialPrice, _config.Fee);
 
             if (!candles.Any())
             {
-                return account;
+                return _account;
             }
 
-            var nextPrice = candles.First().Close;
-            var nextAction = OrderSide.Buy;
-            DateTime? lastActionDate = null;
+            _nextPrice = candles.First().Close;
+            _nextAction = OrderSide.Buy;
+            _lastActionDate = null;
 
             foreach (var candle in candles)
             {
-                var force = lastActionDate == null ||
-                            candle.CloseTime.GetTime() - lastActionDate.Value >= TimeSpan.FromHours(_config.MaxIdleHours);
+                var force = _lastActionDate == null ||
+                            candle.CloseTime.GetTime() - _lastActionDate.Value >=
+                            TimeSpan.FromHours(_config.MaxIdleHours);
 
-                //var force = false;
-                var minProfitRatio = _config.MinProfitRatio;
-                var inRange = nextPrice >= candle.Low && nextPrice <= candle.High;
+                var profitRatio = _config.MinProfitRatio;
+                var inRange = _nextPrice >= candle.Low && _nextPrice <= candle.High;
 
-                if (nextAction == OrderSide.Buy && (inRange || force))
+                var n = 10m;
+                if (_nextAction == OrderSide.Buy)
                 {
-                    var price = nextPrice;
-
-                    if (force)
+             
+                    if (inRange)
                     {
-                        price = candle.High;
+                        var price = _nextPrice;
+                        Buy(price, candle, profitRatio);
                     }
-
-                    var estimatedBaseAmount = Math.Floor(account.CurrentQuoteAmount / price);
-                    if (account.CurrentQuoteAmount > _config.MinQuoteAmount && estimatedBaseAmount > 0)
+                    //else if (candle.Low - _nextPrice > _nextPrice.Percents(n))
+                    //{
+                    //    var price = candle.Low;
+                    //    Buy(price, candle, profitRatio);
+                    //}
+                    else if (force)
                     {
-                        account.Buy(estimatedBaseAmount, price, candle.OpenTime.GetTime());
-
-                        //Log(nextAction, candle, price, account, force);
-
-                        nextPrice = price + price.Percents(minProfitRatio);
-                        nextAction = OrderSide.Sell;
-                        lastActionDate = candle.OpenTime.GetTime();
+                        var price = candle.High;
+                        Buy(price, candle, profitRatio);
                     }
                 }
-                else if (nextAction == OrderSide.Sell && (inRange || force))
+                else if (_nextAction == OrderSide.Sell)
                 {
-                    var price = nextPrice;
-
-                    if (force)
+                    if (inRange)
                     {
-                        price = candle.Low;
+                        var price = _nextPrice;
+                        Sell(price, candle, profitRatio);
                     }
-
-                    var baseAmount = Math.Floor(account.CurrentBaseAmount);
-                    if (baseAmount > 0)
+                    //else if (_nextPrice - candle.High > _nextPrice.Percents(n))
+                    //{
+                    //    var price = candle.High;
+                    //    Sell(price, candle, profitRatio);
+                    //}
+                    else if (force)
                     {
-                        account.Sell(baseAmount, price, candle.OpenTime.GetTime());
-
-                        //Log(nextAction, candle, price, account, force);
-
-                        nextPrice = price - price.Percents(minProfitRatio);
-                        nextAction = OrderSide.Buy;
-                        lastActionDate = candle.OpenTime.GetTime();
+                        var price = candle.Low;
+                        Sell(price, candle, profitRatio);
                     }
                 }
             }
 
-            return account;
+            return _account;
+        }
+
+        private void Buy(decimal price, Candlestick candle, decimal profitRatio)
+        {
+            var estimatedBaseAmount = Math.Floor(_account.CurrentQuoteAmount / price);
+            if (_account.CurrentQuoteAmount > _config.MinQuoteAmount && estimatedBaseAmount > 0)
+            {
+                _account.Buy(estimatedBaseAmount, price, candle.OpenTime.GetTime());
+
+                _nextPrice = price + price.Percents(profitRatio);
+                _nextAction = OrderSide.Sell;
+                _lastActionDate = candle.OpenTime.GetTime();
+            }
+        }
+
+        private void Sell(decimal price, Candlestick candle, decimal profitRatio)
+        {
+            var baseAmount = Math.Floor(_account.CurrentBaseAmount);
+            if (baseAmount > 0)
+            {
+                _account.Sell(baseAmount, price, candle.OpenTime.GetTime());
+
+                _nextPrice = price - price.Percents(profitRatio);
+                _nextAction = OrderSide.Buy;
+                _lastActionDate = candle.OpenTime.GetTime();
+            }
         }
 
         private static void Log(
