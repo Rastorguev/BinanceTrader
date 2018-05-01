@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
-using Binance.API.Csharp.Client;
+using Binance.API.Csharp.Client.Domain.Interfaces;
 using Binance.API.Csharp.Client.Models;
 using Binance.API.Csharp.Client.Models.Account;
 using Binance.API.Csharp.Client.Models.Enums;
@@ -19,14 +19,14 @@ namespace BinanceTrader.Trader
         private readonly TimeSpan _scheduleInterval = TimeSpan.FromMinutes(1);
         private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromHours(12);
         private const decimal ProfitRatio = 2m;
-        private const decimal MinQuoteAmount = 0.01m;
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
         private const string UsdtAsset = "USDT";
 
-        [NotNull] private readonly BinanceClient _binanceClient;
+        [NotNull] private readonly IBinanceClient _client;
         [NotNull] private readonly Timer _timer;
         [NotNull] private readonly ILogger _logger;
+        [NotNull] private readonly TradingRulesProvider _rulesProvider;
 
         [NotNull] [ItemNotNull] private readonly List<string> _assets =
             new List<string>
@@ -65,11 +65,12 @@ namespace BinanceTrader.Trader
             };
 
         public RabbitTrader(
-            [NotNull] BinanceClient binanceClient,
+            [NotNull] IBinanceClient client,
             [NotNull] ILogger logger)
         {
             _logger = logger;
-            _binanceClient = binanceClient;
+            _client = client;
+            _rulesProvider = new TradingRulesProvider(client);
 
             _timer = new Timer
             {
@@ -82,13 +83,38 @@ namespace BinanceTrader.Trader
 
         public async void Start()
         {
-            await CheckOrders();
+            await ExecuteScheduledTasks();
+
             _timer.Start();
         }
 
         private async void OnTimerElapsed(object sender, ElapsedEventArgs elapsedEventArgs)
         {
+            await ExecuteScheduledTasks();
+        }
+
+        public async Task ExecuteScheduledTasks()
+        {
+            try
+            {
+                await _rulesProvider.UpdateRulesIfNeeded();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
+
             await CheckOrders();
+
+            try
+            {
+                await BuyFeeCurrencyIfNeeded();
+                await LogCurrentBalance();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
         }
 
         private async Task CheckOrders()
@@ -130,16 +156,6 @@ namespace BinanceTrader.Trader
                 {
                     _logger.LogException(ex);
                 }
-            }
-
-            try
-            {
-                await BuyFeeCurrencyIfNeeded();
-                await LogCurrentBalance();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogException(ex);
             }
         }
 
@@ -225,7 +241,7 @@ namespace BinanceTrader.Trader
 
         private async Task<Order> GetLastOrder(string currency)
         {
-            var lastOrder = (await _binanceClient.GetAllOrders(currency, null, 1)).NotNull().FirstOrDefault();
+            var lastOrder = (await _client.GetAllOrders(currency, null, 1).NotNull()).NotNull().FirstOrDefault();
 
             return lastOrder;
         }
@@ -240,14 +256,15 @@ namespace BinanceTrader.Trader
             var success = false;
             NewOrder newOrder = null;
 
-            if (IsMinNotional(price, qty))
+            if (IsMinNotional(symbol, price, qty))
             {
-                newOrder = await _binanceClient.PostNewOrder(
-                        symbol,
-                        qty,
-                        price,
-                        side,
-                        timeInForce: timeInForce)
+                newOrder = (await _client.PostNewOrder(
+                            symbol,
+                            qty,
+                            price,
+                            side,
+                            timeInForce: timeInForce)
+                        .NotNull())
                     .NotNull();
 
                 success = true;
@@ -264,14 +281,14 @@ namespace BinanceTrader.Trader
 
         private async Task<PriceChangeInfo> GetPrices(string symbol)
         {
-            var priceInfo = (await _binanceClient.GetPriceChange24H(symbol)).NotNull().First();
+            var priceInfo = (await _client.GetPriceChange24H(symbol).NotNull()).NotNull().First();
 
             return priceInfo;
         }
 
         private async Task<CanceledOrder> CancelOrder([NotNull] IOrder order)
         {
-            var canceledOrder = await _binanceClient.CancelOrder(order.Symbol, order.OrderId);
+            var canceledOrder = await _client.CancelOrder(order.Symbol, order.OrderId).NotNull();
 
             _logger.LogOrder("Canceled", order);
 
@@ -282,8 +299,8 @@ namespace BinanceTrader.Trader
         {
             var total = 0m;
 
-            var prices = (await _binanceClient.GetAllPrices().NotNull()).ToList();
-            var balances = (await _binanceClient.GetAccountInfo().NotNull()).NotNull()
+            var prices = (await _client.GetAllPrices().NotNull().NotNull()).ToList();
+            var balances = (await _client.GetAccountInfo().NotNull()).NotNull()
                 .Balances.NotNull().Where(b => b.NotNull().Free + b.NotNull().Locked > 0).ToList();
 
             foreach (var balance in balances)
@@ -308,9 +325,10 @@ namespace BinanceTrader.Trader
                 $"{Math.Round(total, 3)} {QuoteAsset} ({Math.Round(balanceUsdt, 3)} {UsdtAsset})");
         }
 
-        private static bool IsMinNotional(decimal price, decimal qty)
+        private bool IsMinNotional(string symbol, decimal price, decimal qty)
         {
-            var isMinNotional = price * qty >= MinQuoteAmount;
+            var minNotional = _rulesProvider.GetRulesFor(symbol).MinNotional;
+            var isMinNotional = price * qty >= minNotional;
 
             return isMinNotional;
         }
@@ -327,13 +345,13 @@ namespace BinanceTrader.Trader
                 await CancelOrder(lastOrder);
             }
 
-            var balance = (await _binanceClient.GetAccountInfo()).NotNull().Balances.NotNull().ToList();
+            var balance = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull().ToList();
 
-            var feeAssetAmmount = balance.First(b => b.NotNull().Asset == FeeAsset).NotNull().Free;
-            var qouteAssetAmmount = balance.First(b => b.NotNull().Asset == FeeAsset).NotNull().Free;
+            var feeAmmount = balance.First(b => b.NotNull().Asset == FeeAsset).NotNull().Free;
+            var qouteAmmount = balance.First(b => b.NotNull().Asset == QuoteAsset).NotNull().Free;
             var price = await GetActualPrice(feeSymbol, OrderSide.Buy);
 
-            if (feeAssetAmmount < 1 && qouteAssetAmmount >= price * qty)
+            if (feeAmmount < 1 && qouteAmmount >= price * qty)
             {
                 var result = await TryPlaceOrder(OrderSide.Buy, feeSymbol, price, qty, TimeInForce.IOC).NotNull();
                 if (result.Value != null)
@@ -350,18 +368,6 @@ namespace BinanceTrader.Trader
         private static string GetCurrencySymbol(string originalAsset, string quoteAsset)
         {
             return string.Format($"{originalAsset}{quoteAsset}");
-        }
-
-        public class Result<T>
-        {
-            public bool Success { get; }
-            public T Value { get; }
-
-            public Result(bool success, T value)
-            {
-                Success = success;
-                Value = value;
-            }
         }
     }
 }
