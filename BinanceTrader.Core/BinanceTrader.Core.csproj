@@ -43,9 +43,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Exceptions.cs" />
     <Compile Include="ILogger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RabbitTrader.cs" />
+    <Compile Include="Result.cs" />
+    <Compile Include="TradingRulesProvider.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BinanceTrader.Tools\BinanceTrader.Tools.csproj">
