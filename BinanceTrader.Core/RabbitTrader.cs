@@ -28,40 +28,40 @@ namespace BinanceTrader.Trader
         [NotNull] private readonly Timer _timer;
         [NotNull] private readonly ILogger _logger;
 
-        [NotNull] [ItemNotNull] private readonly List<string> _symbols =
+        [NotNull] [ItemNotNull] private readonly List<string> _assets =
             new List<string>
             {
-                "NCASHETH",
-                "IOSTETH",
-                "STORMETH",
-                "TRXETH",
-                "FUNETH",
-                "POEETH",
-                "TNBETH",
-                "XVGETH",
-                "CDTETH",
-                "DNTETH",
-                "LENDETH",
-                "MANAETH",
-                "SNGLSETH",
-                "TNTETH",
-                "FUELETH",
-                "YOYOETH",
-                "CNDETH",
-                "RCNETH",
-                "MTHETH",
-                "CMTETH",
-                "SNTETH",
-                "RPXETH",
-                "ENJETH",
-                "CHATETH",
-                "BTSETH",
-                "VIBETH",
-                "SNMETH",
-                "OSTETH",
-                "QSPETH",
-                "DLTETH",
-                "BATETH"
+                "NCASH",
+                "IOST",
+                "STORM",
+                "TRX",
+                "FUN",
+                "POE",
+                "TNB",
+                "XVG",
+                "CDT",
+                "DNT",
+                "LEND",
+                "MANA",
+                "SNGLS",
+                "TNT",
+                "FUEL",
+                "YOYO",
+                "CND",
+                "RCN",
+                "MTH",
+                "CMT",
+                "SNT",
+                "RPX",
+                "ENJ",
+                "CHAT",
+                "BTS",
+                "VIB",
+                "SNM",
+                "OST",
+                "QSP",
+                "DLT",
+                "BAT"
             };
 
         public RabbitTrader(
@@ -93,10 +93,11 @@ namespace BinanceTrader.Trader
 
         private async Task CheckOrders()
         {
-            foreach (var symbol in _symbols)
+            foreach (var asset in _assets)
             {
                 try
                 {
+                    var symbol = GetCurrencySymbol(asset, QuoteAsset);
                     var order = await GetLastOrder(symbol).NotNull();
 
                     if (order == null)
@@ -134,7 +135,6 @@ namespace BinanceTrader.Trader
             try
             {
                 await BuyFeeCurrencyIfNeeded();
-
                 await LogCurrentBalance();
             }
             catch (Exception ex)
