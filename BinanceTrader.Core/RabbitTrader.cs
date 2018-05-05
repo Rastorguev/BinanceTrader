@@ -18,10 +18,13 @@ namespace BinanceTrader.Trader
     {
         private readonly TimeSpan _scheduleInterval = TimeSpan.FromMinutes(1);
         private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromHours(12);
-        private const decimal ProfitRatio = 2m;
+        private const decimal MinProfitRatio = 2m;
+        private const decimal MaxProfitRatio = 2.5m;
+        private const decimal ProfitRatioStepSize = 0.1m;
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
         private const string UsdtAsset = "USDT";
+        private const decimal MinOrderSize = 0.02m;
 
         [NotNull] private readonly IBinanceClient _client;
         [NotNull] private readonly Timer _timer;
@@ -64,17 +67,8 @@ namespace BinanceTrader.Trader
             try
             {
                 await _rulesProvider.UpdateRulesIfNeeded();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogException(ex);
-            }
-
-            await CheckOrders();
-
-            try
-            {
                 await BuyFeeCurrencyIfNeeded();
+                await CheckOrders();
                 await LogCurrentBalance();
             }
             catch (Exception ex)
@@ -85,112 +79,136 @@ namespace BinanceTrader.Trader
 
         private async Task CheckOrders()
         {
-            foreach (var asset in _assets)
+            await CancelExpiredOrders();
+            await PlaceSellOrders();
+            await PlaceBuyOrders();
+        }
+
+        private async Task CancelExpiredOrders()
+        {
+            try
             {
-                try
+                var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
+                var now = DateTime.Now;
+                var expiredOrders = openOrders
+                    .Where(o => now.ToLocalTime() - o.NotNull().UnixTime.GetTime().ToLocalTime() > _maxIdlePeriod)
+                    .ToList();
+
+                foreach (var order in expiredOrders)
                 {
-                    var symbol = GetCurrencySymbol(asset, QuoteAsset);
-                    var order = await GetLastOrder(symbol).NotNull();
-
-                    if (order == null)
-                    {
-                        _logger.LogWarning("NoOrdersFound", $"No orders for {symbol}");
-                        continue;
-                    }
-
-                    var now = DateTime.Now;
-                    var isCompleted = order.Status == OrderStatus.Filled;
-                    var isNew = order.Status == OrderStatus.New;
-                    var isExpired =
-                        isNew && now.ToLocalTime() - order.UnixTime.GetTime().ToLocalTime() > _maxIdlePeriod;
-
-                    if (isExpired)
-                    {
-                        await HandleExpiredOrder(order);
-                    }
-                    else if (isCompleted)
-                    {
-                        await HandleCompletedOrder(order);
-                        _logger.LogOrder("Completed", order);
-                    }
-                    else if (order.Status != OrderStatus.New &&
-                             order.Status != OrderStatus.Filled)
-                    {
-                    }
+                    await CancelOrder(order.NotNull());
+                    _logger.LogOrder("Canceled", order);
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogException(ex);
-                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
             }
         }
 
-        private async Task HandleCompletedOrder([NotNull] IOrder order)
+        private async Task PlaceSellOrders()
         {
-            switch (order.Side)
+            try
             {
-                case OrderSide.Sell:
+                var freeBalances
+                    = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull()
+                    .Where(b => b.NotNull().Free > 0 && _assets.Contains(b.Asset)).ToList();
+
+                foreach (var balance in freeBalances)
                 {
-                    var amount = order.Price * order.OrigQty;
-                    var price = (order.Price - order.Price.Percents(ProfitRatio)).Round();
-                    if (price == 0)
+                    try
                     {
-                        price = await GetActualPrice(order.Symbol, OrderSide.Buy);
+                        var symbol = GetCurrencySymbol(balance.NotNull().Asset, QuoteAsset);
+                        var price = await GetActualPrice(symbol, OrderSide.Sell);
+                        var rules = _rulesProvider.GetRulesFor(symbol);
+                        var sellAmounts =
+                            OrderDistributor.SplitIntoSellOrders(balance.Free, MinOrderSize, price, rules.StepSize);
+
+                        var profitRatio = MinProfitRatio;
+
+                        foreach (var amount in sellAmounts)
+                        {
+                            var sellPrice = (price + price.Percents(profitRatio)).Round();
+                            var orderRequest = new OrderRequest(symbol, OrderSide.Sell, amount, sellPrice);
+
+                            if (MeetsTradingRules(orderRequest))
+                            {
+                                await PlaceOrder(orderRequest);
+
+                                if (profitRatio < MaxProfitRatio)
+                                {
+                                    profitRatio += ProfitRatioStepSize;
+                                }
+                            }
+                        }
                     }
-
-                    var qty = Math.Floor(amount / price);
-
-                    var buyRequest = new OrderRequest(order.Symbol, OrderSide.Buy, qty, price);
-                    await TryPlaceOrder(buyRequest);
-                    break;
-                }
-                case OrderSide.Buy:
-                {
-                    var price = (order.Price + order.Price.Percents(ProfitRatio)).Round();
-                    if (price == 0)
+                    catch (Exception ex)
                     {
-                        price = await GetActualPrice(order.Symbol, OrderSide.Sell);
+                        _logger.LogException(ex);
                     }
-
-                    var qty = order.OrigQty;
-
-                    var sellRequest = new OrderRequest(order.Symbol, OrderSide.Sell, qty, price);
-                    await TryPlaceOrder(sellRequest);
-                    break;
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
             }
         }
 
-        private async Task HandleExpiredOrder([NotNull] IOrder order)
+        private async Task PlaceBuyOrders()
         {
-            await CancelOrder(order);
-
-            await ReplaceWithActualPrice(order);
-        }
-
-        private async Task ReplaceWithActualPrice([NotNull] IOrder order)
-        {
-            switch (order.Side)
+            try
             {
-                case OrderSide.Buy:
-                {
-                    var amount = order.Price * order.OrigQty;
-                    var price = await GetActualPrice(order.Symbol, OrderSide.Buy);
-                    var qty = Math.Floor(amount / price);
+                var freeQuoteBalance = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull()
+                    .First(b => b.NotNull().Asset == QuoteAsset).NotNull().Free;
 
-                    var buyRequest = new OrderRequest(order.Symbol, OrderSide.Buy, qty, price);
-                    await TryPlaceOrder(buyRequest);
-                    break;
-                }
-                case OrderSide.Sell:
-                {
-                    var price = await GetActualPrice(order.Symbol, OrderSide.Sell);
-                    var qty = order.OrigQty;
+                var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
 
-                    var sellRequest = new OrderRequest(order.Symbol, OrderSide.Sell, qty, price);
-                    await TryPlaceOrder(sellRequest);
-                    break;
+                var openOrdersCount = _assets.Select(asset =>
+                    {
+                        var symbol = GetCurrencySymbol(asset, QuoteAsset);
+                        var count = openOrders.Count(o => o.NotNull().Symbol == symbol);
+                        return (symbol: symbol, count: count);
+                    })
+                    .ToDictionary(x => x.symbol, x => x.count);
+
+                var amounts = OrderDistributor.SplitIntoBuyOrders(freeQuoteBalance, MinOrderSize, openOrdersCount);
+
+                foreach (var symbolAmounts in amounts)
+                {
+                    try
+                    {
+                        var symbol = symbolAmounts.Key;
+                        var price = await GetActualPrice(symbol, OrderSide.Buy);
+                        var rules = _rulesProvider.GetRulesFor(symbol);
+                        var profitRatio = MinProfitRatio;
+
+                        foreach (var quoteAmount in symbolAmounts.Value.NotNull())
+                        {
+                            var buyPrice = (price - price.Percents(profitRatio)).Round();
+                            var baseAmount =
+                                OrderDistributor.GetFittingBaseAmount(quoteAmount, buyPrice, rules.StepSize);
+                            var orderRequest = new OrderRequest(symbol, OrderSide.Buy, baseAmount, buyPrice);
+
+                            if (MeetsTradingRules(orderRequest))
+                            {
+                                await PlaceOrder(orderRequest);
+
+                                if (profitRatio < MaxProfitRatio)
+                                {
+                                    profitRatio += ProfitRatioStepSize;
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogException(ex);
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
             }
         }
 
@@ -216,34 +234,36 @@ namespace BinanceTrader.Trader
             return lastOrder;
         }
 
-        private async Task<Result<NewOrder>> TryPlaceOrder([NotNull] OrderRequest orderRequest,
+        private async Task<NewOrder> PlaceOrder([NotNull] OrderRequest orderRequest,
+            OrderType orderType = OrderType.Limit,
             TimeInForce timeInForce = TimeInForce.GTC)
         {
-            var success = false;
-            NewOrder newOrder = null;
+            var newOrder = (await _client.PostNewOrder(
+                        orderRequest.Symbol,
+                        orderRequest.Qty,
+                        orderRequest.Price,
+                        orderRequest.Side,
+                        orderType,
+                        timeInForce)
+                    .NotNull())
+                .NotNull();
 
+            _logger.LogOrder("Placed", newOrder);
+
+            return newOrder;
+        }
+
+        private bool MeetsTradingRules([NotNull] OrderRequest orderRequest)
+        {
             var rules = _rulesProvider.GetRulesFor(orderRequest.Symbol);
             if (orderRequest.MeetsTradingRules(rules))
             {
-                newOrder = (await _client.PostNewOrder(
-                            orderRequest.Symbol,
-                            orderRequest.Qty,
-                            orderRequest.Price,
-                            orderRequest.Side,
-                            timeInForce: timeInForce)
-                        .NotNull())
-                    .NotNull();
-
-                success = true;
-
-                _logger.LogOrder("Placed", newOrder);
-            }
-            else
-            {
-                _logger.LogOrderRequest("OrderRequestDoesNotMeetRules", orderRequest);
+                return true;
             }
 
-            return new Result<NewOrder>(success, newOrder);
+            _logger.LogOrderRequest("OrderRequestDoesNotMeetRules", orderRequest);
+
+            return false;
         }
 
         private async Task<PriceChangeInfo> GetPrices(string symbol)
@@ -297,13 +317,6 @@ namespace BinanceTrader.Trader
             const int qty = 1;
             var feeSymbol = GetCurrencySymbol(FeeAsset, QuoteAsset);
 
-            var lastOrder = await GetLastOrder(feeSymbol).NotNull();
-            if (lastOrder.Status == OrderStatus.New ||
-                lastOrder.Status == OrderStatus.PartiallyFilled)
-            {
-                await CancelOrder(lastOrder);
-            }
-
             var balance = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull().ToList();
 
             var feeAmount = balance.First(b => b.NotNull().Asset == FeeAsset).NotNull().Free;
@@ -312,12 +325,13 @@ namespace BinanceTrader.Trader
 
             if (feeAmount < 1 && quoteAmount >= price * qty)
             {
-                var buyRequest = new OrderRequest(feeSymbol, OrderSide.Buy, qty, price);
-                var result = await TryPlaceOrder(buyRequest, TimeInForce.IOC).NotNull();
-                if (result.Value != null)
+                var orderRequest = new OrderRequest(feeSymbol, OrderSide.Buy, qty, price);
+
+                if (MeetsTradingRules(orderRequest))
                 {
-                    var status = result.Value.Status;
-                    var executedQty = result.Value.ExecutedQty;
+                    var order = await PlaceOrder(orderRequest, OrderType.Market, TimeInForce.IOC).NotNull();
+                    var status = order.Status;
+                    var executedQty = order.ExecutedQty;
 
                     _logger.LogMessage("BuyFeeCurrency",
                         $"Status {status}, Quantity {executedQty}, Price {price}");
@@ -325,9 +339,9 @@ namespace BinanceTrader.Trader
             }
         }
 
-        private static string GetCurrencySymbol(string originalAsset, string quoteAsset)
+        private static string GetCurrencySymbol(string baseAsset, string quoteAsset)
         {
-            return string.Format($"{originalAsset}{quoteAsset}");
+            return string.Format($"{baseAsset}{quoteAsset}");
         }
     }
 }

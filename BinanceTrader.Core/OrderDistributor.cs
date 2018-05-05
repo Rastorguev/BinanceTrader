@@ -13,15 +13,16 @@ namespace BinanceTrader.Trader
             decimal minOrderSize,
             [NotNull] Dictionary<string, int> openOrdersCount)
         {
-            var ordersRequests = new Dictionary<string, List<decimal>>();
+            var amounts = new Dictionary<string, List<decimal>>();
             var remainingQuoteAmount = freeQuoteAmount;
 
             while (true)
             {
-                var minOrdersCountSymbols = openOrdersCount.Select(o =>
+                var minOrdersCountSymbols = openOrdersCount.Select(
+                        o =>
                     {
-                        var requestsCount = ordersRequests.ContainsKey(o.Key.NotNull())
-                            ? ordersRequests[o.Key.NotNull()].NotNull().Count
+                        var requestsCount = amounts.ContainsKey(o.Key.NotNull())
+                            ? amounts[o.Key.NotNull()].NotNull().Count
                             : 0;
 
                         return (Symbol: o.Key, Count: requestsCount + o.Value);
@@ -36,16 +37,16 @@ namespace BinanceTrader.Trader
                 {
                     if (remainingQuoteAmount < minOrderSize)
                     {
-                        return ordersRequests;
+                        return amounts;
                     }
 
-                    if (!ordersRequests.ContainsKey(symbol.NotNull()))
+                    if (!amounts.ContainsKey(symbol.NotNull()))
                     {
-                        ordersRequests[symbol] = new List<decimal>();
+                        amounts[symbol] = new List<decimal>();
                     }
 
                     var orderSize = remainingQuoteAmount >= minOrderSize * 2 ? minOrderSize : remainingQuoteAmount;
-                    ordersRequests[symbol].NotNull().Add(orderSize);
+                    amounts[symbol].NotNull().Add(orderSize);
                     remainingQuoteAmount -= orderSize;
                 }
             }
@@ -58,7 +59,7 @@ namespace BinanceTrader.Trader
             decimal price,
             decimal stepSize)
         {
-            var ordersRequests = new List<decimal>();
+            var amounts = new List<decimal>();
             var remainingStepsAmount = (int) (freeBaseAmount / stepSize);
 
             var minOrderSizeInSteps = (int) (minOrderSize / stepSize / price);
@@ -68,11 +69,11 @@ namespace BinanceTrader.Trader
                     ? minOrderSizeInSteps
                     : remainingStepsAmount;
 
-                ordersRequests.Add(orderSizeInSteps * stepSize);
+                amounts.Add(orderSizeInSteps * stepSize);
                 remainingStepsAmount -= orderSizeInSteps;
             }
 
-            return ordersRequests;
+            return amounts;
         }
 
         public static decimal GetFittingBaseAmount(decimal quoteAmount, decimal price, decimal stepSize)
