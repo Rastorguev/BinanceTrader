@@ -6,7 +6,8 @@ namespace BinanceTrader.Trader
 {
     public interface ILogger
     {
-        void LogOrder([NotNull] string orderEvent, [NotNull] IOrder order);
+        void LogOrder([NotNull] string eventName, [NotNull] IOrder order);
+        void LogOrderRequest([NotNull] string eventName, [NotNull] OrderRequest orderRequest);
         void LogMessage([NotNull] string key, [NotNull] string message);
         void LogWarning([NotNull] string key, [NotNull] string message);
         void LogException([NotNull] Exception ex);

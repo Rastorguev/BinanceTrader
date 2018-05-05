@@ -28,9 +28,7 @@ namespace BinanceTrader.Trader
         [NotNull] private readonly ILogger _logger;
         [NotNull] private readonly TradingRulesProvider _rulesProvider;
 
-        [NotNull]
-        [ItemNotNull]
-        private readonly List<string> _assets =
+        [NotNull] [ItemNotNull] private readonly List<string> _assets =
             new List<string>
             {
                 "NCASH",
@@ -166,32 +164,34 @@ namespace BinanceTrader.Trader
             switch (order.Side)
             {
                 case OrderSide.Sell:
+                {
+                    var amount = order.Price * order.OrigQty;
+                    var price = (order.Price - order.Price.Percents(ProfitRatio)).Round();
+                    if (price == 0)
                     {
-                        var amount = order.Price * order.OrigQty;
-                        var price = (order.Price - order.Price.Percents(ProfitRatio)).Round();
-                        if (price == 0)
-                        {
-                            price = await GetActualPrice(order.Symbol, OrderSide.Buy);
-                        }
-
-                        var qty = Math.Floor(amount / price);
-
-                        await TryPlaceOrder(OrderSide.Buy, order.Symbol, price, qty);
-                        break;
+                        price = await GetActualPrice(order.Symbol, OrderSide.Buy);
                     }
+
+                    var qty = Math.Floor(amount / price);
+
+                    var buyRequest = new OrderRequest(order.Symbol, OrderSide.Buy, qty, price);
+                    await TryPlaceOrder(buyRequest);
+                    break;
+                }
                 case OrderSide.Buy:
+                {
+                    var price = (order.Price + order.Price.Percents(ProfitRatio)).Round();
+                    if (price == 0)
                     {
-                        var price = (order.Price + order.Price.Percents(ProfitRatio)).Round();
-                        if (price == 0)
-                        {
-                            price = await GetActualPrice(order.Symbol, OrderSide.Sell);
-                        }
-
-                        var qty = order.OrigQty;
-
-                        await TryPlaceOrder(OrderSide.Sell, order.Symbol, price, qty);
-                        break;
+                        price = await GetActualPrice(order.Symbol, OrderSide.Sell);
                     }
+
+                    var qty = order.OrigQty;
+
+                    var sellRequest = new OrderRequest(order.Symbol, OrderSide.Sell, qty, price);
+                    await TryPlaceOrder(sellRequest);
+                    break;
+                }
             }
         }
 
@@ -207,22 +207,24 @@ namespace BinanceTrader.Trader
             switch (order.Side)
             {
                 case OrderSide.Buy:
-                    {
-                        var amount = order.Price * order.OrigQty;
-                        var price = await GetActualPrice(order.Symbol, OrderSide.Buy);
-                        var qty = Math.Floor(amount / price);
+                {
+                    var amount = order.Price * order.OrigQty;
+                    var price = await GetActualPrice(order.Symbol, OrderSide.Buy);
+                    var qty = Math.Floor(amount / price);
 
-                        await TryPlaceOrder(OrderSide.Buy, order.Symbol, price, qty);
-                        break;
-                    }
+                    var buyRequest = new OrderRequest(order.Symbol, OrderSide.Buy, qty, price);
+                    await TryPlaceOrder(buyRequest);
+                    break;
+                }
                 case OrderSide.Sell:
-                    {
-                        var price = await GetActualPrice(order.Symbol, OrderSide.Sell);
-                        var qty = order.OrigQty;
+                {
+                    var price = await GetActualPrice(order.Symbol, OrderSide.Sell);
+                    var qty = order.OrigQty;
 
-                        await TryPlaceOrder(OrderSide.Sell, order.Symbol, price, qty);
-                        break;
-                    }
+                    var sellRequest = new OrderRequest(order.Symbol, OrderSide.Sell, qty, price);
+                    await TryPlaceOrder(sellRequest);
+                    break;
+                }
             }
         }
 
@@ -248,23 +250,20 @@ namespace BinanceTrader.Trader
             return lastOrder;
         }
 
-        private async Task<Result<NewOrder>> TryPlaceOrder(
-            OrderSide side,
-            string symbol,
-            decimal price,
-            decimal qty,
+        private async Task<Result<NewOrder>> TryPlaceOrder([NotNull] OrderRequest orderRequest,
             TimeInForce timeInForce = TimeInForce.GTC)
         {
             var success = false;
             NewOrder newOrder = null;
 
-            if (IsMinNotional(symbol, price, qty))
+            var rules = _rulesProvider.GetRulesFor(orderRequest.Symbol);
+            if (orderRequest.MeetsTradingRules(rules))
             {
                 newOrder = (await _client.PostNewOrder(
-                            symbol,
-                            qty,
-                            price,
-                            side,
+                            orderRequest.Symbol,
+                            orderRequest.Qty,
+                            orderRequest.Price,
+                            orderRequest.Side,
                             timeInForce: timeInForce)
                         .NotNull())
                     .NotNull();
@@ -275,7 +274,7 @@ namespace BinanceTrader.Trader
             }
             else
             {
-                _logger.LogWarning("MinNotionalError", $"{symbol} : {price} * {qty} = {price * qty}");
+                _logger.LogOrderRequest("OrderRequestDoesNotMeetRules", orderRequest);
             }
 
             return new Result<NewOrder>(success, newOrder);
@@ -327,14 +326,6 @@ namespace BinanceTrader.Trader
                 $"{Math.Round(total, 3)} {QuoteAsset} ({Math.Round(balanceUsdt, 3)} {UsdtAsset})");
         }
 
-        private bool IsMinNotional(string symbol, decimal price, decimal qty)
-        {
-            var minNotional = _rulesProvider.GetRulesFor(symbol).MinNotional;
-            var isMinNotional = price * qty >= minNotional;
-
-            return isMinNotional;
-        }
-
         private async Task BuyFeeCurrencyIfNeeded()
         {
             const int qty = 1;
@@ -349,13 +340,14 @@ namespace BinanceTrader.Trader
 
             var balance = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull().ToList();
 
-            var feeAmmount = balance.First(b => b.NotNull().Asset == FeeAsset).NotNull().Free;
-            var qouteAmmount = balance.First(b => b.NotNull().Asset == QuoteAsset).NotNull().Free;
+            var feeAmount = balance.First(b => b.NotNull().Asset == FeeAsset).NotNull().Free;
+            var quoteAmount = balance.First(b => b.NotNull().Asset == QuoteAsset).NotNull().Free;
             var price = await GetActualPrice(feeSymbol, OrderSide.Buy);
 
-            if (feeAmmount < 1 && qouteAmmount >= price * qty)
+            if (feeAmount < 1 && quoteAmount >= price * qty)
             {
-                var result = await TryPlaceOrder(OrderSide.Buy, feeSymbol, price, qty, TimeInForce.IOC).NotNull();
+                var buyRequest = new OrderRequest(feeSymbol, OrderSide.Buy, qty, price);
+                var result = await TryPlaceOrder(buyRequest, TimeInForce.IOC).NotNull();
                 if (result.Value != null)
                 {
                     var status = result.Value.Status;

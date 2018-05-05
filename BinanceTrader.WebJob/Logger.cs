@@ -20,9 +20,9 @@ namespace BinanceTrader.WebJob
             _client = new TelemetryClient {InstrumentationKey = key};
         }
 
-        public void LogOrder(string orderEvent, IOrder order)
+        public void LogOrder(string eventName, IOrder order)
         {
-            _client.TrackEvent(orderEvent, new Dictionary<string, string>
+            _client.TrackEvent(eventName, new Dictionary<string, string>
             {
                 {"Symbol", order.Symbol},
                 {"Side", order.Side.ToString()},
@@ -30,6 +30,20 @@ namespace BinanceTrader.WebJob
                 {"Price", order.Price.Round().ToString(CultureInfo.InvariantCulture)},
                 {"Qty", order.OrigQty.Round().ToString(CultureInfo.InvariantCulture)},
                 {"Total", (order.OrigQty * order.Price).Round().ToString(CultureInfo.InvariantCulture)}
+            });
+
+            _client.Flush();
+        }
+
+        public void LogOrderRequest(string eventName, OrderRequest orderRequest)
+        {
+            _client.TrackEvent(eventName, new Dictionary<string, string>
+            {
+                {"Symbol", orderRequest.Symbol},
+                {"Side", orderRequest.Side.ToString()},
+                {"Price", orderRequest.Price.Round().ToString(CultureInfo.InvariantCulture)},
+                {"Qty", orderRequest.Qty.Round().ToString(CultureInfo.InvariantCulture)},
+                {"Total", (orderRequest.Qty * orderRequest.Price).Round().ToString(CultureInfo.InvariantCulture)}
             });
 
             _client.Flush();
