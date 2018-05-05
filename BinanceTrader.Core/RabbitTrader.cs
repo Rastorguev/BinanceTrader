@@ -28,41 +28,7 @@ namespace BinanceTrader.Trader
         [NotNull] private readonly ILogger _logger;
         [NotNull] private readonly TradingRulesProvider _rulesProvider;
 
-        [NotNull] [ItemNotNull] private readonly List<string> _assets =
-            new List<string>
-            {
-                "NCASH",
-                "IOST",
-                "STORM",
-                "TRX",
-                "FUN",
-                "POE",
-                "TNB",
-                "XVG",
-                "CDT",
-                "DNT",
-                "LEND",
-                "MANA",
-                "SNGLS",
-                "TNT",
-                "FUEL",
-                //"YOYO",
-                "CND",
-                "RCN",
-                "MTH",
-                //"CMT",
-                "SNT",
-                "RPX",
-                "ENJ",
-                "CHAT",
-                //"BTS",
-                "VIB",
-                "SNM",
-                "OST",
-                "QSP",
-                "DLT",
-                "BAT"
-            };
+        [NotNull] [ItemNotNull] private readonly List<string> _assets = AssetsProvider.Assets;
 
         public RabbitTrader(
             [NotNull] IBinanceClient client,
