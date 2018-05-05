@@ -7,7 +7,7 @@ namespace BinanceTrader.Cli
 {
     public class Logger : ILogger
     {
-        public void LogOrder(string orderEvent, IOrder order)
+        public void LogOrder(string eventName, IOrder order)
         {
             LogTime();
 
@@ -16,13 +16,32 @@ namespace BinanceTrader.Cli
             Console.ResetColor();
 
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine(orderEvent);
+            Console.WriteLine(eventName);
             Console.ResetColor();
 
             Console.WriteLine($"Side:\t\t {order.Side}");
             Console.WriteLine($"Status:\t\t {order.Status}");
             Console.WriteLine($"Price:\t\t {order.Price.Round()}");
             Console.WriteLine($"Qty:\t\t {order.OrigQty.Round()}");
+
+            Console.WriteLine();
+        }
+
+        public void LogOrderRequest(string eventName, OrderRequest orderRequest)
+        {
+            LogTime();
+
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine(orderRequest.Symbol);
+            Console.ResetColor();
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine(eventName);
+            Console.ResetColor();
+
+            Console.WriteLine($"Side:\t\t {orderRequest.Side}");
+            Console.WriteLine($"Price:\t\t {orderRequest.Price.Round()}");
+            Console.WriteLine($"Qty:\t\t {orderRequest.Qty.Round()}");
 
             Console.WriteLine();
         }

@@ -13,7 +13,7 @@ namespace BinanceTrader.Trader
         [NotNull] private readonly IBinanceClient _client;
         private DateTime? _lastUpdateTime;
         private readonly TimeSpan _expiration = TimeSpan.FromHours(12);
-        private TradingRules _tradingRules;
+        private TradingRulesContainer _rulesContainer;
 
         public TradingRulesProvider([NotNull] IBinanceClient client)
         {
@@ -24,13 +24,13 @@ namespace BinanceTrader.Trader
         {
             try
             {
-                var isValid = _tradingRules != null &&
+                var isValid = _rulesContainer != null &&
                               _lastUpdateTime != null &&
                               _lastUpdateTime.Value + _expiration > DateTime.Now;
 
                 if (!isValid)
                 {
-                    _tradingRules = await _client.LoadTradingRules().NotNull();
+                    _rulesContainer = await _client.LoadTradingRules().NotNull();
                     _lastUpdateTime = DateTime.Now;
                 }
             }
@@ -41,11 +41,11 @@ namespace BinanceTrader.Trader
         }
 
         [NotNull]
-        public TradingRule GetRulesFor(string symbol)
+        public ITradingRules GetRulesFor(string symbol)
         {
             try
             {
-                return _tradingRules.NotNull().Symbols.NotNull().First(s => s.NotNull().Symbol == symbol).NotNull();
+                return _rulesContainer.NotNull().Rules.NotNull().First(s => s.NotNull().Symbol == symbol).NotNull();
             }
             catch (Exception ex)
             {
