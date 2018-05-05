@@ -9,11 +9,11 @@ namespace BinanceTrader
     public class QuoteDistributionTest
     {
         [Fact]
-        public void DistributeQuoteCurrency_AllSymbolsHaveNoOpenOrders()
+        public void SplitIntoBuyOrders_AllSymbolsHaveNoOpenOrders()
         {
             const int quoteAmount = 100;
             const int minOrderSize = 10;
-            var ordersRequest = OrdersDistributor.DistributeQuoteCurrency(quoteAmount, minOrderSize,
+            var ordersRequest = OrderDistributor.SplitIntoBuyOrders(quoteAmount, minOrderSize,
                 new Dictionary<string, int>
                 {
                     {"0", 0},
@@ -33,12 +33,12 @@ namespace BinanceTrader
         }
 
         [Fact]
-        public void DistributeQuoteCurrency_OneSymbolHaveOneOpenOrder()
+        public void SplitIntoBuyOrders_OneSymbolHaveOneOpenOrder()
         {
             const int quoteAmount = 100;
             const int minOrderSize = 10;
 
-            var ordersRequest = OrdersDistributor.DistributeQuoteCurrency(quoteAmount, minOrderSize,
+            var ordersRequest = OrderDistributor.SplitIntoBuyOrders(quoteAmount, minOrderSize,
                 new Dictionary<string, int>
                 {
                     {"0", 1},
@@ -53,17 +53,17 @@ namespace BinanceTrader
                     {"9", 0}
                 });
 
-            Assert.True(ordersRequest.Sum(r => r.Value.Sum()) == quoteAmount);
-            Assert.True(ordersRequest.All(r => r.Value.ToList().Count == 1));
+            Assert.True(ordersRequest.Sum(r => r.Value.NotNull().Sum()) == quoteAmount);
+            Assert.True(ordersRequest.All(r => r.Value.NotNull().ToList().Count == 1));
         }
 
         [Fact]
-        public void DistributeQuoteCurrency_OneSymbolHaveManyOpenOrder()
+        public void SplitIntoBuyOrders_OneSymbolHaveManyOpenOrder()
         {
             const int quoteAmount = 100;
             const int minOrderSize = 10;
 
-            var ordersRequest = OrdersDistributor.DistributeQuoteCurrency(quoteAmount, minOrderSize,
+            var ordersRequest = OrderDistributor.SplitIntoBuyOrders(quoteAmount, minOrderSize,
                 new Dictionary<string, int>
                 {
                     {"0", 25},
@@ -78,18 +78,18 @@ namespace BinanceTrader
                     {"9", 0}
                 });
 
-            Assert.True(ordersRequest.Sum(r => r.Value.Sum()) == quoteAmount);
-            Assert.True(ordersRequest.Where(o => o.Key != "1").All(r => r.Value.ToList().Count == 1));
+            Assert.True(ordersRequest.Sum(r => r.Value.NotNull().Sum()) == quoteAmount);
+            Assert.True(ordersRequest.Where(o => o.Key != "1").All(r => r.Value.NotNull().ToList().Count == 1));
             Assert.True(ordersRequest.First(o => o.Key == "1").Value.NotNull().Count == 2);
         }
 
         [Fact]
-        public void DistributeQuoteCurrency_AllSymbolsHaveDifferentNumberOfOpenOrders()
+        public void SplitIntoBuyOrders_AllSymbolsHaveDifferentNumberOfOpenOrders()
         {
             const int quoteAmount = 1000;
             const int minOrderSize = 10;
 
-            var ordersRequest = OrdersDistributor.DistributeQuoteCurrency(quoteAmount, minOrderSize,
+            var ordersRequest = OrderDistributor.SplitIntoBuyOrders(quoteAmount, minOrderSize,
                 new Dictionary<string, int>
                 {
                     {"0", 0},
@@ -104,7 +104,7 @@ namespace BinanceTrader
                     {"9", 9}
                 });
 
-            Assert.True(ordersRequest.Sum(r => r.Value.Sum()) == quoteAmount);
+            Assert.True(ordersRequest.Sum(r => r.Value.NotNull().Sum()) == quoteAmount);
             Assert.True(ordersRequest.First(o => o.Key == "0").Value.NotNull().Count == 15);
             Assert.True(ordersRequest.First(o => o.Key == "1").Value.NotNull().Count == 14);
             Assert.True(ordersRequest.First(o => o.Key == "2").Value.NotNull().Count == 13);
@@ -118,12 +118,12 @@ namespace BinanceTrader
         }
 
         [Fact]
-        public void DistributeQuoteCurrency_QuoteAmountNotDivisibleByMinOrderSize()
+        public void SplitIntoBuyOrders_QuoteAmountNotDivisibleByMinOrderSize()
         {
             const decimal quoteAmount = 1005.25m;
             const int minOrderSize = 10;
 
-            var ordersRequest = OrdersDistributor.DistributeQuoteCurrency(quoteAmount, minOrderSize,
+            var ordersRequest = OrderDistributor.SplitIntoBuyOrders(quoteAmount, minOrderSize,
                 new Dictionary<string, int>
                 {
                     {"0", 0},
@@ -138,7 +138,7 @@ namespace BinanceTrader
                     {"9", 9}
                 });
 
-            Assert.True(ordersRequest.Sum(r => r.Value.Sum()) == quoteAmount);
+            Assert.True(ordersRequest.Sum(r => r.Value.NotNull().Sum()) == quoteAmount);
             Assert.True(ordersRequest.First(o => o.Key == "0").Value.NotNull().Count == 15);
             Assert.True(ordersRequest.First(o => o.Key == "1").Value.NotNull().Count == 14);
             Assert.True(ordersRequest.First(o => o.Key == "2").Value.NotNull().Count == 13);
@@ -153,14 +153,14 @@ namespace BinanceTrader
         }
 
         [Fact]
-        public void DistributeBaseCurrency_BaseAmountEqualsToOrderMinSize()
+        public void SplitIntoSellOrders_BaseAmountEqualsToOrderMinSize()
         {
             const decimal baseAmount = 1000;
             const int minOrderSize = 10;
             const decimal price = 0.01m;
             const decimal stepSize = 1;
 
-            var ordersRequest = OrdersDistributor.DistributeBaseCurrency(baseAmount, minOrderSize, price, stepSize);
+            var ordersRequest = OrderDistributor.SplitIntoSellOrders(baseAmount, minOrderSize, price, stepSize);
 
             Assert.Equal(baseAmount, ordersRequest.Sum(r => r));
             Assert.Single(ordersRequest);
@@ -168,14 +168,14 @@ namespace BinanceTrader
         }
 
         [Fact]
-        public void DistributeBaseCurrency_BaseAmountGreaterThanOrderMinSize()
+        public void SplitIntoSellOrders_BaseAmountGreaterThanOrderMinSize()
         {
             const decimal baseAmount = 1050.18m;
             const int minOrderSize = 10;
             const decimal price = 0.01m;
             const decimal stepSize = 1;
 
-            var ordersRequest = OrdersDistributor.DistributeBaseCurrency(baseAmount, minOrderSize, price, stepSize);
+            var ordersRequest = OrderDistributor.SplitIntoSellOrders(baseAmount, minOrderSize, price, stepSize);
 
             Assert.Equal(baseAmount, ordersRequest.Sum(r => r) + 0.18m);
             Assert.Single(ordersRequest);
@@ -183,14 +183,14 @@ namespace BinanceTrader
         }
 
         [Fact]
-        public void DistributeBaseCurrency_BasePriceIsGreaterThanQuotePrice()
+        public void SplitIntoSellOrders_BasePriceIsGreaterThanQuotePrice()
         {
             const decimal baseAmount = 10.013m;
             const int minOrderSize = 10;
             const decimal price = 10m;
             const decimal stepSize = 0.01m;
 
-            var ordersRequest = OrdersDistributor.DistributeBaseCurrency(baseAmount, minOrderSize, price, stepSize);
+            var ordersRequest = OrderDistributor.SplitIntoSellOrders(baseAmount, minOrderSize, price, stepSize);
 
             Assert.Equal(baseAmount, ordersRequest.Sum(r => r) + 0.003m);
             Assert.Equal(10, ordersRequest.Count);

@@ -5,10 +5,10 @@ using JetBrains.Annotations;
 
 namespace BinanceTrader.Trader
 {
-    public static class OrdersDistributor
+    public static class OrderDistributor
     {
         [NotNull]
-        public static Dictionary<string, List<decimal>> DistributeQuoteCurrency(
+        public static Dictionary<string, List<decimal>> SplitIntoBuyOrders(
             decimal freeQuoteAmount,
             decimal minOrderSize,
             [NotNull] Dictionary<string, int> openOrdersCount)
@@ -52,7 +52,7 @@ namespace BinanceTrader.Trader
         }
 
         [NotNull]
-        public static List<decimal> DistributeBaseCurrency(
+        public static List<decimal> SplitIntoSellOrders(
             decimal freeBaseAmount,
             decimal minOrderSize,
             decimal price,
@@ -73,6 +73,11 @@ namespace BinanceTrader.Trader
             }
 
             return ordersRequests;
+        }
+
+        public static decimal GetFittingBaseAmount(decimal quoteAmount, decimal price, decimal stepSize)
+        {
+            return (int) (quoteAmount / price / stepSize) * stepSize;
         }
     }
 }
