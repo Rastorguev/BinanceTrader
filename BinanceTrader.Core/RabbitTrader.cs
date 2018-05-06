@@ -227,13 +227,6 @@ namespace BinanceTrader.Trader
             }
         }
 
-        private async Task<Order> GetLastOrder(string currency)
-        {
-            var lastOrder = (await _client.GetAllOrders(currency, null, 1).NotNull()).NotNull().FirstOrDefault();
-
-            return lastOrder;
-        }
-
         private async Task<NewOrder> PlaceOrder([NotNull] OrderRequest orderRequest,
             OrderType orderType = OrderType.Limit,
             TimeInForce timeInForce = TimeInForce.GTC)
