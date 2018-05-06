@@ -284,58 +284,72 @@ namespace BinanceTrader.Trader
 
         private async Task LogCurrentBalance()
         {
-            var total = 0m;
-
-            var prices = (await _client.GetAllPrices().NotNull().NotNull()).ToList();
-            var balances = (await _client.GetAccountInfo().NotNull()).NotNull()
-                .Balances.NotNull().Where(b => b.NotNull().Free + b.NotNull().Locked > 0).ToList();
-
-            foreach (var balance in balances)
+            try
             {
-                var assetTotal = balance.NotNull().Free + balance.NotNull().Locked;
+                var total = 0m;
 
-                if (balance.NotNull().Asset == QuoteAsset)
+                var prices = (await _client.GetAllPrices().NotNull().NotNull()).ToList();
+                var balances = (await _client.GetAccountInfo().NotNull()).NotNull()
+                    .Balances.NotNull().Where(b => b.NotNull().Free + b.NotNull().Locked > 0).ToList();
+
+                foreach (var balance in balances)
                 {
-                    total += assetTotal;
+                    var assetTotal = balance.NotNull().Free + balance.NotNull().Locked;
+
+                    if (balance.NotNull().Asset == QuoteAsset)
+                    {
+                        total += assetTotal;
+                    }
+                    else
+                    {
+                        var symbol = $"{balance.NotNull().Asset}{QuoteAsset}";
+                        total += assetTotal * prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
+                    }
                 }
-                else
-                {
-                    var symbol = $"{balance.NotNull().Asset}{QuoteAsset}";
-                    total += assetTotal * prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
-                }
+
+                var ethUsdt = GetCurrencySymbol(QuoteAsset, UsdtAsset);
+                var balanceUsdt = total * prices.First(p => p.NotNull().Symbol == ethUsdt).NotNull().Price;
+
+                _logger.LogMessage("Balance",
+                    $"{Math.Round(total, 3)} {QuoteAsset} ({Math.Round(balanceUsdt, 3)} {UsdtAsset})");
             }
-
-            var ethUsdt = GetCurrencySymbol(QuoteAsset, UsdtAsset);
-            var balanceUsdt = total * prices.First(p => p.NotNull().Symbol == ethUsdt).NotNull().Price;
-
-            _logger.LogMessage("Balance",
-                $"{Math.Round(total, 3)} {QuoteAsset} ({Math.Round(balanceUsdt, 3)} {UsdtAsset})");
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
         }
 
         private async Task BuyFeeCurrencyIfNeeded()
         {
-            const int qty = 1;
-            var feeSymbol = GetCurrencySymbol(FeeAsset, QuoteAsset);
-
-            var balance = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull().ToList();
-
-            var feeAmount = balance.First(b => b.NotNull().Asset == FeeAsset).NotNull().Free;
-            var quoteAmount = balance.First(b => b.NotNull().Asset == QuoteAsset).NotNull().Free;
-            var price = await GetActualPrice(feeSymbol, OrderSide.Buy);
-
-            if (feeAmount < 1 && quoteAmount >= price * qty)
+            try
             {
-                var orderRequest = new OrderRequest(feeSymbol, OrderSide.Buy, qty, price);
+                const int qty = 1;
+                var feeSymbol = GetCurrencySymbol(FeeAsset, QuoteAsset);
 
-                if (MeetsTradingRules(orderRequest))
+                var balance = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull().ToList();
+
+                var feeAmount = balance.First(b => b.NotNull().Asset == FeeAsset).NotNull().Free;
+                var quoteAmount = balance.First(b => b.NotNull().Asset == QuoteAsset).NotNull().Free;
+                var price = await GetActualPrice(feeSymbol, OrderSide.Buy);
+
+                if (feeAmount < 1 && quoteAmount >= price * qty)
                 {
-                    var order = await PlaceOrder(orderRequest, OrderType.Market, TimeInForce.IOC).NotNull();
-                    var status = order.Status;
-                    var executedQty = order.ExecutedQty;
+                    var orderRequest = new OrderRequest(feeSymbol, OrderSide.Buy, qty, price);
 
-                    _logger.LogMessage("BuyFeeCurrency",
-                        $"Status {status}, Quantity {executedQty}, Price {price}");
+                    if (MeetsTradingRules(orderRequest))
+                    {
+                        var order = await PlaceOrder(orderRequest, OrderType.Market, TimeInForce.IOC).NotNull();
+                        var status = order.Status;
+                        var executedQty = order.ExecutedQty;
+
+                        _logger.LogMessage("BuyFeeCurrency",
+                            $"Status {status}, Quantity {executedQty}, Price {price}");
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
             }
         }
 
