@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Binance.API.Csharp.Client.Models.WebSocket;
 using BinanceTrader.Tools;
 using BinanceTrader.Trader;
@@ -58,21 +59,34 @@ namespace BinanceTrader.Cli
             Console.ResetColor();
         }
 
-        public void LogMessage(string key, string message)
+        public void LogMessage(string eventName, string message)
         {
             LogTime();
-            Console.WriteLine(key);
+            Console.WriteLine(eventName);
             Console.WriteLine(message);
             Console.WriteLine();
         }
 
-        public void LogWarning(string key, string message)
+        public void LogMessage(string eventName, Dictionary<string, string> properties)
+        {
+            LogTime();
+            Console.WriteLine(eventName);
+
+            foreach (var pair in properties)
+            {
+                Console.WriteLine($"{pair.Key}: {pair.Value}");
+            }
+
+            Console.WriteLine();
+        }
+
+        public void LogWarning(string eventName, string message)
         {
             LogTime();
 
             Console.ForegroundColor = ConsoleColor.Yellow;
 
-            Console.WriteLine(key);
+            Console.WriteLine(eventName);
             Console.WriteLine(message);
             Console.WriteLine();
 

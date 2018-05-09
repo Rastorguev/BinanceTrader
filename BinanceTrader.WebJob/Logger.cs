@@ -49,20 +49,25 @@ namespace BinanceTrader.WebJob
             _client.Flush();
         }
 
-        public void LogMessage(string key, string message)
+        public void LogMessage(string eventName, string message)
         {
-            _client.TrackEvent(key, new Dictionary<string, string>
+            _client.TrackEvent(eventName, new Dictionary<string, string>
             {
-                {key, message}
+                {eventName, message}
             });
             _client.Flush();
         }
 
-        public void LogWarning(string key, string message)
+        public void LogMessage(string eventName, Dictionary<string, string> properties)
         {
-            _client.TrackEvent(key, new Dictionary<string, string>
+            _client.TrackEvent(eventName, properties);
+        }
+
+        public void LogWarning(string eventName, string message)
+        {
+            _client.TrackEvent(eventName, new Dictionary<string, string>
             {
-                {key, message}
+                {eventName, message}
             });
 
             _client.Flush();

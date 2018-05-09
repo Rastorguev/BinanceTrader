@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
@@ -11,6 +12,7 @@ using Binance.API.Csharp.Client.Models.Market;
 using Binance.API.Csharp.Client.Models.WebSocket;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
+using Balance = Binance.API.Csharp.Client.Models.Account.Balance;
 
 namespace BinanceTrader.Trader
 {
@@ -69,7 +71,7 @@ namespace BinanceTrader.Trader
                 await _rulesProvider.UpdateRulesIfNeeded();
                 await BuyFeeCurrencyIfNeeded();
                 await CheckOrders();
-                await LogCurrentBalance();
+                await LogFundsState();
             }
             catch (Exception ex)
             {
@@ -275,43 +277,6 @@ namespace BinanceTrader.Trader
             return canceledOrder;
         }
 
-        private async Task LogCurrentBalance()
-        {
-            try
-            {
-                var total = 0m;
-
-                var prices = (await _client.GetAllPrices().NotNull().NotNull()).ToList();
-                var balances = (await _client.GetAccountInfo().NotNull()).NotNull()
-                    .Balances.NotNull().Where(b => b.NotNull().Free + b.NotNull().Locked > 0).ToList();
-
-                foreach (var balance in balances)
-                {
-                    var assetTotal = balance.NotNull().Free + balance.NotNull().Locked;
-
-                    if (balance.NotNull().Asset == QuoteAsset)
-                    {
-                        total += assetTotal;
-                    }
-                    else
-                    {
-                        var symbol = $"{balance.NotNull().Asset}{QuoteAsset}";
-                        total += assetTotal * prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
-                    }
-                }
-
-                var ethUsdt = GetCurrencySymbol(QuoteAsset, UsdtAsset);
-                var balanceUsdt = total * prices.First(p => p.NotNull().Symbol == ethUsdt).NotNull().Price;
-
-                _logger.LogMessage("Balance",
-                    $"{Math.Round(total, 3)} {QuoteAsset} ({Math.Round(balanceUsdt, 3)} {UsdtAsset})");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogException(ex);
-            }
-        }
-
         private async Task BuyFeeCurrencyIfNeeded()
         {
             try
@@ -346,9 +311,66 @@ namespace BinanceTrader.Trader
             }
         }
 
+        private async Task LogFundsState()
+        {
+            try
+            {
+                var prices = (await _client.GetAllPrices().NotNull().NotNull()).ToList();
+                var assetsAveragePrice = GetTradingAssetsAveragePrice(prices);
+
+                var funds = (await _client.GetAccountInfo().NotNull()).NotNull()
+                    .Balances.NotNull().Where(b => b.NotNull().Free + b.NotNull().Locked > 0).ToList();
+
+                var quoteUsdtSymbol = GetCurrencySymbol(QuoteAsset, UsdtAsset);
+                var quoteTotal = GetFundsTotal(funds, prices);
+                var usdtTotal = quoteTotal * prices.First(p => p.NotNull().Symbol == quoteUsdtSymbol).NotNull().Price;
+
+                _logger.LogMessage("Funds", new Dictionary<string, string>
+                {
+                    {"Quote", quoteTotal.Round().ToString(CultureInfo.InvariantCulture)},
+                    {"Usdt", usdtTotal.Round().ToString(CultureInfo.InvariantCulture)},
+                    {"AverageAssetPrice", assetsAveragePrice.Round().ToString(CultureInfo.InvariantCulture)}
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
+        }
+
         private static string GetCurrencySymbol(string baseAsset, string quoteAsset)
         {
             return string.Format($"{baseAsset}{quoteAsset}");
+        }
+
+        private static decimal GetFundsTotal(
+            [NotNull] IReadOnlyList<Balance> funds,
+            [NotNull] IReadOnlyList<SymbolPrice> prices)
+        {
+            var total = 0m;
+            foreach (var fund in funds)
+            {
+                var assetTotal = fund.NotNull().Free + fund.NotNull().Locked;
+                if (fund.NotNull().Asset == QuoteAsset)
+                {
+                    total += assetTotal;
+                }
+                else
+                {
+                    var symbol = $"{fund.NotNull().Asset}{QuoteAsset}";
+                    total += assetTotal * prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
+                }
+            }
+
+            return total;
+        }
+
+        private decimal GetTradingAssetsAveragePrice([NotNull] IReadOnlyList<SymbolPrice> prices)
+        {
+            var symbols = _assets.Select(a => GetCurrencySymbol(a, QuoteAsset));
+            var tradingAssetsPrices =
+                prices.Where(p => symbols.Contains(p.NotNull().Symbol)).Select(p => p.Price).ToList();
+            return tradingAssetsPrices.Average().Round();
         }
     }
 }
