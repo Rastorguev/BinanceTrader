@@ -20,9 +20,6 @@ namespace BinanceTrader.Trader
     {
         private readonly TimeSpan _scheduleInterval = TimeSpan.FromMinutes(1);
         private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromHours(12);
-        private const decimal MinProfitRatio = 2m;
-        private const decimal MaxProfitRatio = 2.5m;
-        private const decimal ProfitRatioStepSize = 0.1m;
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
         private const string UsdtAsset = "USDT";
@@ -122,11 +119,17 @@ namespace BinanceTrader.Trader
                     {
                         var symbol = GetCurrencySymbol(balance.NotNull().Asset, QuoteAsset);
                         var price = await GetActualPrice(symbol, OrderSide.Sell);
-                        var rules = _rulesProvider.GetRulesFor(symbol);
-                        var sellAmounts =
-                            OrderDistributor.SplitIntoSellOrders(balance.Free, MinOrderSize, price, rules.StepSize);
+                        var tradingRules = _rulesProvider.GetRulesFor(symbol);
 
-                        var profitRatio = MinProfitRatio;
+                        var sellAmounts =
+                            OrderDistributor.SplitIntoSellOrders(
+                                balance.Free,
+                                MinOrderSize,
+                                price,
+                                tradingRules.StepSize);
+
+                        var profitRules = await GetProfitRules(symbol, sellAmounts.Count);
+                        var profitRatio = profitRules.minProfitRatio;
 
                         foreach (var amount in sellAmounts)
                         {
@@ -136,11 +139,7 @@ namespace BinanceTrader.Trader
                             if (MeetsTradingRules(orderRequest))
                             {
                                 await PlaceOrder(orderRequest);
-
-                                if (profitRatio < MaxProfitRatio)
-                                {
-                                    profitRatio += ProfitRatioStepSize;
-                                }
+                                profitRatio += profitRules.profitRatioStepSize;
                             }
                         }
                     }
@@ -182,11 +181,11 @@ namespace BinanceTrader.Trader
                         var symbol = symbolAmounts.Key;
                         var price = await GetActualPrice(symbol, OrderSide.Buy);
                         var tradingRules = _rulesProvider.GetRulesFor(symbol);
-                        var quoteAmounts = symbolAmounts.Value.NotNull();
-                        var profitRules = await GetProfitRules(symbol, quoteAmounts.Count);
+                        var buyAmounts = symbolAmounts.Value.NotNull();
+                        var profitRules = await GetProfitRules(symbol, buyAmounts.Count);
                         var profitRatio = profitRules.minProfitRatio;
 
-                        foreach (var quoteAmount in quoteAmounts)
+                        foreach (var quoteAmount in buyAmounts)
                         {
                             var buyPrice = (price - price.Percents(profitRatio)).Round();
                             var baseAmount =
@@ -367,13 +366,15 @@ namespace BinanceTrader.Trader
             string symbol,
             int ordersCount)
         {
-            var priceStat = (await _client.GetPriceChange24H(symbol).NotNull()).First().NotNull();
+            var priceStat = (await _client.GetPriceChange24H(symbol).NotNull()).NotNull().First().NotNull();
             var gain = MathUtils.Gain(priceStat.LowPrice, priceStat.HighPrice);
-            var minProfitRatio = gain / 24;
-            var maxProfitRatio = gain * (decimal) _maxIdlePeriod.TotalHours;
-            var stepSize = (maxProfitRatio - minProfitRatio) / ordersCount;
+            var hourGain = gain / 2 / 24;
 
-            return (minProfitRatio, stepSize);
+            var maxProfitRatio = hourGain * (decimal) _maxIdlePeriod.TotalHours;
+            var minProfitRatio = maxProfitRatio * 0.75m;
+            var stepSize = ordersCount > 0 ? (maxProfitRatio - minProfitRatio) / ordersCount : 0;
+
+            return (minProfitRatio.Round(), stepSize.Round());
         }
 
         private decimal GetTradingAssetsAveragePrice([NotNull] IReadOnlyList<SymbolPrice> prices)
