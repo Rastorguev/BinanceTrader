@@ -29,7 +29,7 @@ namespace BinanceTrader
         {
             var initialAmount = account.InitialBaseAmount * account.InitialPrice + account.InitialQuoteAmount;
             var currentAmount = account.CurrentBaseAmount * account.LastPrice + account.CurrentQuoteAmount;
-            var profit = MathUtils.CalculateProfit(initialAmount, currentAmount).Round();
+            var profit = MathUtils.Gain(initialAmount, currentAmount).Round();
 
             return profit;
         }

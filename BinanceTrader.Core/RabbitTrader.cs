@@ -181,24 +181,22 @@ namespace BinanceTrader.Trader
                     {
                         var symbol = symbolAmounts.Key;
                         var price = await GetActualPrice(symbol, OrderSide.Buy);
-                        var rules = _rulesProvider.GetRulesFor(symbol);
-                        var profitRatio = MinProfitRatio;
+                        var tradingRules = _rulesProvider.GetRulesFor(symbol);
+                        var quoteAmounts = symbolAmounts.Value.NotNull();
+                        var profitRules = await GetProfitRules(symbol, quoteAmounts.Count);
+                        var profitRatio = profitRules.minProfitRatio;
 
-                        foreach (var quoteAmount in symbolAmounts.Value.NotNull())
+                        foreach (var quoteAmount in quoteAmounts)
                         {
                             var buyPrice = (price - price.Percents(profitRatio)).Round();
                             var baseAmount =
-                                OrderDistributor.GetFittingBaseAmount(quoteAmount, buyPrice, rules.StepSize);
+                                OrderDistributor.GetFittingBaseAmount(quoteAmount, buyPrice, tradingRules.StepSize);
                             var orderRequest = new OrderRequest(symbol, OrderSide.Buy, baseAmount, buyPrice);
 
                             if (MeetsTradingRules(orderRequest))
                             {
                                 await PlaceOrder(orderRequest);
-
-                                if (profitRatio < MaxProfitRatio)
-                                {
-                                    profitRatio += ProfitRatioStepSize;
-                                }
+                                profitRatio += profitRules.profitRatioStepSize;
                             }
                         }
                     }
@@ -363,6 +361,19 @@ namespace BinanceTrader.Trader
             }
 
             return total;
+        }
+
+        private async Task<(decimal minProfitRatio, decimal profitRatioStepSize)> GetProfitRules(
+            string symbol,
+            int ordersCount)
+        {
+            var priceStat = (await _client.GetPriceChange24H(symbol).NotNull()).First().NotNull();
+            var gain = MathUtils.Gain(priceStat.LowPrice, priceStat.HighPrice);
+            var minProfitRatio = gain / 24;
+            var maxProfitRatio = gain * (decimal) _maxIdlePeriod.TotalHours;
+            var stepSize = (maxProfitRatio - minProfitRatio) / ordersCount;
+
+            return (minProfitRatio, stepSize);
         }
 
         private decimal GetTradingAssetsAveragePrice([NotNull] IReadOnlyList<SymbolPrice> prices)

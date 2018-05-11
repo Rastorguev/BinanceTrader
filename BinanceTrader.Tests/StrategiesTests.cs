@@ -83,8 +83,8 @@ namespace BinanceTrader
                 var holdQuoteAmount = result.InitialQuoteAmount / firstPrice * lastPrice + result.InitialBaseAmount;
 
                 var tradeProfitPercents =
-                    MathUtils.CalculateProfit(result.InitialQuoteAmount, tradeQuoteAmount).Round();
-                var holdProfitPercents = MathUtils.CalculateProfit(result.InitialQuoteAmount, holdQuoteAmount).Round();
+                    MathUtils.Gain(result.InitialQuoteAmount, tradeQuoteAmount).Round();
+                var holdProfitPercents = MathUtils.Gain(result.InitialQuoteAmount, holdQuoteAmount).Round();
                 var diffQuoteAmount = tradeQuoteAmount - holdQuoteAmount;
                 var diffPercents = tradeProfitPercents - holdProfitPercents;
 
@@ -110,8 +110,8 @@ namespace BinanceTrader
                 Console.WriteLine();
             }
 
-            var tradeProfit = MathUtils.CalculateProfit(initialAmountTotal, tradeAmountTotal).Round();
-            var holdProfit = MathUtils.CalculateProfit(initialAmountTotal, holdAmountTotal).Round();
+            var tradeProfit = MathUtils.Gain(initialAmountTotal, tradeAmountTotal).Round();
+            var holdProfit = MathUtils.Gain(initialAmountTotal, holdAmountTotal).Round();
 
             Console.WriteLine();
             Console.WriteLine("----------------------");

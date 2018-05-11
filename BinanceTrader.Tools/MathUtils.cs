@@ -6,7 +6,7 @@
 
         public static decimal Round(this decimal value) => decimal.Round(value, 8);
 
-        public static decimal CalculateProfit(decimal initialAmount, decimal currentAmount)
+        public static decimal Gain(decimal initialAmount, decimal currentAmount)
         {
             var profit = (currentAmount - initialAmount) / initialAmount * 100;
 
