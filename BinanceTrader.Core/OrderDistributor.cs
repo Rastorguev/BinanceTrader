@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
@@ -29,7 +30,13 @@ namespace BinanceTrader.Trader
                                 : 0;
 
                             var openCount = o.Value;
-                            var priority = fluct == 0m ? decimal.MaxValue : (requestsCount + openCount) / fluct;
+
+                            if (fluct == 0m)
+                            {
+                                fluct = (decimal)Math.Pow(10, -10);
+                            }
+
+                            var priority = (requestsCount + openCount + 1) / fluct;
 
                             return (Symbol: o.Key, Priority: priority);
                         })
@@ -66,9 +73,9 @@ namespace BinanceTrader.Trader
             decimal stepSize)
         {
             var amounts = new List<decimal>();
-            var remainingStepsAmount = (int) (freeBaseAmount / stepSize);
+            var remainingStepsAmount = (int)(freeBaseAmount / stepSize);
 
-            var minOrderSizeInSteps = (int) (minOrderSize / stepSize / price);
+            var minOrderSizeInSteps = (int)(minOrderSize / stepSize / price);
             while (remainingStepsAmount >= minOrderSizeInSteps)
             {
                 var orderSizeInSteps = remainingStepsAmount >= minOrderSizeInSteps * 2
@@ -82,7 +89,9 @@ namespace BinanceTrader.Trader
             return amounts;
         }
 
-        public static decimal GetFittingBaseAmount(decimal quoteAmount, decimal price, decimal stepSize) =>
-            (int) (quoteAmount / price / stepSize) * stepSize;
+        public static decimal GetFittingBaseAmount(decimal quoteAmount, decimal price, decimal stepSize)
+        {
+            return (int)(quoteAmount / price / stepSize) * stepSize;
+        }
     }
 }
