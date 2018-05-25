@@ -391,9 +391,9 @@ namespace BinanceTrader.Trader
                     var max = c.candles.Max(x => x.NotNull().High);
                     var min = c.candles.Min(x => x.NotNull().Low);
 
-                    return (asset: c.symbol, fluctuation: MathUtils.Gain(min, max));
+                    return (asset: c.symbol, fluctuation: MathUtils.Gain(min, max).Round());
                 })
-                .OrderByDescending(c => c.fluctuation.Round())
+                .OrderByDescending(c => c.fluctuation)
                 .ToDictionary(x => x.asset, x => x.fluctuation);
 
             return fluctuations;
