@@ -10,6 +10,7 @@ namespace BinanceTrader.Trader
         public static List<string> Assets =>
             new List<string>
             {
+                "BCN",
                 "NCASH",
                 "IOST",
                 "STORM",
@@ -29,18 +30,28 @@ namespace BinanceTrader.Trader
                 "CND",
                 "RCN",
                 "MTH",
+                "WPR",
                 "CMT",
                 "SNT",
                 "RPX",
                 "ENJ",
+                "ZIL",
+                "QLC",
                 "CHAT",
                 "BTS",
                 "VIB",
                 "SNM",
                 "OST",
+                "REQ",
+                "VIBE",
                 "QSP",
                 "DLT",
-                "BAT"
+                "BAT",
+                "ADA",
+                "GTO",
+                "XEM",
+                "AST",
+                "XLM"
             };
     }
 }

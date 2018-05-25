@@ -25,7 +25,7 @@ namespace BinanceTrader.Trader
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
         private const string UsdtAsset = "USDT";
-        private const decimal MinOrderSize = 0.02m;
+        private const decimal MinOrderSize = 0.015m;
 
         [NotNull] private readonly IBinanceClient _client;
         [NotNull] private readonly Timer _timer;
@@ -174,7 +174,7 @@ namespace BinanceTrader.Trader
                     })
                     .ToDictionary(x => x.symbol, x => x.count);
 
-                var fluctuations = await GetPricesFluctuation();
+                var fluctuations = await GetPricesFluctuation().NotNull();
                 var amounts =
                     OrderDistributor.SplitIntoBuyOrders(freeQuoteBalance, MinOrderSize, openOrdersCount, fluctuations);
 
@@ -376,6 +376,7 @@ namespace BinanceTrader.Trader
             return tradingAssetsPrices.Average().Round();
         }
 
+        [NotNull]
         private async Task<Dictionary<string, decimal>> GetPricesFluctuation()
         {
             var symbols = _assets.Select(a => SymbolUtils.GetCurrencySymbol(a, QuoteAsset));
