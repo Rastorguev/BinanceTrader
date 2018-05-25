@@ -119,7 +119,7 @@ namespace BinanceTrader.Trader
                 {
                     try
                     {
-                        var symbol = GetCurrencySymbol(balance.NotNull().Asset, QuoteAsset);
+                        var symbol = SymbolUtils.GetCurrencySymbol(balance.NotNull().Asset, QuoteAsset);
                         var price = await GetActualPrice(symbol, OrderSide.Sell);
                         var tradingRules = _rulesProvider.GetRulesFor(symbol);
 
@@ -168,13 +168,15 @@ namespace BinanceTrader.Trader
 
                 var openOrdersCount = _assets.Select(asset =>
                     {
-                        var symbol = GetCurrencySymbol(asset, QuoteAsset);
+                        var symbol = SymbolUtils.GetCurrencySymbol(asset, QuoteAsset);
                         var count = openOrders.Count(o => o.NotNull().Symbol == symbol);
                         return (symbol: symbol, count: count);
                     })
                     .ToDictionary(x => x.symbol, x => x.count);
 
-                var amounts = OrderDistributor.SplitIntoBuyOrders(freeQuoteBalance, MinOrderSize, openOrdersCount);
+                var fluctuations = await GetPricesFluctuation();
+                var amounts =
+                    OrderDistributor.SplitIntoBuyOrders(freeQuoteBalance, MinOrderSize, openOrdersCount, fluctuations);
 
                 foreach (var symbolAmounts in amounts)
                 {
@@ -281,7 +283,7 @@ namespace BinanceTrader.Trader
             try
             {
                 const int qty = 1;
-                var feeSymbol = GetCurrencySymbol(FeeAsset, QuoteAsset);
+                var feeSymbol = SymbolUtils.GetCurrencySymbol(FeeAsset, QuoteAsset);
 
                 var balance = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull().ToList();
 
@@ -320,7 +322,7 @@ namespace BinanceTrader.Trader
                 var funds = (await _client.GetAccountInfo().NotNull()).NotNull()
                     .Balances.NotNull().Where(b => b.NotNull().Free + b.NotNull().Locked > 0).ToList();
 
-                var quoteUsdtSymbol = GetCurrencySymbol(QuoteAsset, UsdtAsset);
+                var quoteUsdtSymbol = SymbolUtils.GetCurrencySymbol(QuoteAsset, UsdtAsset);
                 var quoteTotal = GetFundsTotal(funds, prices);
                 var usdtTotal = quoteTotal * prices.First(p => p.NotNull().Symbol == quoteUsdtSymbol).NotNull().Price;
 
@@ -335,11 +337,6 @@ namespace BinanceTrader.Trader
             {
                 _logger.LogException(ex);
             }
-        }
-
-        private static string GetCurrencySymbol(string baseAsset, string quoteAsset)
-        {
-            return string.Format($"{baseAsset}{quoteAsset}");
         }
 
         private static decimal GetFundsTotal(
@@ -373,10 +370,32 @@ namespace BinanceTrader.Trader
 
         private decimal GetTradingAssetsAveragePrice([NotNull] IReadOnlyList<SymbolPrice> prices)
         {
-            var symbols = _assets.Select(a => GetCurrencySymbol(a, QuoteAsset));
+            var symbols = _assets.Select(a => SymbolUtils.GetCurrencySymbol(a, QuoteAsset));
             var tradingAssetsPrices =
                 prices.Where(p => symbols.Contains(p.NotNull().Symbol)).Select(p => p.Price).ToList();
             return tradingAssetsPrices.Average().Round();
+        }
+
+        private async Task<Dictionary<string, decimal>> GetPricesFluctuation()
+        {
+            var symbols = _assets.Select(a => SymbolUtils.GetCurrencySymbol(a, QuoteAsset));
+
+            var tasks = symbols.Select(async s => (symbol: s,
+                candles: await _client.GetCandleSticks(s, TimeInterval.Minutes_1, null, null, 10).NotNull()));
+
+            var candles = await Task.WhenAll(tasks).NotNull();
+            var fluctuations = candles
+                .Select(c =>
+                {
+                    var max = c.candles.Max(x => x.NotNull().High);
+                    var min = c.candles.Min(x => x.NotNull().Low);
+
+                    return (asset: c.symbol, fluctuation: MathUtils.Gain(min, max));
+                })
+                .OrderByDescending(c => c.fluctuation.Round())
+                .ToDictionary(x => x.asset, x => x.fluctuation);
+
+            return fluctuations;
         }
     }
 }
