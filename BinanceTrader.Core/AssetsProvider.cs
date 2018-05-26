@@ -50,7 +50,7 @@ namespace BinanceTrader.Trader
                 "ADA",
                 "GTO",
                 "XEM",
-                "AST",
+                //"AST",
                 "XLM"
             };
     }
