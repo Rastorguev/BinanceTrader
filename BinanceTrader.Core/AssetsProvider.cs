@@ -43,14 +43,14 @@ namespace BinanceTrader.Trader
                 "SNM",
                 "OST",
                 "REQ",
-                "VIBE",
+                //"VIBE",
                 "QSP",
                 "DLT",
                 "BAT",
                 "ADA",
                 "GTO",
                 "XEM",
-                "AST",
+                //"AST",
                 "XLM"
             };
     }
