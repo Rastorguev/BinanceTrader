@@ -25,9 +25,13 @@ namespace BinanceTrader.Trader
         public static bool MeetsTradingRules([NotNull] this OrderRequest order, [NotNull] ITradingRules rules)
         {
             return
-                order.Price >= rules.MinPrice && order.Price <= rules.MaxPrice &&
-                order.Qty >= rules.MinQty && order.Qty <= rules.MaxQty &&
-                order.Price * order.Qty >= rules.MinNotional;
+                order.Price >= rules.MinPrice &&
+                order.Price <= rules.MaxPrice &&
+                order.Price * order.Qty >= rules.MinNotional &&
+                (order.Price - rules.MinQty) % rules.TickSize == 0 &&
+                order.Qty >= rules.MinQty &&
+                order.Qty <= rules.MaxQty &&
+                (order.Qty - rules.MinQty) % rules.StepSize == 0;
         }
     }
 }

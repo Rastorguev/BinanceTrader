@@ -9,6 +9,7 @@ using Binance.API.Csharp.Client.Models;
 using Binance.API.Csharp.Client.Models.Account;
 using Binance.API.Csharp.Client.Models.Enums;
 using Binance.API.Csharp.Client.Models.Market;
+using Binance.API.Csharp.Client.Models.Market.TradingRules;
 using Binance.API.Csharp.Client.Models.WebSocket;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
@@ -119,7 +120,7 @@ namespace BinanceTrader.Trader
                 {
                     try
                     {
-                        var symbol = SymbolUtils.GetCurrencySymbol(balance.NotNull().Asset, QuoteAsset);
+                        var symbol = SymbolUtils.GetCurrencySymbol(balance.NotNull().Asset.NotNull(), QuoteAsset);
                         var price = await GetActualPrice(symbol, OrderSide.Sell);
                         var tradingRules = _rulesProvider.GetRulesFor(symbol);
 
@@ -135,7 +136,8 @@ namespace BinanceTrader.Trader
 
                         foreach (var amount in sellAmounts)
                         {
-                            var sellPrice = (price + price.Percents(profitRatio)).Round();
+                            var sellPrice =
+                                AdjustPriceAccordingRules(price + price.Percents(profitRatio), tradingRules);
                             var orderRequest = new OrderRequest(symbol, OrderSide.Sell, amount, sellPrice);
 
                             if (MeetsTradingRules(orderRequest))
@@ -191,7 +193,7 @@ namespace BinanceTrader.Trader
 
                         foreach (var quoteAmount in buyAmounts)
                         {
-                            var buyPrice = (price - price.Percents(profitRatio)).Round();
+                            var buyPrice = AdjustPriceAccordingRules(price - price.Percents(profitRatio), tradingRules);
                             var baseAmount =
                                 OrderDistributor.GetFittingBaseAmount(quoteAmount, buyPrice, tradingRules.StepSize);
                             var orderRequest = new OrderRequest(symbol, OrderSide.Buy, baseAmount, buyPrice);
@@ -397,6 +399,11 @@ namespace BinanceTrader.Trader
                 .ToDictionary(x => x.asset, x => x.fluctuation);
 
             return fluctuations;
+        }
+
+        private decimal AdjustPriceAccordingRules(decimal price, [NotNull] ITradingRules rules)
+        {
+            return (int) (price / rules.TickSize) * rules.TickSize;
         }
     }
 }
