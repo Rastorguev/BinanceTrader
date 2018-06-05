@@ -384,7 +384,7 @@ namespace BinanceTrader.Trader
             var symbols = _assets.Select(a => SymbolUtils.GetCurrencySymbol(a, QuoteAsset));
 
             var tasks = symbols.Select(async s => (symbol: s,
-                candles: await _client.GetCandleSticks(s, TimeInterval.Minutes_1, null, null, 10).NotNull()));
+                candles: await _client.GetCandleSticks(s, TimeInterval.Hours_1, null, null, 2).NotNull()));
 
             var candles = (await Task.WhenAll(tasks).NotNull()).NotNull();
             var fluctuations = candles
