@@ -389,7 +389,7 @@ namespace BinanceTrader.Trader
                 {
                     var result = (asset: c.symbol, fluctuation: 0m);
 
-                    if (candles.Any())
+                    if (!candles.Any())
                     {
                         return result;
                     }
