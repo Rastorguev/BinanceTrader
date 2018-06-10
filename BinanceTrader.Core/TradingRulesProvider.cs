@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client.Domain.Interfaces;
@@ -12,7 +13,7 @@ namespace BinanceTrader.Trader
     {
         [NotNull] private readonly IBinanceClient _client;
         private DateTime? _lastUpdateTime;
-        private readonly TimeSpan _expiration = TimeSpan.FromHours(12);
+        private readonly TimeSpan _expiration = TimeSpan.FromHours(1);
         private TradingRulesContainer _rulesContainer;
 
         public TradingRulesProvider([NotNull] IBinanceClient client)
@@ -51,6 +52,12 @@ namespace BinanceTrader.Trader
             {
                 throw new AppException($"Trading rules for {symbol} are not found", ex);
             }
+        }
+
+        [NotNull]
+        public List<string> GetBaseAssetsFor(string asset)
+        {
+           return _rulesContainer.NotNull().Rules.NotNull().Where(r => r.NotNull().QuoteAsset == asset).Select(r => r.BaseAsset).ToList();
         }
     }
 }

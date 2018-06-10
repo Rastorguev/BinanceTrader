@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Timers;
 using Binance.API.Csharp.Client.Domain.Interfaces;
 using Binance.API.Csharp.Client.Models;
 using Binance.API.Csharp.Client.Models.Account;
@@ -29,11 +28,10 @@ namespace BinanceTrader.Trader
         private const decimal MinOrderSize = 0.015m;
 
         [NotNull] private readonly IBinanceClient _client;
-        [NotNull] private readonly Timer _timer;
         [NotNull] private readonly ILogger _logger;
         [NotNull] private readonly TradingRulesProvider _rulesProvider;
 
-        [NotNull] [ItemNotNull] private readonly List<string> _assets = AssetsProvider.Assets;
+        [NotNull] [ItemNotNull] private IReadOnlyList<string> _assets = new List<string>();
 
         public RabbitTrader(
             [NotNull] IBinanceClient client,
@@ -42,33 +40,26 @@ namespace BinanceTrader.Trader
             _logger = logger;
             _client = client;
             _rulesProvider = new TradingRulesProvider(client);
-
-            _timer = new Timer
-            {
-                Interval = _scheduleInterval.TotalMilliseconds,
-                AutoReset = true
-            };
-
-            _timer.Elapsed += OnTimerElapsed;
         }
 
         public async void Start()
         {
-            await ExecuteScheduledTasks();
+            while (true)
+            {
+                await Task.WhenAll(new List<Task> {ExecuteScheduledTasks(), Task.Delay(_scheduleInterval)}).NotNull();
+            }
 
-            _timer.Start();
+            // ReSharper disable FunctionNeverReturns
         }
-
-        private async void OnTimerElapsed(object sender, ElapsedEventArgs elapsedEventArgs)
-        {
-            await ExecuteScheduledTasks();
-        }
+        // ReSharper restore FunctionNeverReturns
 
         public async Task ExecuteScheduledTasks()
         {
             try
             {
                 await _rulesProvider.UpdateRulesIfNeeded();
+                _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
+
                 await BuyFeeCurrencyIfNeeded();
                 await CheckOrders();
                 await LogFundsState();
@@ -384,21 +375,46 @@ namespace BinanceTrader.Trader
             var symbols = _assets.Select(a => SymbolUtils.GetCurrencySymbol(a, QuoteAsset));
 
             var tasks = symbols.Select(async s => (symbol: s,
-                candles: await _client.GetCandleSticks(s, TimeInterval.Hours_1, null, null, 2).NotNull()));
+                candles: await LoadCandlesForPriceFluctuation(s).NotNull()));
 
             var candles = (await Task.WhenAll(tasks).NotNull()).NotNull();
             var fluctuations = candles
                 .Select(c =>
                 {
+                    var result = (asset: c.symbol, fluctuation: 0m);
+
+                    if (candles.Any())
+                    {
+                        return result;
+                    }
+
                     var max = c.candles.Max(x => x.NotNull().High);
                     var min = c.candles.Min(x => x.NotNull().Low);
 
-                    return (asset: c.symbol, fluctuation: MathUtils.Gain(min, max).Round());
+                    result.fluctuation = MathUtils.Gain(min, max).Round();
+
+                    return result;
                 })
                 .OrderByDescending(c => c.fluctuation)
                 .ToDictionary(x => x.asset, x => x.fluctuation);
 
             return fluctuations;
+        }
+
+        private async Task<IEnumerable<Candlestick>> LoadCandlesForPriceFluctuation(string s)
+        {
+            var candles = new List<Candlestick>();
+            try
+            {
+                candles = (await _client.GetCandleSticks(s, TimeInterval.Minutes_1, null, null, 5).NotNull())
+                    .NotNull().ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
+
+            return candles;
         }
 
         private decimal AdjustPriceAccordingRules(decimal price, [NotNull] ITradingRules rules)
