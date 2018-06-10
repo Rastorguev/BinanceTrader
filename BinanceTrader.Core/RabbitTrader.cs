@@ -19,7 +19,8 @@ namespace BinanceTrader.Trader
     public class RabbitTrader
     {
         private readonly TimeSpan _scheduleInterval = TimeSpan.FromMinutes(1);
-        private readonly TimeSpan _maxIdlePeriod = TimeSpan.FromHours(12);
+        private readonly TimeSpan _sellWaitingTime = TimeSpan.FromHours(12);
+        private readonly TimeSpan _buyWaitingTime = TimeSpan.FromHours(1);
         private const decimal MinProfitRatio = 2;
         private const decimal MaxProfitRatio = 3;
         private const string QuoteAsset = "ETH";
@@ -83,11 +84,16 @@ namespace BinanceTrader.Trader
             {
                 var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
                 var now = DateTime.Now;
-                var expiredOrders = openOrders
-                    .Where(o => now.ToLocalTime() - o.NotNull().UnixTime.GetTime().ToLocalTime() > _maxIdlePeriod)
+                var expiredSellOrders = openOrders
+                    .Where(o => o.NotNull().Side == OrderSide.Sell &&
+                                now.ToLocalTime() - o.NotNull().UnixTime.GetTime().ToLocalTime() > _sellWaitingTime)
+                    .ToList();
+                var expiredBuyOrders = openOrders
+                    .Where(o => o.NotNull().Side == OrderSide.Buy &&
+                                now.ToLocalTime() - o.NotNull().UnixTime.GetTime().ToLocalTime() > _buyWaitingTime)
                     .ToList();
 
-                foreach (var order in expiredOrders)
+                foreach (var order in expiredSellOrders.Concat(expiredBuyOrders))
                 {
                     await CancelOrder(order.NotNull());
                     _logger.LogOrder("Canceled", order);
