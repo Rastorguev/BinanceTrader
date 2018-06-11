@@ -175,7 +175,7 @@ namespace BinanceTrader.Trader
                         var price = await GetActualPrice(symbol, OrderSide.Buy);
                         var tradingRules = _rulesProvider.GetRulesFor(symbol);
                         var buyAmounts = symbolAmounts.Value.NotNull();
- 
+
                         foreach (var quoteAmount in buyAmounts)
                         {
                             var buyPrice = AdjustPriceAccordingRules(price, tradingRules);
@@ -368,7 +368,7 @@ namespace BinanceTrader.Trader
             var symbols = _assets.Select(a => SymbolUtils.GetCurrencySymbol(a, QuoteAsset));
 
             var tasks = symbols.Select(async s => (symbol: s,
-                candles: await LoadCandlesForPriceGain(s).NotNull()));
+                candles: (await LoadCandlesForPriceGain(s).NotNull()).OrderBy(c => c.OpenTime)));
 
             var candles = (await Task.WhenAll(tasks).NotNull()).NotNull();
             var gains = candles
@@ -381,8 +381,8 @@ namespace BinanceTrader.Trader
                         return result;
                     }
 
-                    var max = c.candles.First().NotNull().Low;
-                    var min = c.candles.Last().NotNull().High;
+                    var min = c.candles.First().NotNull().Low;
+                    var max = c.candles.Last().NotNull().High;
 
                     result.gain = MathUtils.Gain(min, max).Round();
 
@@ -399,7 +399,7 @@ namespace BinanceTrader.Trader
             var candles = new List<Candlestick>();
             try
             {
-                candles = (await _client.GetCandleSticks(s, TimeInterval.Minutes_1, null, null, 10).NotNull())
+                candles = (await _client.GetCandleSticks(s, TimeInterval.Minutes_1, null, null, 30).NotNull())
                     .NotNull().ToList();
             }
             catch (Exception ex)
