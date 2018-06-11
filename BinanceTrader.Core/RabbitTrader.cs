@@ -163,19 +163,9 @@ namespace BinanceTrader.Trader
                 var freeQuoteBalance = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull()
                     .First(b => b.NotNull().Asset == QuoteAsset).NotNull().Free;
 
-                var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
-
-                var openOrdersCount = _assets.Select(asset =>
-                    {
-                        var symbol = SymbolUtils.GetCurrencySymbol(asset, QuoteAsset);
-                        var count = openOrders.Count(o => o.NotNull().Symbol == symbol);
-                        return (symbol: symbol, count: count);
-                    })
-                    .ToDictionary(x => x.symbol, x => x.count);
-
-                var fluctuations = await GetPricesFluctuation().NotNull();
+                var gains = await GetPricesGain().NotNull();
                 var amounts =
-                    OrderDistributor.SplitIntoBuyOrders(freeQuoteBalance, MinOrderSize, openOrdersCount, fluctuations);
+                    OrderDistributor.SplitIntoBuyOrders(freeQuoteBalance, MinOrderSize, gains);
 
                 foreach (var symbolAmounts in amounts)
                 {
@@ -185,12 +175,10 @@ namespace BinanceTrader.Trader
                         var price = await GetActualPrice(symbol, OrderSide.Buy);
                         var tradingRules = _rulesProvider.GetRulesFor(symbol);
                         var buyAmounts = symbolAmounts.Value.NotNull();
-                        var profitStepSize = GetProfitStepSize(buyAmounts.Count);
-                        var profitRatio = MinProfitRatio;
-
+ 
                         foreach (var quoteAmount in buyAmounts)
                         {
-                            var buyPrice = AdjustPriceAccordingRules(price - price.Percents(profitRatio), tradingRules);
+                            var buyPrice = AdjustPriceAccordingRules(price, tradingRules);
                             var baseAmount =
                                 OrderDistributor.GetFittingBaseAmount(quoteAmount, buyPrice, tradingRules.StepSize);
                             var orderRequest = new OrderRequest(symbol, OrderSide.Buy, baseAmount, buyPrice);
@@ -198,7 +186,6 @@ namespace BinanceTrader.Trader
                             if (MeetsTradingRules(orderRequest))
                             {
                                 await PlaceOrder(orderRequest);
-                                profitRatio += profitStepSize;
                             }
                         }
                     }
@@ -376,38 +363,38 @@ namespace BinanceTrader.Trader
         }
 
         [NotNull]
-        private async Task<Dictionary<string, decimal>> GetPricesFluctuation()
+        private async Task<Dictionary<string, decimal>> GetPricesGain()
         {
             var symbols = _assets.Select(a => SymbolUtils.GetCurrencySymbol(a, QuoteAsset));
 
             var tasks = symbols.Select(async s => (symbol: s,
-                candles: await LoadCandlesForPriceFluctuation(s).NotNull()));
+                candles: await LoadCandlesForPriceGain(s).NotNull()));
 
             var candles = (await Task.WhenAll(tasks).NotNull()).NotNull();
-            var fluctuations = candles
+            var gains = candles
                 .Select(c =>
                 {
-                    var result = (asset: c.symbol, fluctuation: 0m);
+                    var result = (asset: c.symbol, gain: decimal.MinValue);
 
                     if (!candles.Any())
                     {
                         return result;
                     }
 
-                    var max = c.candles.Max(x => x.NotNull().High);
-                    var min = c.candles.Min(x => x.NotNull().Low);
+                    var max = c.candles.First().NotNull().Low;
+                    var min = c.candles.Last().NotNull().High;
 
-                    result.fluctuation = MathUtils.Gain(min, max).Round();
+                    result.gain = MathUtils.Gain(min, max).Round();
 
                     return result;
                 })
-                .OrderByDescending(c => c.fluctuation)
-                .ToDictionary(x => x.asset, x => x.fluctuation);
+                .OrderByDescending(c => c.gain)
+                .ToDictionary(x => x.asset, x => x.gain);
 
-            return fluctuations;
+            return gains;
         }
 
-        private async Task<IEnumerable<Candlestick>> LoadCandlesForPriceFluctuation(string s)
+        private async Task<IEnumerable<Candlestick>> LoadCandlesForPriceGain(string s)
         {
             var candles = new List<Candlestick>();
             try

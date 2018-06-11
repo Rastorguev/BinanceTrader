@@ -12,47 +12,27 @@ namespace BinanceTrader.Trader
         public static Dictionary<string, List<decimal>> SplitIntoBuyOrders(
             decimal freeQuoteAmount,
             decimal minOrderSize,
-            [NotNull] Dictionary<string, int> openOrdersCount,
-            [NotNull] Dictionary<string, decimal> priceFluctuations
+            [NotNull] Dictionary<string, decimal> priceGain
         )
         {
             var amounts = new Dictionary<string, List<decimal>>();
             var remainingQuoteAmount = freeQuoteAmount;
+            var positiveGainSymbols = priceGain.Where(g => g.Value > 0m).ToList();
 
-            while (true)
+            if (!positiveGainSymbols.Any())
             {
-                var prioritySymbols = openOrdersCount.Select(
-                        o =>
-                        {
-                            priceFluctuations.TryGetValue(o.Key.NotNull(), out var fluct);
-                            var requestsCount = amounts.ContainsKey(o.Key.NotNull())
-                                ? amounts[o.Key.NotNull()].NotNull().Count
-                                : 0;
+                return amounts;
+            }
 
-                            var openCount = o.Value;
+            var topGainSymbols = positiveGainSymbols
+                .OrderByDescending(g => g.Value)
+                .Take(Math.Min(positiveGainSymbols.Count, 5))
+                .Select(g => g.Key).ToList();
 
-                            if (fluct == 0m)
-                            {
-                                fluct = (decimal)Math.Pow(10, -10);
-                            }
-
-                            var priority = (requestsCount + openCount + 1) / fluct;
-
-                            return (Symbol: o.Key, Priority: priority);
-                        })
-                    .GroupBy(x => x.Priority)
-                    .OrderBy(g => g.Key)
-                    .First().NotNull()
-                    .Select(g => g.Symbol)
-                    .ToList();
-
-                foreach (var symbol in prioritySymbols)
+            while (remainingQuoteAmount >= minOrderSize)
+            {
+                foreach (var symbol in topGainSymbols)
                 {
-                    if (remainingQuoteAmount < minOrderSize)
-                    {
-                        return amounts;
-                    }
-
                     if (!amounts.ContainsKey(symbol.NotNull()))
                     {
                         amounts[symbol] = new List<decimal>();
@@ -63,6 +43,8 @@ namespace BinanceTrader.Trader
                     remainingQuoteAmount -= orderSize;
                 }
             }
+
+            return amounts;
         }
 
         [NotNull]
@@ -73,9 +55,9 @@ namespace BinanceTrader.Trader
             decimal stepSize)
         {
             var amounts = new List<decimal>();
-            var remainingStepsAmount = (int)(freeBaseAmount / stepSize);
+            var remainingStepsAmount = (int) (freeBaseAmount / stepSize);
 
-            var minOrderSizeInSteps = (int)(minOrderSize / stepSize / price);
+            var minOrderSizeInSteps = (int) (minOrderSize / stepSize / price);
             while (remainingStepsAmount >= minOrderSizeInSteps)
             {
                 var orderSizeInSteps = remainingStepsAmount >= minOrderSizeInSteps * 2
@@ -91,7 +73,7 @@ namespace BinanceTrader.Trader
 
         public static decimal GetFittingBaseAmount(decimal quoteAmount, decimal price, decimal stepSize)
         {
-            return (int)(quoteAmount / price / stepSize) * stepSize;
+            return (int) (quoteAmount / price / stepSize) * stepSize;
         }
     }
 }
