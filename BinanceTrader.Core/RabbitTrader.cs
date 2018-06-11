@@ -412,7 +412,7 @@ namespace BinanceTrader.Trader
             var candles = new List<Candlestick>();
             try
             {
-                candles = (await _client.GetCandleSticks(s, TimeInterval.Minutes_1, null, null, 5).NotNull())
+                candles = (await _client.GetCandleSticks(s, TimeInterval.Minutes_1, null, null, 10).NotNull())
                     .NotNull().ToList();
             }
             catch (Exception ex)
