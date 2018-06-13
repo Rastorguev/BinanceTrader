@@ -19,10 +19,10 @@ namespace BinanceTrader.Trader
     public class RabbitTrader
     {
         private readonly TimeSpan _scheduleInterval = TimeSpan.FromMinutes(1);
-        private readonly TimeSpan _sellWaitingTime = TimeSpan.FromHours(4);
-        private readonly TimeSpan _buyWaitingTime = TimeSpan.FromHours(2);
-        private const decimal MinProfitRatio = 1;
-        private const decimal MaxProfitRatio = 1.5m;
+        private readonly TimeSpan _sellWaitingTime = TimeSpan.FromHours(12);
+        private readonly TimeSpan _buyWaitingTime = TimeSpan.FromHours(12);
+        private const decimal MinProfitRatio = 2;
+        private const decimal MaxProfitRatio = 3m;
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
         private const string UsdtAsset = "USDT";
