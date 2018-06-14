@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client.Domain.Interfaces;
@@ -12,20 +11,18 @@ using Binance.API.Csharp.Client.Models.Market.TradingRules;
 using Binance.API.Csharp.Client.Models.WebSocket;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
-using Balance = Binance.API.Csharp.Client.Models.Account.Balance;
 
 namespace BinanceTrader.Trader
 {
     public class RabbitTrader
     {
-        private readonly TimeSpan _scheduleInterval = TimeSpan.FromMinutes(1);
-        private readonly TimeSpan _sellWaitingTime = TimeSpan.FromHours(12);
-        private readonly TimeSpan _buyWaitingTime = TimeSpan.FromHours(12);
-        private const decimal MinProfitRatio = 2;
-        private const decimal MaxProfitRatio = 3m;
+        private readonly TimeSpan _scheduleInterval = TimeSpan.FromSeconds(30);
+        private readonly TimeSpan _sellWaitingTime = TimeSpan.FromHours(1);
+        private readonly TimeSpan _buyWaitingTime = TimeSpan.FromHours(1);
+        private const decimal ProfitRatio = 0.5m;
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
-        private const string UsdtAsset = "USDT";
+
         private const decimal MinOrderSize = 0.015m;
 
         [NotNull] private readonly IBinanceClient _client;
@@ -33,6 +30,7 @@ namespace BinanceTrader.Trader
         [NotNull] private readonly TradingRulesProvider _rulesProvider;
 
         [NotNull] [ItemNotNull] private IReadOnlyList<string> _assets = new List<string>();
+        [NotNull] private readonly FundsStateChecker _fundsStateChecker;
 
         public RabbitTrader(
             [NotNull] IBinanceClient client,
@@ -41,6 +39,7 @@ namespace BinanceTrader.Trader
             _logger = logger;
             _client = client;
             _rulesProvider = new TradingRulesProvider(client);
+            _fundsStateChecker = new FundsStateChecker(_client, _logger, QuoteAsset);
         }
 
         public async void Start()
@@ -63,7 +62,9 @@ namespace BinanceTrader.Trader
 
                 await BuyFeeCurrencyIfNeeded();
                 await CheckOrders();
-                await LogFundsState();
+
+                _fundsStateChecker.Assets = _assets;
+                await _fundsStateChecker.LogFundsStateIfNeeded();
             }
             catch (Exception ex)
             {
@@ -128,19 +129,15 @@ namespace BinanceTrader.Trader
                                 price,
                                 tradingRules.StepSize);
 
-                        var profitStepSize = GetProfitStepSize(sellAmounts.Count);
-                        var profitRatio = MinProfitRatio;
-
                         foreach (var amount in sellAmounts)
                         {
                             var sellPrice =
-                                AdjustPriceAccordingRules(price + price.Percents(profitRatio), tradingRules);
+                                AdjustPriceAccordingRules(price + price.Percents(ProfitRatio), tradingRules);
                             var orderRequest = new OrderRequest(symbol, OrderSide.Sell, amount, sellPrice);
 
                             if (MeetsTradingRules(orderRequest))
                             {
                                 await PlaceOrder(orderRequest);
-                                profitRatio += profitStepSize;
                             }
                         }
                     }
@@ -173,9 +170,8 @@ namespace BinanceTrader.Trader
                     })
                     .ToDictionary(x => x.symbol, x => x.count);
 
-                var fluctuations = await GetPricesFluctuation().NotNull();
                 var amounts =
-                    OrderDistributor.SplitIntoBuyOrders(freeQuoteBalance, MinOrderSize, openOrdersCount, fluctuations);
+                    OrderDistributor.SplitIntoBuyOrders(freeQuoteBalance, MinOrderSize, openOrdersCount);
 
                 foreach (var symbolAmounts in amounts)
                 {
@@ -185,12 +181,10 @@ namespace BinanceTrader.Trader
                         var price = await GetActualPrice(symbol, OrderSide.Buy);
                         var tradingRules = _rulesProvider.GetRulesFor(symbol);
                         var buyAmounts = symbolAmounts.Value.NotNull();
-                        var profitStepSize = GetProfitStepSize(buyAmounts.Count);
-                        var profitRatio = MinProfitRatio;
 
                         foreach (var quoteAmount in buyAmounts)
                         {
-                            var buyPrice = AdjustPriceAccordingRules(price - price.Percents(profitRatio), tradingRules);
+                            var buyPrice = AdjustPriceAccordingRules(price - price.Percents(ProfitRatio), tradingRules);
                             var baseAmount =
                                 OrderDistributor.GetFittingBaseAmount(quoteAmount, buyPrice, tradingRules.StepSize);
                             var orderRequest = new OrderRequest(symbol, OrderSide.Buy, baseAmount, buyPrice);
@@ -198,7 +192,6 @@ namespace BinanceTrader.Trader
                             if (MeetsTradingRules(orderRequest))
                             {
                                 await PlaceOrder(orderRequest);
-                                profitRatio += profitStepSize;
                             }
                         }
                     }
@@ -311,121 +304,7 @@ namespace BinanceTrader.Trader
             }
         }
 
-        private async Task LogFundsState()
-        {
-            try
-            {
-                var prices = (await _client.GetAllPrices().NotNull().NotNull()).ToList();
-                var assetsAveragePrice = GetTradingAssetsAveragePrice(prices);
-
-                var funds = (await _client.GetAccountInfo().NotNull()).NotNull()
-                    .Balances.NotNull().Where(b => b.NotNull().Free + b.NotNull().Locked > 0).ToList();
-
-                var quoteUsdtSymbol = SymbolUtils.GetCurrencySymbol(QuoteAsset, UsdtAsset);
-                var quoteTotal = GetFundsTotal(funds, prices);
-                var usdtTotal = quoteTotal * prices.First(p => p.NotNull().Symbol == quoteUsdtSymbol).NotNull().Price;
-
-                _logger.LogMessage("Funds", new Dictionary<string, string>
-                {
-                    {"Quote", quoteTotal.Round().ToString(CultureInfo.InvariantCulture)},
-                    {"Usdt", usdtTotal.Round().ToString(CultureInfo.InvariantCulture)},
-                    {"AverageAssetPrice", assetsAveragePrice.Round().ToString(CultureInfo.InvariantCulture)}
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogException(ex);
-            }
-        }
-
-        private static decimal GetFundsTotal(
-            [NotNull] IReadOnlyList<Balance> funds,
-            [NotNull] IReadOnlyList<SymbolPrice> prices)
-        {
-            var total = 0m;
-            foreach (var fund in funds)
-            {
-                var assetTotal = fund.NotNull().Free + fund.NotNull().Locked;
-                if (fund.NotNull().Asset == QuoteAsset)
-                {
-                    total += assetTotal;
-                }
-                else
-                {
-                    var symbol = $"{fund.NotNull().Asset}{QuoteAsset}";
-                    total += assetTotal * prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
-                }
-            }
-
-            return total;
-        }
-
-        private static decimal GetProfitStepSize(int ordersCount)
-        {
-            var stepSize = ordersCount > 0 ? (MaxProfitRatio - MinProfitRatio) / ordersCount : 0;
-
-            return stepSize.Round();
-        }
-
-        private decimal GetTradingAssetsAveragePrice([NotNull] IReadOnlyList<SymbolPrice> prices)
-        {
-            var symbols = _assets.Select(a => SymbolUtils.GetCurrencySymbol(a, QuoteAsset));
-            var tradingAssetsPrices =
-                prices.Where(p => symbols.Contains(p.NotNull().Symbol)).Select(p => p.Price).ToList();
-            return tradingAssetsPrices.Average().Round();
-        }
-
-        [NotNull]
-        private async Task<Dictionary<string, decimal>> GetPricesFluctuation()
-        {
-            var symbols = _assets.Select(a => SymbolUtils.GetCurrencySymbol(a, QuoteAsset));
-
-            var tasks = symbols.Select(async s => (symbol: s,
-                candles: await LoadCandlesForPriceFluctuation(s).NotNull()));
-
-            var candles = (await Task.WhenAll(tasks).NotNull()).NotNull();
-            var fluctuations = candles
-                .Select(c =>
-                {
-                    var result = (asset: c.symbol, fluctuation: 0m);
-
-                    if (!c.candles.Any())
-                    {
-                        return result;
-                    }
-
-                    var max = c.candles.Max(x => x.NotNull().High);
-                    var min = c.candles.Min(x => x.NotNull().Low);
-
-                    result.fluctuation = MathUtils.Gain(min, max).Round();
-
-                    return result;
-                })
-                .OrderByDescending(c => c.fluctuation)
-                .ToDictionary(x => x.asset, x => x.fluctuation);
-
-            return fluctuations;
-        }
-
-        private async Task<IEnumerable<Candlestick>> LoadCandlesForPriceFluctuation(string s)
-        {
-            var candles = new List<Candlestick>();
-            try
-            {
-                candles = (await _client.GetCandleSticks(s, TimeInterval.Minutes_1, null, null, 30).NotNull())
-                    .NotNull().ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogException(ex);
-            }
-
-            return candles;
-        }
-
-        private decimal AdjustPriceAccordingRules(decimal price, [NotNull] ITradingRules rules)
-        {
-            return (int) (price / rules.TickSize) * rules.TickSize;
-        }
+        private static decimal AdjustPriceAccordingRules(decimal price, [NotNull] ITradingRules rules) =>
+            (int) (price / rules.TickSize) * rules.TickSize;
     }
 }

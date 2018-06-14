@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
@@ -12,9 +11,7 @@ namespace BinanceTrader.Trader
         public static Dictionary<string, List<decimal>> SplitIntoBuyOrders(
             decimal freeQuoteAmount,
             decimal minOrderSize,
-            [NotNull] Dictionary<string, int> openOrdersCount,
-            [NotNull] Dictionary<string, decimal> priceFluctuations
-        )
+            [NotNull] Dictionary<string, int> openOrdersCount)
         {
             var amounts = new Dictionary<string, List<decimal>>();
             var remainingQuoteAmount = freeQuoteAmount;
@@ -24,23 +21,13 @@ namespace BinanceTrader.Trader
                 var prioritySymbols = openOrdersCount.Select(
                         o =>
                         {
-                            priceFluctuations.TryGetValue(o.Key.NotNull(), out var fluct);
                             var requestsCount = amounts.ContainsKey(o.Key.NotNull())
                                 ? amounts[o.Key.NotNull()].NotNull().Count
                                 : 0;
 
-                            var openCount = o.Value;
-
-                            if (fluct == 0m)
-                            {
-                                fluct = (decimal)Math.Pow(10, -10);
-                            }
-
-                            var priority = (requestsCount + openCount + 1) / fluct;
-
-                            return (Symbol: o.Key, Priority: priority);
+                            return (Symbol: o.Key, Count: requestsCount + o.Value);
                         })
-                    .GroupBy(x => x.Priority)
+                    .GroupBy(x => x.Count)
                     .OrderBy(g => g.Key)
                     .First().NotNull()
                     .Select(g => g.Symbol)
@@ -73,9 +60,9 @@ namespace BinanceTrader.Trader
             decimal stepSize)
         {
             var amounts = new List<decimal>();
-            var remainingStepsAmount = (int)(freeBaseAmount / stepSize);
+            var remainingStepsAmount = (int) (freeBaseAmount / stepSize);
 
-            var minOrderSizeInSteps = (int)(minOrderSize / stepSize / price);
+            var minOrderSizeInSteps = (int) (minOrderSize / stepSize / price);
             while (remainingStepsAmount >= minOrderSizeInSteps)
             {
                 var orderSizeInSteps = remainingStepsAmount >= minOrderSizeInSteps * 2
@@ -89,9 +76,7 @@ namespace BinanceTrader.Trader
             return amounts;
         }
 
-        public static decimal GetFittingBaseAmount(decimal quoteAmount, decimal price, decimal stepSize)
-        {
-            return (int)(quoteAmount / price / stepSize) * stepSize;
-        }
+        public static decimal GetFittingBaseAmount(decimal quoteAmount, decimal price, decimal stepSize) =>
+            (int) (quoteAmount / price / stepSize) * stepSize;
     }
 }
