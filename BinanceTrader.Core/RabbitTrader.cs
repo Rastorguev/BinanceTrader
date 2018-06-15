@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client.Domain.Interfaces;
@@ -12,7 +11,6 @@ using Binance.API.Csharp.Client.Models.Market.TradingRules;
 using Binance.API.Csharp.Client.Models.WebSocket;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
-using Balance = Binance.API.Csharp.Client.Models.Account.Balance;
 
 namespace BinanceTrader.Trader
 {
@@ -22,10 +20,10 @@ namespace BinanceTrader.Trader
         private readonly TimeSpan _sellWaitingTime = TimeSpan.FromHours(12);
         private readonly TimeSpan _buyWaitingTime = TimeSpan.FromHours(12);
         private const decimal MinProfitRatio = 2;
-        private const decimal MaxProfitRatio = 3m;
+        private const decimal MaxProfitRatio = 3;
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
-        private const string UsdtAsset = "USDT";
+
         private const decimal MinOrderSize = 0.015m;
 
         [NotNull] private readonly IBinanceClient _client;
@@ -33,6 +31,7 @@ namespace BinanceTrader.Trader
         [NotNull] private readonly TradingRulesProvider _rulesProvider;
 
         [NotNull] [ItemNotNull] private IReadOnlyList<string> _assets = new List<string>();
+        [NotNull] private readonly FundsStateChecker _fundsStateChecker;
 
         public RabbitTrader(
             [NotNull] IBinanceClient client,
@@ -41,6 +40,7 @@ namespace BinanceTrader.Trader
             _logger = logger;
             _client = client;
             _rulesProvider = new TradingRulesProvider(client);
+            _fundsStateChecker = new FundsStateChecker(_client, _logger, QuoteAsset);
         }
 
         public async void Start()
@@ -63,7 +63,9 @@ namespace BinanceTrader.Trader
 
                 await BuyFeeCurrencyIfNeeded();
                 await CheckOrders();
-                await LogFundsState();
+
+                _fundsStateChecker.Assets = _assets;
+                await _fundsStateChecker.LogFundsStateIfNeeded();
             }
             catch (Exception ex)
             {
@@ -311,68 +313,11 @@ namespace BinanceTrader.Trader
             }
         }
 
-        private async Task LogFundsState()
-        {
-            try
-            {
-                var prices = (await _client.GetAllPrices().NotNull().NotNull()).ToList();
-                var assetsAveragePrice = GetTradingAssetsAveragePrice(prices);
-
-                var funds = (await _client.GetAccountInfo().NotNull()).NotNull()
-                    .Balances.NotNull().Where(b => b.NotNull().Free + b.NotNull().Locked > 0).ToList();
-
-                var quoteUsdtSymbol = SymbolUtils.GetCurrencySymbol(QuoteAsset, UsdtAsset);
-                var quoteTotal = GetFundsTotal(funds, prices);
-                var usdtTotal = quoteTotal * prices.First(p => p.NotNull().Symbol == quoteUsdtSymbol).NotNull().Price;
-
-                _logger.LogMessage("Funds", new Dictionary<string, string>
-                {
-                    {"Quote", quoteTotal.Round().ToString(CultureInfo.InvariantCulture)},
-                    {"Usdt", usdtTotal.Round().ToString(CultureInfo.InvariantCulture)},
-                    {"AverageAssetPrice", assetsAveragePrice.Round().ToString(CultureInfo.InvariantCulture)}
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogException(ex);
-            }
-        }
-
-        private static decimal GetFundsTotal(
-            [NotNull] IReadOnlyList<Balance> funds,
-            [NotNull] IReadOnlyList<SymbolPrice> prices)
-        {
-            var total = 0m;
-            foreach (var fund in funds)
-            {
-                var assetTotal = fund.NotNull().Free + fund.NotNull().Locked;
-                if (fund.NotNull().Asset == QuoteAsset)
-                {
-                    total += assetTotal;
-                }
-                else
-                {
-                    var symbol = $"{fund.NotNull().Asset}{QuoteAsset}";
-                    total += assetTotal * prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
-                }
-            }
-
-            return total;
-        }
-
         private static decimal GetProfitStepSize(int ordersCount)
         {
             var stepSize = ordersCount > 0 ? (MaxProfitRatio - MinProfitRatio) / ordersCount : 0;
 
             return stepSize.Round();
-        }
-
-        private decimal GetTradingAssetsAveragePrice([NotNull] IReadOnlyList<SymbolPrice> prices)
-        {
-            var symbols = _assets.Select(a => SymbolUtils.GetCurrencySymbol(a, QuoteAsset));
-            var tradingAssetsPrices =
-                prices.Where(p => symbols.Contains(p.NotNull().Symbol)).Select(p => p.Price).ToList();
-            return tradingAssetsPrices.Average().Round();
         }
 
         [NotNull]

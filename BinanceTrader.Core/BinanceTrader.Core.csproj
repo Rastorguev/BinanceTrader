@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="AssetsProvider.cs" />
     <Compile Include="Exceptions.cs" />
+    <Compile Include="FundsStateChecker.cs" />
     <Compile Include="ILogger.cs" />
     <Compile Include="OrderDistributor.cs" />
     <Compile Include="OrderRequest.cs" />
