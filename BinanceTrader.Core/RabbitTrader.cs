@@ -16,10 +16,11 @@ namespace BinanceTrader.Trader
 {
     public class RabbitTrader
     {
-        private readonly TimeSpan _scheduleInterval = TimeSpan.FromSeconds(20);
+        private readonly TimeSpan _scheduleInterval = TimeSpan.FromMinutes(1);
         private readonly TimeSpan _sellWaitingTime = TimeSpan.FromHours(12);
         private readonly TimeSpan _buyWaitingTime = TimeSpan.FromHours(12);
-        private const decimal ProfitRatio = 2m;
+        private const decimal MinProfitRatio = 2;
+        private const decimal MaxProfitRatio = 3;
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
 
@@ -129,15 +130,19 @@ namespace BinanceTrader.Trader
                                 price,
                                 tradingRules.StepSize);
 
+                        var profitStepSize = GetProfitStepSize(sellAmounts.Count);
+                        var profitRatio = MinProfitRatio;
+
                         foreach (var amount in sellAmounts)
                         {
                             var sellPrice =
-                                AdjustPriceAccordingRules(price + price.Percents(ProfitRatio), tradingRules);
+                                AdjustPriceAccordingRules(price + price.Percents(profitRatio), tradingRules);
                             var orderRequest = new OrderRequest(symbol, OrderSide.Sell, amount, sellPrice);
 
                             if (MeetsTradingRules(orderRequest))
                             {
                                 await PlaceOrder(orderRequest);
+                                profitRatio += profitStepSize;
                             }
                         }
                     }
@@ -181,10 +186,12 @@ namespace BinanceTrader.Trader
                         var price = await GetActualPrice(symbol, OrderSide.Buy);
                         var tradingRules = _rulesProvider.GetRulesFor(symbol);
                         var buyAmounts = symbolAmounts.Value.NotNull();
+                        var profitStepSize = GetProfitStepSize(buyAmounts.Count);
+                        var profitRatio = MinProfitRatio;
 
                         foreach (var quoteAmount in buyAmounts)
                         {
-                            var buyPrice = AdjustPriceAccordingRules(price - price.Percents(ProfitRatio), tradingRules);
+                            var buyPrice = AdjustPriceAccordingRules(price - price.Percents(profitRatio), tradingRules);
                             var baseAmount =
                                 OrderDistributor.GetFittingBaseAmount(quoteAmount, buyPrice, tradingRules.StepSize);
                             var orderRequest = new OrderRequest(symbol, OrderSide.Buy, baseAmount, buyPrice);
@@ -192,6 +199,7 @@ namespace BinanceTrader.Trader
                             if (MeetsTradingRules(orderRequest))
                             {
                                 await PlaceOrder(orderRequest);
+                                profitRatio += profitStepSize;
                             }
                         }
                     }
@@ -304,7 +312,16 @@ namespace BinanceTrader.Trader
             }
         }
 
-        private static decimal AdjustPriceAccordingRules(decimal price, [NotNull] ITradingRules rules) =>
-            (int) (price / rules.TickSize) * rules.TickSize;
+        private static decimal AdjustPriceAccordingRules(decimal price, [NotNull] ITradingRules rules)
+        {
+            return (int) (price / rules.TickSize) * rules.TickSize;
+        }
+
+        private static decimal GetProfitStepSize(int ordersCount)
+        {
+            var stepSize = ordersCount > 0 ? (MaxProfitRatio - MinProfitRatio) / ordersCount : 0;
+
+            return stepSize.Round();
+        }
     }
 }
