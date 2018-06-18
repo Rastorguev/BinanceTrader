@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
@@ -12,41 +11,29 @@ namespace BinanceTrader.Trader
         public static Dictionary<string, List<decimal>> SplitIntoBuyOrders(
             decimal freeQuoteAmount,
             decimal minOrderSize,
-            [NotNull] Dictionary<string, int> openOrdersCount,
-            [NotNull] Dictionary<string, decimal> priceFluctuations
-        )
+            [NotNull] Dictionary<string, int> openOrdersCount)
         {
             var amounts = new Dictionary<string, List<decimal>>();
             var remainingQuoteAmount = freeQuoteAmount;
 
             while (true)
             {
-                var prioritySymbols = openOrdersCount.Select(
+                var minOrdersCountSymbols = openOrdersCount.Select(
                         o =>
                         {
-                            priceFluctuations.TryGetValue(o.Key.NotNull(), out var fluct);
                             var requestsCount = amounts.ContainsKey(o.Key.NotNull())
                                 ? amounts[o.Key.NotNull()].NotNull().Count
                                 : 0;
 
-                            var openCount = o.Value;
-
-                            if (fluct == 0m)
-                            {
-                                fluct = (decimal)Math.Pow(10, -10);
-                            }
-
-                            var priority = (requestsCount + openCount + 1) / fluct;
-
-                            return (Symbol: o.Key, Priority: priority);
+                            return (Symbol: o.Key, Count: requestsCount + o.Value);
                         })
-                    .GroupBy(x => x.Priority)
+                    .GroupBy(x => x.Count)
                     .OrderBy(g => g.Key)
                     .First().NotNull()
                     .Select(g => g.Symbol)
                     .ToList();
 
-                foreach (var symbol in prioritySymbols)
+                foreach (var symbol in minOrdersCountSymbols)
                 {
                     if (remainingQuoteAmount < minOrderSize)
                     {

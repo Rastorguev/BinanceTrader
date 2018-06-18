@@ -17,10 +17,11 @@ namespace BinanceTrader.Trader
     public class RabbitTrader
     {
         private readonly TimeSpan _scheduleInterval = TimeSpan.FromMinutes(1);
-        private readonly TimeSpan _sellWaitingTime = TimeSpan.FromHours(12);
-        private readonly TimeSpan _buyWaitingTime = TimeSpan.FromHours(12);
-        private const decimal MinProfitRatio = 2;
-        private const decimal MaxProfitRatio = 3;
+        private readonly TimeSpan _sellWaitingTime = TimeSpan.FromHours(4);
+        private readonly TimeSpan _buyWaitingTime = TimeSpan.FromHours(4);
+
+        private const decimal MinProfitRatio = 0.5m;
+        private const decimal MaxProfitRatio = 1m;
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
 
@@ -32,6 +33,7 @@ namespace BinanceTrader.Trader
 
         [NotNull] [ItemNotNull] private IReadOnlyList<string> _assets = new List<string>();
         [NotNull] private readonly FundsStateChecker _fundsStateChecker;
+        private string _listenKey;
 
         public RabbitTrader(
             [NotNull] IBinanceClient client,
@@ -60,12 +62,69 @@ namespace BinanceTrader.Trader
             {
                 await _rulesProvider.UpdateRulesIfNeeded();
                 _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
+                _fundsStateChecker.Assets = _assets;
 
+                await ResetOrderUpdatesListening();
                 await BuyFeeCurrencyIfNeeded();
                 await CheckOrders();
-
-                _fundsStateChecker.Assets = _assets;
                 await _fundsStateChecker.LogFundsStateIfNeeded();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
+        }
+
+        private async Task ResetOrderUpdatesListening()
+        {
+            await StopListenOrderUpdates();
+            StartListenOrderUpdates();
+        }
+
+        private void StartListenOrderUpdates()
+        {
+            _listenKey = _client.ListenUserDataEndpoint(m => { }, OnOrderUpdated, m => { });
+        }
+
+        private async Task StopListenOrderUpdates()
+        {
+            if (_listenKey != null)
+            {
+                await _client.CloseUserStream(_listenKey).NotNull();
+            }
+        }
+
+        private async void OnOrderUpdated([NotNull] OrderOrTradeUpdatedMessage message)
+        {
+            try
+            {
+                if (message.Status != OrderStatus.Filled)
+                {
+                    return;
+                }
+
+                switch (message.Side)
+                {
+                    case OrderSide.Buy:
+                        var sellRequest = CreateSellOrder(message);
+                        if (MeetsTradingRules(sellRequest))
+                        {
+                            await PlaceOrder(sellRequest);
+                        }
+
+                        break;
+
+                    case OrderSide.Sell:
+                        var buyRequest = CreateBuyOrder(message);
+                        if (MeetsTradingRules(buyRequest))
+                        {
+                            await PlaceOrder(buyRequest);
+                        }
+
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(OrderSide));
+                }
             }
             catch (Exception ex)
             {
@@ -175,9 +234,8 @@ namespace BinanceTrader.Trader
                     })
                     .ToDictionary(x => x.symbol, x => x.count);
 
-                var fluctuations = await GetPricesFluctuation().NotNull();
                 var amounts =
-                    OrderDistributor.SplitIntoBuyOrders(freeQuoteBalance, MinOrderSize, openOrdersCount, fluctuations);
+                    OrderDistributor.SplitIntoBuyOrders(freeQuoteBalance, MinOrderSize, openOrdersCount);
 
                 foreach (var symbolAmounts in amounts)
                 {
@@ -321,56 +379,40 @@ namespace BinanceTrader.Trader
         }
 
         [NotNull]
-        private async Task<Dictionary<string, decimal>> GetPricesFluctuation()
+        private OrderRequest CreateSellOrder([NotNull] IOrder message)
         {
-            var symbols = _assets.Select(a => SymbolUtils.GetCurrencySymbol(a, QuoteAsset));
+            var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
 
-            var tasks = symbols.Select(async s => (symbol: s,
-                candles: await LoadCandlesForPriceFluctuation(s).NotNull()));
+            var sellPrice =
+                AdjustPriceAccordingRules(message.Price + message.Price.Percents(MinProfitRatio), tradingRules);
 
-            var candles = (await Task.WhenAll(tasks).NotNull()).NotNull();
-            var fluctuations = candles
-                .Select(c =>
-                {
-                    var result = (asset: c.symbol, fluctuation: 0m);
+            var orderRequest = new OrderRequest(message.Symbol, OrderSide.Sell, message.OrigQty, sellPrice);
 
-                    if (!c.candles.Any())
-                    {
-                        return result;
-                    }
-
-                    var max = c.candles.Max(x => x.NotNull().High);
-                    var min = c.candles.Min(x => x.NotNull().Low);
-
-                    result.fluctuation = MathUtils.Gain(min, max).Round();
-
-                    return result;
-                })
-                .OrderByDescending(c => c.fluctuation)
-                .ToDictionary(x => x.asset, x => x.fluctuation);
-
-            return fluctuations;
+            return orderRequest;
         }
 
-        private async Task<IEnumerable<Candlestick>> LoadCandlesForPriceFluctuation(string s)
+        [NotNull]
+        private OrderRequest CreateBuyOrder([NotNull] IOrder message)
         {
-            var candles = new List<Candlestick>();
-            try
-            {
-                candles = (await _client.GetCandleSticks(s, TimeInterval.Minutes_1, null, null, 30).NotNull())
-                    .NotNull().ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogException(ex);
-            }
+            var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
 
-            return candles;
+            var buyPrice =
+                AdjustPriceAccordingRules(message.Price - message.Price.Percents(MinProfitRatio), tradingRules);
+
+            var qty = AdjustQtyAccordingRules(message.Price * message.OrigQty / buyPrice, tradingRules);
+
+            var orderRequest = new OrderRequest(message.Symbol, OrderSide.Buy, qty, buyPrice);
+            return orderRequest;
         }
 
-        private decimal AdjustPriceAccordingRules(decimal price, [NotNull] ITradingRules rules)
+        private static decimal AdjustPriceAccordingRules(decimal price, [NotNull] ITradingRules rules)
         {
             return (int) (price / rules.TickSize) * rules.TickSize;
+        }
+
+        private static decimal AdjustQtyAccordingRules(decimal qty, [NotNull] ITradingRules rules)
+        {
+            return (int) (qty / rules.StepSize) * rules.StepSize;
         }
     }
 }
