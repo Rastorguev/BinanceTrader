@@ -104,6 +104,7 @@ namespace BinanceTrader.Trader
 
                 await BuyFeeCurrencyIfNeeded();
                 await CheckOrders();
+                await KeepStreamAlive();
             }
             catch (Exception ex)
             {
@@ -151,6 +152,14 @@ namespace BinanceTrader.Trader
             if (_listenKey != null)
             {
                 await _client.CloseUserStream(_listenKey).NotNull();
+            }
+        }
+
+        private async Task KeepStreamAlive()
+        {
+            if (_listenKey != null)
+            {
+                await _client.KeepAliveUserStream(_listenKey).NotNull();
             }
         }
 
