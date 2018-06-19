@@ -42,8 +42,8 @@ namespace BinanceTrader.Trader
             AutoReset = true
         };
 
-        private const decimal MinProfitRatio = 0.5m;
-        private const decimal MaxProfitRatio = 1m;
+        private const decimal MinProfitRatio = 2m;
+        private const decimal MaxProfitRatio = 3m;
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
 
