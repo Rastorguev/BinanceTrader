@@ -21,8 +21,8 @@ namespace BinanceTrader.Trader
         private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan StreamResetInterval = TimeSpan.FromMinutes(60);
 
-        private readonly TimeSpan _sellWaitingTime = TimeSpan.FromHours(4);
-        private readonly TimeSpan _buyWaitingTime = TimeSpan.FromHours(4);
+        private readonly TimeSpan _sellWaitingTime = TimeSpan.FromHours(12);
+        private readonly TimeSpan _buyWaitingTime = TimeSpan.FromHours(12);
 
         [NotNull] private readonly Timer _ordersCheckTimer = new Timer
         {
