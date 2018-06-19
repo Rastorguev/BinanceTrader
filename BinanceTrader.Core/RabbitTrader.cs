@@ -17,9 +17,9 @@ namespace BinanceTrader.Trader
 {
     public class RabbitTrader
     {
-        private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(10);
+        private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(5);
         private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
-        private static readonly TimeSpan StreamResetInterval = TimeSpan.FromMinutes(60);
+        private static readonly TimeSpan StreamResetInterval = TimeSpan.FromMinutes(30);
 
         private readonly TimeSpan _sellWaitingTime = TimeSpan.FromHours(12);
         private readonly TimeSpan _buyWaitingTime = TimeSpan.FromHours(12);
