@@ -172,6 +172,8 @@ namespace BinanceTrader.Trader
                     return;
                 }
 
+                _logger.LogOrder("Completed", message);
+
                 switch (message.Side)
                 {
                     case OrderSide.Buy:
