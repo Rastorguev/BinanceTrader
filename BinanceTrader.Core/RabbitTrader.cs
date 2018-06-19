@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Timers;
 using Binance.API.Csharp.Client.Domain.Interfaces;
 using Binance.API.Csharp.Client.Models;
 using Binance.API.Csharp.Client.Models.Account;
@@ -16,9 +17,30 @@ namespace BinanceTrader.Trader
 {
     public class RabbitTrader
     {
-        private readonly TimeSpan _scheduleInterval = TimeSpan.FromMinutes(1);
+        private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(10);
+        private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
+        private static readonly TimeSpan StreamResetInterval = TimeSpan.FromMinutes(60);
+
         private readonly TimeSpan _sellWaitingTime = TimeSpan.FromHours(4);
         private readonly TimeSpan _buyWaitingTime = TimeSpan.FromHours(4);
+
+        [NotNull] private readonly Timer _ordersCheckTimer = new Timer
+        {
+            Interval = OrdersCheckInterval.TotalMilliseconds,
+            AutoReset = true
+        };
+
+        [NotNull] private readonly Timer _fundsCheckTimer = new Timer
+        {
+            Interval = FundsCheckInterval.TotalMilliseconds,
+            AutoReset = true
+        };
+
+        [NotNull] private readonly Timer _streamResetTimer = new Timer
+        {
+            Interval = StreamResetInterval.TotalMilliseconds,
+            AutoReset = true
+        };
 
         private const decimal MinProfitRatio = 0.5m;
         private const decimal MaxProfitRatio = 1m;
@@ -43,20 +65,13 @@ namespace BinanceTrader.Trader
             _client = client;
             _rulesProvider = new TradingRulesProvider(client);
             _fundsStateChecker = new FundsStateChecker(_client, _logger, QuoteAsset);
+
+            _fundsCheckTimer.Elapsed += OnFundsEvent;
+            _streamResetTimer.Elapsed += OnStreamResetEvent;
+            _ordersCheckTimer.Elapsed += OnOrdersCheckEvent;
         }
 
         public async void Start()
-        {
-            while (true)
-            {
-                await Task.WhenAll(new List<Task> {ExecuteScheduledTasks(), Task.Delay(_scheduleInterval)}).NotNull();
-            }
-
-            // ReSharper disable FunctionNeverReturns
-        }
-        // ReSharper restore FunctionNeverReturns
-
-        public async Task ExecuteScheduledTasks()
         {
             try
             {
@@ -67,7 +82,52 @@ namespace BinanceTrader.Trader
                 await ResetOrderUpdatesListening();
                 await BuyFeeCurrencyIfNeeded();
                 await CheckOrders();
-                await _fundsStateChecker.LogFundsStateIfNeeded();
+                await _fundsStateChecker.LogFundsState();
+
+                _ordersCheckTimer.Start();
+                _streamResetTimer.Start();
+                _fundsCheckTimer.Start();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
+        }
+
+        private async void OnOrdersCheckEvent(object sender, ElapsedEventArgs e)
+        {
+            try
+            {
+                await _rulesProvider.UpdateRulesIfNeeded();
+                _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
+                _fundsStateChecker.Assets = _assets;
+
+                await BuyFeeCurrencyIfNeeded();
+                await CheckOrders();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
+        }
+
+        private async void OnFundsEvent(object sender, ElapsedEventArgs e)
+        {
+            try
+            {
+                await _fundsStateChecker.LogFundsState();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
+        }
+
+        private async void OnStreamResetEvent(object sender, ElapsedEventArgs e)
+        {
+            try
+            {
+                await ResetOrderUpdatesListening();
             }
             catch (Exception ex)
             {

@@ -18,8 +18,6 @@ namespace BinanceTrader.Trader
         [NotNull] private readonly IBinanceClient _client;
         [NotNull] private readonly ILogger _logger;
         [NotNull] private readonly string _quoteAsset;
-        private DateTime? _lastLogTime;
-        private readonly TimeSpan _expiration = TimeSpan.FromMinutes(1);
 
         public FundsStateChecker(
             [NotNull] IBinanceClient client,
@@ -34,45 +32,32 @@ namespace BinanceTrader.Trader
         [NotNull]
         public IReadOnlyList<string> Assets { get; set; } = new List<string>();
 
-        public async Task LogFundsStateIfNeeded()
+        public async Task LogFundsState()
         {
             try
             {
-                var needToLog = _lastLogTime == null ||
-                                _lastLogTime != null && _lastLogTime.Value + _expiration <= DateTime.Now;
+                var prices = (await _client.GetAllPrices().NotNull().NotNull()).ToList();
+                var assetsAveragePrice = GetTradingAssetsAveragePrice(prices);
 
-                if (needToLog)
+                var funds = (await _client.GetAccountInfo().NotNull()).NotNull()
+                    .Balances.NotNull().Where(b => b.NotNull().Free + b.NotNull().Locked > 0).ToList();
+
+                var quoteUsdtSymbol = SymbolUtils.GetCurrencySymbol(_quoteAsset, UsdtAsset);
+                var quoteTotal = GetFundsTotal(funds, prices);
+                var usdtTotal = quoteTotal *
+                                prices.First(p => p.NotNull().Symbol == quoteUsdtSymbol).NotNull().Price;
+
+                _logger.LogMessage("Funds", new Dictionary<string, string>
                 {
-                    await LogFundsState();
-
-                    _lastLogTime = DateTime.Now;
-                }
+                    {"Quote", quoteTotal.Round().ToString(CultureInfo.InvariantCulture)},
+                    {"Usdt", usdtTotal.Round().ToString(CultureInfo.InvariantCulture)},
+                    {"AverageAssetPrice", assetsAveragePrice.Round().ToString(CultureInfo.InvariantCulture)}
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogException(ex);
             }
-        }
-
-        private async Task LogFundsState()
-        {
-            var prices = (await _client.GetAllPrices().NotNull().NotNull()).ToList();
-            var assetsAveragePrice = GetTradingAssetsAveragePrice(prices);
-
-            var funds = (await _client.GetAccountInfo().NotNull()).NotNull()
-                .Balances.NotNull().Where(b => b.NotNull().Free + b.NotNull().Locked > 0).ToList();
-
-            var quoteUsdtSymbol = SymbolUtils.GetCurrencySymbol(_quoteAsset, UsdtAsset);
-            var quoteTotal = GetFundsTotal(funds, prices);
-            var usdtTotal = quoteTotal *
-                            prices.First(p => p.NotNull().Symbol == quoteUsdtSymbol).NotNull().Price;
-
-            _logger.LogMessage("Funds", new Dictionary<string, string>
-            {
-                {"Quote", quoteTotal.Round().ToString(CultureInfo.InvariantCulture)},
-                {"Usdt", usdtTotal.Round().ToString(CultureInfo.InvariantCulture)},
-                {"AverageAssetPrice", assetsAveragePrice.Round().ToString(CultureInfo.InvariantCulture)}
-            });
         }
 
         private decimal GetFundsTotal(
