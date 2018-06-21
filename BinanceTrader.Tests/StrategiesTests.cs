@@ -65,8 +65,8 @@ namespace BinanceTrader
                 var candles = LoadCandles(
                     asset,
                     "ETH",
-                    new DateTime(2017, 09, 1, 0, 0, 0),
-                    new DateTime(2018, 04, 22, 0, 0, 0),
+                    new DateTime(2018, 06, 19, 9, 0, 0),
+                    new DateTime(2018, 06, 21, 19, 0, 0),
                     TimeInterval.Minutes_1);
 
                 var result = Trade(candles);
@@ -121,6 +121,7 @@ namespace BinanceTrader
             Console.WriteLine($"Hold Total:\t\t {holdAmountTotal.Round()}");
             Console.WriteLine($"Trade Profit Total %:\t {tradeProfit}");
             Console.WriteLine($"Hold Profit Total %:\t {holdProfit}");
+            Console.WriteLine($"Trading Efficiency %:\t {tradeProfit - holdProfit}");
         }
 
         [NotNull]
@@ -129,7 +130,7 @@ namespace BinanceTrader
         {
             var tradeSession = new TradeSession(
                 new TradeSessionConfig(
-                    initialQuoteAmount: 0.04m,
+                    initialQuoteAmount: 1m,
                     initialPrice: 0,
                     fee: 0.1m,
                     minQuoteAmount: 0.01m,
