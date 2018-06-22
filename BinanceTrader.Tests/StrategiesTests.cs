@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
-using Binance.API.Csharp.Client.Models;
 using Binance.API.Csharp.Client.Models.Enums;
 using Binance.API.Csharp.Client.Models.Market;
 using BinanceTrader.Tools;
@@ -13,16 +12,18 @@ namespace BinanceTrader
 {
     public class StrategiesTests
     {
-        [NotNull] private readonly BinanceClient _binanceClient;
+        [NotNull] private readonly CandlesProvider _candlesProvider;
 
         public StrategiesTests(
-            [NotNull] BinanceClient api) => _binanceClient = api;
+            [NotNull] BinanceClient client)
+        {
+            _candlesProvider = new CandlesProvider(client);
+        }
 
-        public void CompareStrategies()
+        public async Task CompareStrategies()
         {
             var assets = new List<string>
             {
-
                 //"NCASH",
                 "IOST",
                 //"STORM",
@@ -62,11 +63,11 @@ namespace BinanceTrader
 
             foreach (var asset in assets)
             {
-                var candles = LoadCandles(
+                var candles = await _candlesProvider.GetCandles(
                     asset,
                     "ETH",
-                    new DateTime(2018, 06, 19, 9, 0, 0),
-                    new DateTime(2018, 06, 21, 19, 0, 0),
+                    new DateTime(2018, 01, 01, 0, 0, 0),
+                    new DateTime(2018, 06, 01, 0, 0, 0),
                     TimeInterval.Minutes_1);
 
                 var result = Trade(candles);
@@ -76,8 +77,8 @@ namespace BinanceTrader
                     continue;
                 }
 
-                var firstPrice = candles.First().Close;
-                var lastPrice = candles.Last().Close;
+                var firstPrice = candles.First().NotNull().Close;
+                var lastPrice = candles.Last().NotNull().Close;
 
                 var tradeQuoteAmount = result.CurrentBaseAmount * lastPrice + result.CurrentQuoteAmount;
                 var holdQuoteAmount = result.InitialQuoteAmount / firstPrice * lastPrice + result.InitialBaseAmount;
@@ -126,7 +127,7 @@ namespace BinanceTrader
 
         [NotNull]
         private ITradeAccount Trade(
-            List<Candlestick> candles)
+            IReadOnlyList<Candlestick> candles)
         {
             var tradeSession = new TradeSession(
                 new TradeSessionConfig(
@@ -140,40 +141,6 @@ namespace BinanceTrader
             var result = tradeSession.Run(candles);
 
             return result;
-        }
-
-        [NotNull]
-        [ItemNotNull]
-        private List<Candlestick> LoadCandles(
-            string baseAsset,
-            string quoteAsset,
-            DateTime start,
-            DateTime end,
-            TimeInterval interval)
-        {
-            const int maxRange = 500;
-
-            var tasks = new List<Task<IEnumerable<Candlestick>>>();
-
-
-            while (start < end)
-            {
-                var intervalMinutes = maxRange * interval.ToMinutes();
-                var rangeEnd = (end - start).TotalMinutes > intervalMinutes
-                    ? start.AddMinutes(intervalMinutes)
-                    : end;
-
-                var symbol = $"{baseAsset}{quoteAsset}";
-
-
-                tasks.Add(_binanceClient.GetCandleSticks(symbol, interval, start, rangeEnd));
-                start = rangeEnd;
-            }
-
-            var candles = Task.WhenAll(tasks).NotNull().Result.NotNull().SelectMany(c => c).ToList();
-
-            var orderedCandles = candles.OrderBy(c => c.NotNull().OpenTime).ToList();
-            return orderedCandles;
         }
     }
 }

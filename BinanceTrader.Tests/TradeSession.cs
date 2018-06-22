@@ -24,7 +24,7 @@ namespace BinanceTrader
         }
 
         [NotNull]
-        public ITradeAccount Run([NotNull] [ItemNotNull] List<Candlestick> candles)
+        public ITradeAccount Run([NotNull] [ItemNotNull] IReadOnlyList<Candlestick> candles)
         {
             _account = new MockTradeAccount(0, _config.InitialQuoteAmount, _config.InitialPrice, _config.Fee);
 
