@@ -68,12 +68,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CandlesProvider.cs" />
+    <Compile Include="Strategies\ClosesStrategy.cs" />
+    <Compile Include="Strategies\ITradingStrategy.cs" />
     <Compile Include="OrdersDistributorTests.cs" />
-    <Compile Include="TradeSession.cs" />
+    <Compile Include="RabbitTradeSession.cs" />
     <Compile Include="ITradeAccount.cs" />
     <Compile Include="StrategiesTests.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TradeSession.cs" />
     <Compile Include="TradeSessionConfig.cs" />
   </ItemGroup>
   <ItemGroup>

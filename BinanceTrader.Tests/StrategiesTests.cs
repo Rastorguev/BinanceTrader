@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
 using Binance.API.Csharp.Client.Models.Enums;
 using Binance.API.Csharp.Client.Models.Market;
+using BinanceTrader.Strategies;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
@@ -61,6 +62,8 @@ namespace BinanceTrader
             var tradeAmountTotal = 0m;
             var holdAmountTotal = 0m;
 
+            var closesStrategy = new ClosesStrategy();
+
             foreach (var asset in assets)
             {
                 var candles = await _candlesProvider.GetCandles(
@@ -70,7 +73,7 @@ namespace BinanceTrader
                     new DateTime(2018, 06, 01, 0, 0, 0),
                     TimeInterval.Minutes_1);
 
-                var result = Trade(candles);
+                var result = Trade(candles, closesStrategy);
 
                 if (!candles.Any())
                 {
@@ -127,7 +130,9 @@ namespace BinanceTrader
 
         [NotNull]
         private ITradeAccount Trade(
-            IReadOnlyList<Candlestick> candles)
+            [NotNull] IReadOnlyList<Candlestick> candles,
+            [NotNull] ITradingStrategy strategy
+        )
         {
             var tradeSession = new TradeSession(
                 new TradeSessionConfig(
@@ -138,7 +143,7 @@ namespace BinanceTrader
                     minProfitRatio: 2m,
                     maxIdleHours: 12));
 
-            var result = tradeSession.Run(candles);
+            var result = tradeSession.Run(candles, strategy);
 
             return result;
         }
