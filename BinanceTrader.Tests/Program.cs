@@ -20,8 +20,16 @@ namespace BinanceTrader
             var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
             var binanceClient = new BinanceClient(apiClient);
 
-            var tests = new StrategiesTests(binanceClient);
-            tests.CompareStrategies().Wait();
+            var candlesProvider=new CandlesProvider(binanceClient);
+
+
+            var tests=new TradyTests(candlesProvider);
+            tests.Execute().Wait();
+
+            //var tests = new StrategiesTests(binanceClient);
+            //tests.CompareStrategies().Wait();
+
+         
 
             PreventAppClose();
         }
