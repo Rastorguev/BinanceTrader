@@ -67,6 +67,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CandlesExtensions.cs" />
     <Compile Include="CandlesProvider.cs" />
     <Compile Include="Strategies\ClosesStrategy.cs" />
     <Compile Include="Strategies\ITradingStrategy.cs" />

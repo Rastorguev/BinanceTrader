@@ -5,33 +5,51 @@ using System.Threading.Tasks;
 using Binance.API.Csharp.Client.Models;
 using Binance.API.Csharp.Client.Models.Enums;
 using Binance.API.Csharp.Client.Models.Market;
+using BinanceTrader.Tools;
 using JetBrains.Annotations;
+using Trady.Analysis;
+using Trady.Analysis.Backtest;
 using Trady.Analysis.Extension;
 
 namespace BinanceTrader
 {
     public class TradyTests
     {
-        [NotNull] private readonly CandlesProvider _candlesProvider;
+        [NotNull] private readonly ICandlesProvider _candlesProvider;
 
-        public TradyTests([NotNull] CandlesProvider candlesProvider)
+        public TradyTests([NotNull] ICandlesProvider candlesProvider)
         {
             _candlesProvider = candlesProvider;
         }
 
         public async Task Execute()
         {
-            var candles = await _candlesProvider.GetCandles(
-                "ADA",
-                "ETH",
-                new DateTime(2018, 06, 23, 0, 0, 0),
-                new DateTime(2018, 06, 23, 11, 0, 0),
-                TimeInterval.Minutes_1);
+            var candlesticks = await _candlesProvider.GetCandles(
+                    "BTC",
+                    "USDT",
+                    new DateTime(2018, 04, 1, 0, 0, 0),
+                    new DateTime(2018, 06, 1, 0, 0, 0),
+                    TimeInterval.Hours_1)
+                .NotNull();
 
-            var closes = candles.Select(c => c.Close).ToList();
-            var sma = closes.Ema(7).ToList();
+            var candles = candlesticks.ToIndexedToIOhlcvList();
 
-            var s = sma.GetValueByDate(candles, new DateTime(2018, 06, 23, 11, 0, 0));
+            var buyRule = Rule
+                .Create(c => c.IsFullStoOversold(20, 5, 5));
+
+            var sellRule = Rule
+                .Create(c => c.IsFullStoOversold(20, 5, 5));
+
+            var runner = new Builder()
+                .Add(candles).NotNull()
+                .Buy(buyRule).NotNull()
+                .Sell(sellRule).NotNull()
+                .Build()
+                .NotNull();
+
+            var result = await runner.RunAsync(100, 0.05m).NotNull();
+            var tr = result.NotNull().Transactions.NotNull().Select(t => t.NotNull().DateTime.ToLocalTime()).ToList();
+            var s = "";
         }
     }
 

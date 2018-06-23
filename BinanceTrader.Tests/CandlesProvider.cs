@@ -143,6 +143,11 @@ namespace BinanceTrader
                     ? start.AddMinutes(intervalMinutes)
                     : end;
 
+                //var rangeEnd = (end - start).TotalHours > maxRange
+                //    ? start.AddHours(maxRange)
+                //    : end;
+
+
                 var symbol = $"{baseAsset}{quoteAsset}";
 
                 tasks.Add(_client.GetCandleSticks(symbol, interval, start, rangeEnd));
