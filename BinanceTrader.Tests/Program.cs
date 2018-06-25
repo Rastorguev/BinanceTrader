@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Net;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
 using BinanceTrader.Tools;
+using JetBrains.Annotations;
 
 namespace BinanceTrader
 {
@@ -22,8 +24,11 @@ namespace BinanceTrader
             var binanceClient = new BinanceClient(apiClient);
             var candlesProvider = new CandlesProvider(binanceClient);
 
+            var assets = AssetsProvider.Assets;
+            var configs = GetConfigs();
             var tests = new StrategiesTests(candlesProvider);
-            var results = tests.CompareStrategies();
+
+            var results = tests.CompareStrategies(assets, configs);
 
             foreach (var result in results)
             {
@@ -45,9 +50,44 @@ namespace BinanceTrader
             PreventAppClose();
         }
 
+        [NotNull]
+        [ItemNotNull]
+        private static IReadOnlyList<TradeSessionConfig> GetConfigs()
+        {
+            TradeSessionConfig CreateConfig(decimal minProfit, decimal idle) =>
+                new TradeSessionConfig(
+                    initialQuoteAmount: 1m,
+                    initialPrice: 0,
+                    fee: 0.05m,
+                    minQuoteAmount:
+                    0.01m,
+                    profitRatio: minProfit,
+                    maxIdleHours: idle);
+
+            var configs = new List<TradeSessionConfig>();
+
+            const decimal profitStep = 0.5m;
+            const decimal idleStep = 0.5m;
+
+            var profit = 0.5m;
+            while (profit <= 10)
+            {
+                var idle = 0.5m;
+                while (idle <= 24m)
+                {
+                    configs.Add(CreateConfig(profit, idle));
+                    idle += idleStep;
+                }
+
+                profit += profitStep;
+            }
+
+            return configs;
+        }
+
         private static void PreventAppClose()
         {
-            Task.Delay(-1).Wait();
+            Task.Delay(-1).NotNull().Wait();
         }
     }
 }

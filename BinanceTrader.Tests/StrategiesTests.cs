@@ -16,11 +16,10 @@ namespace BinanceTrader
 
         public StrategiesTests([NotNull] CandlesProvider candlesProvider) => _candlesProvider = candlesProvider;
 
-        public List<KeyValuePair<TradeSessionConfig, TradeResult>> CompareStrategies()
+        public List<KeyValuePair<TradeSessionConfig, TradeResult>> CompareStrategies(
+            [NotNull] IReadOnlyList<string> assets,
+            [NotNull] IReadOnlyList<TradeSessionConfig> configs)
         {
-            var assets = AssetsProvider.Assets;
-
-            var configs = GenerateConfigs();
             var results = new ConcurrentDictionary<TradeSessionConfig, TradeResult>();
 
             Parallel.ForEach(configs, config =>
@@ -64,15 +63,7 @@ namespace BinanceTrader
                 Console.WriteLine($"{config.ProfitRatio} / {config.MaxIdleHours}");
             });
 
-           
-
             var ordered = results.OrderBy(r => r.Value.NotNull().TradeProfit).ToList();
-            var max = ordered.Last();
-            var current = ordered.FirstOrDefault(r =>
-                r.Key.NotNull().ProfitRatio == 2 &&
-                r.Key.NotNull().MaxIdleHours == 12);
-
-
             return ordered;
         }
 
@@ -84,63 +75,6 @@ namespace BinanceTrader
             var result = tradeSession.Run(candles);
 
             return result;
-        }
-
-        [NotNull]
-        [ItemNotNull]
-        private static IReadOnlyList<TradeSessionConfig> GenerateConfigs()
-        {
-            TradeSessionConfig CreateConfig(decimal minProfit, decimal idle) =>
-                new TradeSessionConfig(
-                    initialQuoteAmount: 1m,
-                    initialPrice: 0,
-                    fee: 0.05m,
-                    minQuoteAmount:
-                    0.01m,
-                    profitRatio: minProfit,
-                    maxIdleHours: idle);
-
-            var configs = new List<TradeSessionConfig>();
-
-            const decimal profitStep = 0.5m;
-            const decimal idleStep = 0.5m;
-
-            var profit = 0.5m;
-            while (profit <= 10)
-            {
-                var idle = 0.5m;
-                while (idle <= 24m)
-                {
-                    configs.Add(CreateConfig(profit, idle));
-                    idle += idleStep;
-                }
-
-                profit += profitStep;
-            }
-
-            return configs;
-        }
-    }
-
-    public class TradeResult
-    {
-        public decimal InitialAmount { get; }
-        public decimal TradeAmount { get; }
-        public decimal HoldAmount { get; }
-        public decimal TradeProfit { get; }
-        public decimal HoldProfit { get; }
-        public decimal Diff { get; }
-        public decimal Afficiency { get; }
-
-        public TradeResult(decimal initialAmount, decimal tradeAmount, decimal holdAmount)
-        {
-            InitialAmount = initialAmount;
-            TradeAmount = tradeAmount;
-            HoldAmount = holdAmount;
-            TradeProfit = MathUtils.Gain(InitialAmount, TradeAmount);
-            HoldProfit = MathUtils.Gain(InitialAmount, HoldAmount);
-            Diff = MathUtils.Gain(HoldAmount, TradeAmount);
-            Afficiency = TradeProfit - HoldProfit;
         }
     }
 }

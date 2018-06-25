@@ -12,7 +12,7 @@ namespace BinanceTrader
     public class TradeSession
     {
         [NotNull] private readonly TradeSessionConfig _config;
-        [NotNull ]private MockTradeAccount _account;
+        [NotNull] private MockTradeAccount _account;
         private decimal _nextPrice;
         private OrderSide _nextAction;
         private DateTime? _lastActionDate;
@@ -33,7 +33,7 @@ namespace BinanceTrader
                 return _account;
             }
 
-            _nextPrice = candles.First().Close;
+            _nextPrice = candles.First().NotNull().Close;
             _nextAction = OrderSide.Buy;
             _lastActionDate = null;
 
@@ -41,25 +41,18 @@ namespace BinanceTrader
             {
                 var force = _lastActionDate == null ||
                             candle.CloseTime.GetTime() - _lastActionDate.Value >=
-                            TimeSpan.FromHours((double)_config.MaxIdleHours);
+                            TimeSpan.FromHours((double) _config.MaxIdleHours);
 
                 var profitRatio = _config.ProfitRatio;
                 var inRange = _nextPrice >= candle.Low && _nextPrice <= candle.High;
 
-                var n = 10m;
                 if (_nextAction == OrderSide.Buy)
                 {
-             
                     if (inRange)
                     {
                         var price = _nextPrice;
                         Buy(price, candle, profitRatio);
                     }
-                    //else if (candle.Low - _nextPrice > _nextPrice.Percents(n))
-                    //{
-                    //    var price = candle.Low;
-                    //    Buy(price, candle, profitRatio);
-                    //}
                     else if (force)
                     {
                         var price = candle.High;
@@ -73,11 +66,6 @@ namespace BinanceTrader
                         var price = _nextPrice;
                         Sell(price, candle, profitRatio);
                     }
-                    //else if (_nextPrice - candle.High > _nextPrice.Percents(n))
-                    //{
-                    //    var price = candle.High;
-                    //    Sell(price, candle, profitRatio);
-                    //}
                     else if (force)
                     {
                         var price = candle.Low;
@@ -89,7 +77,7 @@ namespace BinanceTrader
             return _account;
         }
 
-        private void Buy(decimal price, Candlestick candle, decimal profitRatio)
+        private void Buy(decimal price, [NotNull] Candlestick candle, decimal profitRatio)
         {
             var estimatedBaseAmount = Math.Floor(_account.CurrentQuoteAmount / price);
             if (_account.CurrentQuoteAmount > _config.MinQuoteAmount && estimatedBaseAmount > 0)
@@ -102,7 +90,7 @@ namespace BinanceTrader
             }
         }
 
-        private void Sell(decimal price, Candlestick candle, decimal profitRatio)
+        private void Sell(decimal price, [NotNull] Candlestick candle, decimal profitRatio)
         {
             var baseAmount = Math.Floor(_account.CurrentBaseAmount);
             if (baseAmount > 0)
@@ -117,9 +105,9 @@ namespace BinanceTrader
 
         private static void Log(
             OrderSide nextAction,
-            Candlestick candle,
+            [NotNull] Candlestick candle,
             decimal price,
-            ITradeAccount account,
+            [NotNull] ITradeAccount account,
             bool force)
         {
             Console.WriteLine(nextAction);

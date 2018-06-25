@@ -7,7 +7,7 @@ namespace BinanceTrader
     {
         [NotNull]
         [ItemNotNull]
-        public static List<string> Assets =>
+        public static IReadOnlyList<string> Assets =>
             new List<string>
             {
                 "BCN",
