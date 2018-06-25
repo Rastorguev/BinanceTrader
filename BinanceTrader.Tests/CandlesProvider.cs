@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -29,6 +30,8 @@ namespace BinanceTrader
         private const string DateFormat = "yyyy-MM-dd_hh-mm";
         private const string DirName = "Candles";
         [NotNull] private readonly string _dirPath = $@"D:\{DirName}";
+        [NotNull] private readonly ConcurrentDictionary<string, IReadOnlyList<Candlestick>> _inMimoryCache =
+            new ConcurrentDictionary<string, IReadOnlyList<Candlestick>>();
 
         [NotNull] private readonly BinanceClient _client;
 
@@ -44,34 +47,43 @@ namespace BinanceTrader
             DateTime end,
             TimeInterval interval)
         {
-            if (TryGetFromCache(baseAsset, quoteAsset, start, end, interval, out var cached))
+            var fileName = GenerateFileName(baseAsset, quoteAsset, start, end, interval);
+
+            if (TryGetFromInMemoryCache(fileName, out var cachedInMemory))
             {
-                return cached;
+                return cachedInMemory;
+            }
+
+            if (TryGetFromDiskCache(fileName, out var cachedOnDisk))
+            {
+                PutToInMemoryCache(cachedOnDisk, fileName);
+                return cachedOnDisk;
             }
 
             var candles = await LoadCandles(baseAsset, quoteAsset, start, end, interval);
 
-            SaveToCache(candles, baseAsset, quoteAsset, start, end, interval);
+            PutToInMemoryCache(candles, fileName);
+            PutToDiskCache(candles, fileName);
 
             return candles;
         }
 
-        private void SaveToCache(
+        private void PutToInMemoryCache([NotNull] IReadOnlyList<Candlestick> candles,
+            [NotNull] string key)
+        {
+            _inMimoryCache.TryAdd(key, candles);
+        }
+
+        private bool TryGetFromInMemoryCache([NotNull] string key, out IReadOnlyList<Candlestick> candles)
+        {
+            return _inMimoryCache.TryGetValue(key, out candles);
+        }
+
+        private void PutToDiskCache(
             [NotNull] IReadOnlyList<Candlestick> candles,
-            string baseAsset,
-            string quoteAsset,
-            DateTime start,
-            DateTime end,
-            TimeInterval interval)
+            [NotNull] string fileName)
         {
             var serialized = JsonConvert.SerializeObject(candles);
-
-            var fileName = GenerateFileName(
-                baseAsset,
-                quoteAsset,
-                start,
-                end,
-                interval);
 
             if (!Directory.Exists(_dirPath))
             {
@@ -89,22 +101,12 @@ namespace BinanceTrader
             }
         }
 
-        private bool TryGetFromCache(string baseAsset,
-            string quoteAsset,
-            DateTime start,
-            DateTime end,
-            TimeInterval interval,
-            out List<Candlestick> candles
+        private bool TryGetFromDiskCache(
+            [NotNull] string fileName,
+            out IReadOnlyList<Candlestick> candles
         )
         {
             candles = new List<Candlestick>();
-
-            var fileName = GenerateFileName(
-                baseAsset,
-                quoteAsset,
-                start,
-                end, interval);
-
             var path = Path.Combine(_dirPath, fileName);
 
             if (!File.Exists(path))
@@ -142,11 +144,6 @@ namespace BinanceTrader
                 var rangeEnd = (end - start).TotalMinutes > intervalMinutes
                     ? start.AddMinutes(intervalMinutes)
                     : end;
-
-                //var rangeEnd = (end - start).TotalHours > maxRange
-                //    ? start.AddHours(maxRange)
-                //    : end;
-
 
                 var symbol = $"{baseAsset}{quoteAsset}";
 
