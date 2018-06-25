@@ -31,12 +31,12 @@ namespace BinanceTrader
         private const string DateFormat = "yyyy-MM-dd_hh-mm";
         private const string DirName = "Candles";
         [NotNull] private readonly string _dirPath = $@"D:\{DirName}";
+
         [NotNull] private readonly ConcurrentDictionary<string, IReadOnlyList<Candlestick>> _inMimoryCache =
             new ConcurrentDictionary<string, IReadOnlyList<Candlestick>>();
 
-        //private static object _locker = new object();
-
-        [NotNull] private static readonly SemaphoreSlim SemaphoreSlim = new SemaphoreSlim(1, 1);
+        [NotNull] private readonly ConcurrentDictionary<string, SemaphoreSlim> _semaphores =
+            new ConcurrentDictionary<string, SemaphoreSlim>();
 
         [NotNull] private readonly BinanceClient _client;
 
@@ -59,7 +59,8 @@ namespace BinanceTrader
                 return cachedInMemory;
             }
 
-            await SemaphoreSlim.WaitAsync().NotNull();
+            var semaphore = _semaphores.GetOrAdd(fileName, new SemaphoreSlim(1, 1)).NotNull();
+            await semaphore.WaitAsync().NotNull();
             try
             {
                 if (TryGetFromInMemoryCache(fileName, out cachedInMemory))
@@ -70,6 +71,7 @@ namespace BinanceTrader
                 if (TryGetFromDiskCache(fileName, out var cachedOnDisk))
                 {
                     PutToInMemoryCache(cachedOnDisk, fileName);
+
                     return cachedOnDisk;
                 }
 
@@ -82,7 +84,7 @@ namespace BinanceTrader
             }
             finally
             {
-                SemaphoreSlim.Release();
+                semaphore.Release();
             }
         }
 

@@ -16,14 +16,30 @@ namespace BinanceTrader
 
         public StrategiesTests([NotNull] CandlesProvider candlesProvider) => _candlesProvider = candlesProvider;
 
-        public List<KeyValuePair<TradeSessionConfig, TradeResult>> CompareStrategies(
+        public async Task<List<KeyValuePair<TradeSessionConfig, TradeResult>>> CompareStrategies(
             [NotNull] IReadOnlyList<string> assets,
             [NotNull] IReadOnlyList<TradeSessionConfig> configs)
         {
             var results = new ConcurrentDictionary<TradeSessionConfig, TradeResult>();
 
+            foreach (var asset in assets)
+            {
+                Console.WriteLine($"{asset} load started");
+
+                await _candlesProvider.GetCandles(
+                    asset,
+                    "ETH",
+                    new DateTime(2017, 09, 01, 0, 0, 0),
+                    new DateTime(2018, 06, 25, 9, 0, 0),
+                    TimeInterval.Minutes_1);
+
+                Console.WriteLine($"{asset} load complited");
+            }
+
             Parallel.ForEach(configs, config =>
             {
+                Console.WriteLine($"Start: {config.ProfitRatio} / {config.MaxIdleHours}");
+
                 var initialAmountTotal = 0m;
                 var tradeAmountTotal = 0m;
                 var holdAmountTotal = 0m;
@@ -33,7 +49,7 @@ namespace BinanceTrader
                     var candles = _candlesProvider.GetCandles(
                         asset,
                         "ETH",
-                        new DateTime(2018, 06, 19, 9, 0, 0),
+                        new DateTime(2017, 09, 01, 0, 0, 0),
                         new DateTime(2018, 06, 25, 9, 0, 0),
                         TimeInterval.Minutes_1).Result.NotNull();
 
@@ -60,7 +76,7 @@ namespace BinanceTrader
                 var tradesResult = new TradeResult(initialAmountTotal, tradeAmountTotal, holdAmountTotal);
                 results[config.NotNull()] = tradesResult;
 
-                Console.WriteLine($"{config.ProfitRatio} / {config.MaxIdleHours}");
+                Console.WriteLine($"End: {config.ProfitRatio} / {config.MaxIdleHours}");
             });
 
             var ordered = results.OrderBy(r => r.Value.NotNull().TradeProfit).ToList();

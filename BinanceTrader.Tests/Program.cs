@@ -28,7 +28,7 @@ namespace BinanceTrader
             var configs = GetConfigs();
             var tests = new StrategiesTests(candlesProvider);
 
-            var results = tests.CompareStrategies(assets, configs);
+            var results = tests.CompareStrategies(assets, configs).Result;
 
             foreach (var result in results)
             {
