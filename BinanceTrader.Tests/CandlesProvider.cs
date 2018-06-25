@@ -30,7 +30,7 @@ namespace BinanceTrader
     {
         private const string DateFormat = "yyyy-MM-dd_hh-mm";
         private const string DirName = "Candles";
-        [NotNull] private readonly string _dirPath = $@"D:\{DirName}";
+        [NotNull] private readonly string _dirPath = $@"C:\{DirName}";
 
         [NotNull] private readonly ConcurrentDictionary<string, IReadOnlyList<Candlestick>> _inMimoryCache =
             new ConcurrentDictionary<string, IReadOnlyList<Candlestick>>();

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
@@ -43,6 +44,18 @@ namespace BinanceTrader
             watch.Stop();
             var elapsed = new TimeSpan(watch.ElapsedTicks);
 
+            var ordered = results.NotNull().OrderByDescending(r => r.Value.NotNull().TradeProfit).ToList();
+            var max = ordered.First();
+            var min = ordered.First();
+            var current = ordered.First(r => r.Key.NotNull().ProfitRatio == 2 && r.Key.NotNull().MaxIdleHours == 12);
+            var x = ordered.First(r => r.Key.NotNull().ProfitRatio == 1 && r.Key.NotNull().MaxIdleHours == 1);
+            var diff1 = MathUtils.Gain(current.Value.NotNull().TradeProfit, max.Value.NotNull().TradeProfit);
+            var diff2 = MathUtils.Gain(current.Value.NotNull().TradeProfit, x.Value.NotNull().TradeProfit);
+            var diff3 = MathUtils.Gain(x.Value.NotNull().TradeProfit, max.Value.NotNull().TradeProfit);
+
+            var i1 = ordered.IndexOf(current);
+            var i2 = ordered.IndexOf(x);
+
             Console.WriteLine($"Elapsed Time: {elapsed.TotalSeconds}");
 
             Debugger.Break();
@@ -71,15 +84,16 @@ namespace BinanceTrader
         [ItemNotNull]
         private static IReadOnlyList<TradeSessionConfig> GetConfigs()
         {
-            TradeSessionConfig CreateConfig(decimal minProfit, decimal idle) =>
-                new TradeSessionConfig(
-                    initialQuoteAmount: 1m,
-                    initialPrice: 0,
-                    fee: 0.05m,
-                    minQuoteAmount:
+            TradeSessionConfig CreateConfig(decimal minProfit, decimal idle)
+            {
+                return new TradeSessionConfig(
+                    1m,
+                    0,
+                    0.05m,
                     0.01m,
-                    profitRatio: minProfit,
-                    maxIdleHours: idle);
+                    minProfit,
+                    idle);
+            }
 
             var configs = new List<TradeSessionConfig>();
 

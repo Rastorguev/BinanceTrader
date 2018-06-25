@@ -16,7 +16,8 @@ namespace BinanceTrader
 
         public StrategiesTests([NotNull] CandlesProvider candlesProvider) => _candlesProvider = candlesProvider;
 
-        public async Task<List<KeyValuePair<TradeSessionConfig, TradeResult>>> CompareStrategies(
+        [NotNull]
+        public async Task<ConcurrentDictionary<TradeSessionConfig, TradeResult>> CompareStrategies(
             [NotNull] IReadOnlyList<string> assets,
             [NotNull] string baseAsset,
             DateTime start,
@@ -41,13 +42,11 @@ namespace BinanceTrader
 
                 candlesDict.Add(asset.NotNull(), assetCandles);
 
-                Console.WriteLine($"{asset} load complited");
+                Console.WriteLine($"{asset} load completed");
             }
 
-            Parallel.ForEach(configs, new ParallelOptions {MaxDegreeOfParallelism = 10}, config =>
+            Parallel.ForEach(configs, config =>
             {
-                //foreach (var config in configs)
-                //{
                 Console.WriteLine($"Start: {config.NotNull().ProfitRatio} / {config.MaxIdleHours}");
 
                 var initialAmountTotal = 0m;
@@ -82,11 +81,9 @@ namespace BinanceTrader
                 results[config.NotNull()] = tradesResult;
 
                 Console.WriteLine($"End: {config.ProfitRatio} / {config.MaxIdleHours}");
-                //}
             });
 
-            var ordered = results.OrderBy(r => r.Value.NotNull().TradeProfit).ToList();
-            return ordered;
+            return results;
         }
 
         [NotNull]
