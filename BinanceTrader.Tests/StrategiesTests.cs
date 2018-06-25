@@ -18,40 +18,45 @@ namespace BinanceTrader
 
         public async Task<List<KeyValuePair<TradeSessionConfig, TradeResult>>> CompareStrategies(
             [NotNull] IReadOnlyList<string> assets,
+            [NotNull] string baseAsset,
+            DateTime start,
+            DateTime end,
+            TimeInterval interval,
             [NotNull] IReadOnlyList<TradeSessionConfig> configs)
         {
             var results = new ConcurrentDictionary<TradeSessionConfig, TradeResult>();
+
+            var candlesDict = new Dictionary<string, IReadOnlyList<Candlestick>>();
 
             foreach (var asset in assets)
             {
                 Console.WriteLine($"{asset} load started");
 
-                await _candlesProvider.GetCandles(
+                var assetCandles = await _candlesProvider.GetCandles(
                     asset,
-                    "ETH",
-                    new DateTime(2017, 09, 01, 0, 0, 0),
-                    new DateTime(2018, 06, 25, 9, 0, 0),
-                    TimeInterval.Minutes_1);
+                    baseAsset,
+                    start,
+                    end,
+                    interval);
+
+                candlesDict.Add(asset.NotNull(), assetCandles);
 
                 Console.WriteLine($"{asset} load complited");
             }
 
-            Parallel.ForEach(configs, config =>
+            Parallel.ForEach(configs, new ParallelOptions {MaxDegreeOfParallelism = 10}, config =>
             {
-                Console.WriteLine($"Start: {config.ProfitRatio} / {config.MaxIdleHours}");
+                //foreach (var config in configs)
+                //{
+                Console.WriteLine($"Start: {config.NotNull().ProfitRatio} / {config.MaxIdleHours}");
 
                 var initialAmountTotal = 0m;
                 var tradeAmountTotal = 0m;
                 var holdAmountTotal = 0m;
 
-                foreach (var asset in assets)
+                foreach (var value in candlesDict)
                 {
-                    var candles = _candlesProvider.GetCandles(
-                        asset,
-                        "ETH",
-                        new DateTime(2017, 09, 01, 0, 0, 0),
-                        new DateTime(2018, 06, 25, 9, 0, 0),
-                        TimeInterval.Minutes_1).Result.NotNull();
+                    var candles = value.Value.NotNull();
 
                     if (!candles.Any())
                     {
@@ -77,6 +82,7 @@ namespace BinanceTrader
                 results[config.NotNull()] = tradesResult;
 
                 Console.WriteLine($"End: {config.ProfitRatio} / {config.MaxIdleHours}");
+                //}
             });
 
             var ordered = results.OrderBy(r => r.Value.NotNull().TradeProfit).ToList();

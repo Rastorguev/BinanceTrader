@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
+using Binance.API.Csharp.Client.Models.Enums;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
@@ -28,24 +30,39 @@ namespace BinanceTrader
             var configs = GetConfigs();
             var tests = new StrategiesTests(candlesProvider);
 
-            var results = tests.CompareStrategies(assets, configs).Result;
+            var watch = Stopwatch.StartNew();
 
-            foreach (var result in results)
-            {
-                var tradesResult = result.Value.NotNull();
+            var results = tests.CompareStrategies(assets,
+                    "ETH",
+                    new DateTime(2017, 09, 01, 0, 0, 0),
+                    new DateTime(2018, 06, 25, 9, 0, 0),
+                    TimeInterval.Minutes_1,
+                    configs)
+                .Result;
 
-                Console.WriteLine($"{result.Key.NotNull().ProfitRatio} / {result.Key.NotNull().MaxIdleHours}");
-                Console.WriteLine();
-                Console.WriteLine($"Initial Total:\t\t {tradesResult.InitialAmount.Round()}");
-                Console.WriteLine($"Trade Total:\t\t {tradesResult.TradeAmount.Round()}");
-                Console.WriteLine($"Hold Total:\t\t {tradesResult.HoldAmount.Round()}");
-                Console.WriteLine($"Trade Profit Total %:\t {tradesResult.TradeProfit.Round()}");
-                Console.WriteLine($"Hold Profit Total %:\t {tradesResult.HoldProfit.Round()}");
-                Console.WriteLine($"Diff %:\t\t {tradesResult.Diff.Round()}");
-                Console.WriteLine($"Afficiency:\t {tradesResult.Afficiency.Round()}");
-                Console.WriteLine("----------------------");
-                Console.WriteLine();
-            }
+            watch.Stop();
+            var elapsed = new TimeSpan(watch.ElapsedTicks);
+
+            Console.WriteLine($"Elapsed Time: {elapsed.TotalSeconds}");
+
+            Debugger.Break();
+
+            //foreach (var result in results)
+            //{
+            //    var tradesResult = result.Value.NotNull();
+
+            //    Console.WriteLine($"{result.Key.NotNull().ProfitRatio} / {result.Key.NotNull().MaxIdleHours}");
+            //    Console.WriteLine();
+            //    Console.WriteLine($"Initial Total:\t\t {tradesResult.InitialAmount.Round()}");
+            //    Console.WriteLine($"Trade Total:\t\t {tradesResult.TradeAmount.Round()}");
+            //    Console.WriteLine($"Hold Total:\t\t {tradesResult.HoldAmount.Round()}");
+            //    Console.WriteLine($"Trade Profit Total %:\t {tradesResult.TradeProfit.Round()}");
+            //    Console.WriteLine($"Hold Profit Total %:\t {tradesResult.HoldProfit.Round()}");
+            //    Console.WriteLine($"Diff %:\t\t {tradesResult.Diff.Round()}");
+            //    Console.WriteLine($"Afficiency:\t {tradesResult.Afficiency.Round()}");
+            //    Console.WriteLine("----------------------");
+            //    Console.WriteLine();
+            //}
 
             PreventAppClose();
         }
