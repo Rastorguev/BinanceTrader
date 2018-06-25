@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
@@ -20,9 +19,10 @@ namespace BinanceTrader
             var keys = keyProvider.GetKeys().NotNull();
             var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
             var binanceClient = new BinanceClient(apiClient);
+            var candlesProvider = new CandlesProvider(binanceClient);
 
-            var tests = new StrategiesTests(binanceClient);
-            tests.CompareStrategies();
+            var tests = new StrategiesTests(binanceClient, candlesProvider);
+            tests.CompareStrategies().Wait();
 
             PreventAppClose();
         }
