@@ -43,7 +43,7 @@ namespace BinanceTrader
                             candle.CloseTime.GetTime() - _lastActionDate.Value >=
                             TimeSpan.FromHours((double)_config.MaxIdleHours);
 
-                var profitRatio = _config.MinProfitRatio;
+                var profitRatio = _config.ProfitRatio;
                 var inRange = _nextPrice >= candle.Low && _nextPrice <= candle.High;
 
                 var n = 10m;

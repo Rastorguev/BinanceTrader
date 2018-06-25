@@ -6,7 +6,7 @@
         public decimal InitialPrice { get; }
         public decimal Fee { get; }
         public decimal MinQuoteAmount { get; }
-        public decimal MinProfitRatio { get; }
+        public decimal ProfitRatio { get; }
         public decimal MaxIdleHours { get; set; }
 
         public TradeSessionConfig(
@@ -14,14 +14,14 @@
             decimal initialPrice,
             decimal fee,
             decimal minQuoteAmount,
-            decimal minProfitRatio,
+            decimal profitRatio,
             decimal maxIdleHours
         )
         {
             InitialQuoteAmount = initialQuoteAmount;
             Fee = fee;
             MinQuoteAmount = minQuoteAmount;
-            MinProfitRatio = minProfitRatio;
+            ProfitRatio = profitRatio;
             InitialPrice = initialPrice;
             MaxIdleHours = maxIdleHours;
         }
@@ -32,7 +32,7 @@
             InitialPrice == config.InitialPrice &&
             Fee == config.Fee &&
             MinQuoteAmount == config.MinQuoteAmount &&
-            MinProfitRatio == config.MinProfitRatio &&
+            ProfitRatio == config.ProfitRatio &&
             MaxIdleHours == config.MaxIdleHours;
 
         public override int GetHashCode()
@@ -42,7 +42,7 @@
             hashCode = hashCode * -1521134295 + InitialPrice.GetHashCode();
             hashCode = hashCode * -1521134295 + Fee.GetHashCode();
             hashCode = hashCode * -1521134295 + MinQuoteAmount.GetHashCode();
-            hashCode = hashCode * -1521134295 + MinProfitRatio.GetHashCode();
+            hashCode = hashCode * -1521134295 + ProfitRatio.GetHashCode();
             hashCode = hashCode * -1521134295 + MaxIdleHours.GetHashCode();
             return hashCode;
         }

@@ -67,6 +67,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AssetsProvider.cs" />
     <Compile Include="CandlesProvider.cs" />
     <Compile Include="OrdersDistributorTests.cs" />
     <Compile Include="TradeSession.cs" />

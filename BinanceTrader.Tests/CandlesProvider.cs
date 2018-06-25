@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
 using Binance.API.Csharp.Client.Models;
@@ -33,6 +34,10 @@ namespace BinanceTrader
         [NotNull] private readonly ConcurrentDictionary<string, IReadOnlyList<Candlestick>> _inMimoryCache =
             new ConcurrentDictionary<string, IReadOnlyList<Candlestick>>();
 
+        //private static object _locker = new object();
+
+        [NotNull] private static readonly SemaphoreSlim SemaphoreSlim = new SemaphoreSlim(1, 1);
+
         [NotNull] private readonly BinanceClient _client;
 
         public CandlesProvider([NotNull] BinanceClient client)
@@ -54,18 +59,31 @@ namespace BinanceTrader
                 return cachedInMemory;
             }
 
-            if (TryGetFromDiskCache(fileName, out var cachedOnDisk))
+            await SemaphoreSlim.WaitAsync().NotNull();
+            try
             {
-                PutToInMemoryCache(cachedOnDisk, fileName);
-                return cachedOnDisk;
+                if (TryGetFromInMemoryCache(fileName, out cachedInMemory))
+                {
+                    return cachedInMemory;
+                }
+
+                if (TryGetFromDiskCache(fileName, out var cachedOnDisk))
+                {
+                    PutToInMemoryCache(cachedOnDisk, fileName);
+                    return cachedOnDisk;
+                }
+
+                var candles = await LoadCandles(baseAsset, quoteAsset, start, end, interval);
+
+                PutToInMemoryCache(candles, fileName);
+                PutToDiskCache(candles, fileName);
+
+                return candles;
             }
-
-            var candles = await LoadCandles(baseAsset, quoteAsset, start, end, interval);
-
-            PutToInMemoryCache(candles, fileName);
-            PutToDiskCache(candles, fileName);
-
-            return candles;
+            finally
+            {
+                SemaphoreSlim.Release();
+            }
         }
 
         private void PutToInMemoryCache([NotNull] IReadOnlyList<Candlestick> candles,
