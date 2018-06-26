@@ -142,7 +142,7 @@ namespace BinanceTrader.Trader
 
         private void StartListenOrderUpdates()
         {
-            _listenKey = _client.ListenUserDataEndpoint(m => { }, OnOrderUpdated, m => { });
+            _listenKey = _client.ListenUserDataEndpoint(m => { }, OnTrade, m => { });
         }
 
         private async Task StopListenOrderUpdates()
@@ -161,11 +161,14 @@ namespace BinanceTrader.Trader
             }
         }
 
-        private async void OnOrderUpdated([NotNull] OrderOrTradeUpdatedMessage message)
+        private async void OnTrade([NotNull] OrderOrTradeUpdatedMessage message)
         {
             try
             {
-                if (message.Status != OrderStatus.Filled)
+                var baseAsset = SymbolUtils.GetBaseAsset(message.Symbol.NotNull(), QuoteAsset);
+
+                if (message.Status != OrderStatus.Filled ||
+                    baseAsset == FeeAsset)
                 {
                     return;
                 }
