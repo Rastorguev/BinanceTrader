@@ -35,8 +35,10 @@ namespace BinanceTrader
 
             var results = tests.CompareStrategies(assets,
                     "ETH",
-                    new DateTime(2017, 09, 01, 0, 0, 0),
-                    new DateTime(2018, 06, 25, 9, 0, 0),
+                    //new DateTime(2017, 09, 01, 0, 0, 0),
+                    //new DateTime(2018, 06, 25, 9, 0, 0),    
+                    new DateTime(2018, 06, 01, 0, 0, 0),
+                    new DateTime(2018, 06, 15, 0, 0, 0),
                     TimeInterval.Minutes_1,
                     configs)
                 .Result;
@@ -47,14 +49,19 @@ namespace BinanceTrader
             var ordered = results.NotNull().OrderByDescending(r => r.Value.NotNull().TradeProfit).ToList();
             var max = ordered.First();
             var min = ordered.First();
-            var current = ordered.First(r => r.Key.NotNull().ProfitRatio == 2 && r.Key.NotNull().MaxIdleHours == 12);
-            var x = ordered.First(r => r.Key.NotNull().ProfitRatio == 1 && r.Key.NotNull().MaxIdleHours == 1);
-            var diff1 = MathUtils.Gain(current.Value.NotNull().TradeProfit, max.Value.NotNull().TradeProfit);
-            var diff2 = MathUtils.Gain(current.Value.NotNull().TradeProfit, x.Value.NotNull().TradeProfit);
-            var diff3 = MathUtils.Gain(x.Value.NotNull().TradeProfit, max.Value.NotNull().TradeProfit);
+            var x2_12 = ordered.First(r => r.Key.NotNull().ProfitRatio == 2 && r.Key.NotNull().MaxIdleHours == 12);
+            var x1_1 = ordered.First(r => r.Key.NotNull().ProfitRatio == 1 && r.Key.NotNull().MaxIdleHours == 1);
+            var x1_12 = ordered.First(r => r.Key.NotNull().ProfitRatio == 1 && r.Key.NotNull().MaxIdleHours == 12);
+            var x05_4 = ordered.First(r => r.Key.NotNull().ProfitRatio == 0.5m && r.Key.NotNull().MaxIdleHours == 4);
+            var diff1 = MathUtils.Gain(x2_12.Value.NotNull().TradeProfit, max.Value.NotNull().TradeProfit);
+            var diff2 = MathUtils.Gain(x2_12.Value.NotNull().TradeProfit, x1_1.Value.NotNull().TradeProfit);
+            var diff3 = MathUtils.Gain(x1_1.Value.NotNull().TradeProfit, max.Value.NotNull().TradeProfit);
+            var diff4 = MathUtils.Gain(x05_4.Value.NotNull().TradeProfit, max.Value.NotNull().TradeProfit);
 
-            var i1 = ordered.IndexOf(current);
-            var i2 = ordered.IndexOf(x);
+            var i2_12 = ordered.IndexOf(x2_12);
+            var i1_1 = ordered.IndexOf(x1_1);
+            var i1_12 = ordered.IndexOf(x1_12);
+            var i05_4 = ordered.IndexOf(x05_4);
 
             Console.WriteLine($"Elapsed Time: {elapsed.TotalSeconds}");
 
@@ -84,27 +91,24 @@ namespace BinanceTrader
         [ItemNotNull]
         private static IReadOnlyList<TradeSessionConfig> GetConfigs()
         {
-            TradeSessionConfig CreateConfig(decimal minProfit, decimal idle)
-            {
-                return new TradeSessionConfig(
+            TradeSessionConfig CreateConfig(decimal minProfit, decimal idle) =>
+                new TradeSessionConfig(
                     1m,
-                    0,
                     0.05m,
                     0.01m,
                     minProfit,
                     idle);
-            }
 
             var configs = new List<TradeSessionConfig>();
 
-            const decimal profitStep = 0.5m;
+            const decimal profitStep = 0.1m;
             const decimal idleStep = 0.5m;
 
-            var profit = 0.5m;
-            while (profit <= 10)
+            var profit = 0.1m;
+            while (profit <= 2)
             {
                 var idle = 0.5m;
-                while (idle <= 24m)
+                while (idle <= 12m)
                 {
                     configs.Add(CreateConfig(profit, idle));
                     idle += idleStep;
@@ -112,6 +116,8 @@ namespace BinanceTrader
 
                 profit += profitStep;
             }
+
+            //configs.Add(CreateConfig(1, 1));
 
             return configs;
         }

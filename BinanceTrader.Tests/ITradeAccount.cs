@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using Binance.API.Csharp.Client.Models.Enums;
 using BinanceTrader.Tools;
-using JetBrains.Annotations;
 
 namespace BinanceTrader
 {
@@ -10,52 +7,32 @@ namespace BinanceTrader
     {
         decimal InitialBaseAmount { get; }
         decimal InitialQuoteAmount { get; }
-        decimal InitialPrice { get; }
         decimal CurrentBaseAmount { get; }
         decimal CurrentQuoteAmount { get; }
-        decimal LastPrice { get; }
-
-        [NotNull]
-        [ItemNotNull]
-        IReadOnlyList<TradeLogItem> TradesLog { get; }
+        int CompletedCount { get; }
+        int CanceledCount { get; }
 
         void Buy(decimal baseAmount, decimal price, DateTime timestamp);
         void Sell(decimal baseAmount, decimal price, DateTime timestamp);
     }
 
-    public static class TradeAccountExtensions
-    {
-        public static decimal GetProfit([NotNull] this ITradeAccount account)
-        {
-            var initialAmount = account.InitialBaseAmount * account.InitialPrice + account.InitialQuoteAmount;
-            var currentAmount = account.CurrentBaseAmount * account.LastPrice + account.CurrentQuoteAmount;
-            var profit = MathUtils.Gain(initialAmount, currentAmount).Round();
-
-            return profit;
-        }
-    }
-
     public class MockTradeAccount : ITradeAccount
     {
         private readonly decimal _fee;
-        [NotNull] [ItemNotNull] private readonly List<TradeLogItem> _log = new List<TradeLogItem>();
 
-        public MockTradeAccount(decimal initialBaseAmount, decimal initialQuoteAmount, decimal initialPrice,
-            decimal fee)
+        public MockTradeAccount(decimal initialBaseAmount, decimal initialQuoteAmount, decimal fee)
         {
             CurrentBaseAmount = InitialBaseAmount = initialBaseAmount;
             CurrentQuoteAmount = InitialQuoteAmount = initialQuoteAmount;
-            LastPrice = InitialPrice = initialPrice;
             _fee = fee;
         }
 
         public decimal InitialBaseAmount { get; }
         public decimal InitialQuoteAmount { get; }
-        public decimal InitialPrice { get; }
         public decimal CurrentBaseAmount { get; private set; }
         public decimal CurrentQuoteAmount { get; private set; }
-        public decimal LastPrice { get; private set; }
-        public IReadOnlyList<TradeLogItem> TradesLog => _log;
+        public int CompletedCount { get; private set; }
+        public int CanceledCount { get; private set; }
 
         public void Buy(decimal baseAmount, decimal price, DateTime timestamp)
         {
@@ -67,9 +44,8 @@ namespace BinanceTrader
 
             CurrentQuoteAmount -= quoteAmount;
             CurrentBaseAmount += baseAmount - baseAmount.Percents(_fee);
-            LastPrice = price;
 
-            Log(OrderSide.Buy, timestamp);
+            IncreseCompletedCount();
         }
 
         public void Sell(decimal baseAmount, decimal price, DateTime timestamp)
@@ -82,45 +58,18 @@ namespace BinanceTrader
             var quoteAmount = baseAmount * price;
             CurrentBaseAmount -= baseAmount;
             CurrentQuoteAmount += quoteAmount - quoteAmount.Percents(_fee);
-            LastPrice = price;
 
-            Log(OrderSide.Sell, timestamp);
+            IncreseCompletedCount();
         }
 
-        private void Log(OrderSide side, DateTime timestamp)
+        public void IncreseCompletedCount()
         {
-            _log.Add(new TradeLogItem(
-                timestamp,
-                side,
-                LastPrice,
-                CurrentBaseAmount, CurrentQuoteAmount,
-                this.GetProfit()));
+            CompletedCount++;
         }
-    }
 
-    public class TradeLogItem
-    {
-        public DateTime Timestamp { get; }
-        public OrderSide Side { get; }
-        public decimal Price { get; }
-        public decimal BaseAmount { get; }
-        public decimal QuoteAmount { get; }
-        public decimal Profit { get; }
-
-        public TradeLogItem(
-            DateTime timestamp,
-            OrderSide side,
-            decimal price,
-            decimal baseAmount,
-            decimal quoteAmount,
-            decimal profit)
+        public void IncreseCanceledCount()
         {
-            Timestamp = timestamp;
-            Side = side;
-            Price = price;
-            BaseAmount = baseAmount;
-            QuoteAmount = quoteAmount;
-            Profit = profit;
+            CanceledCount++;
         }
     }
 }

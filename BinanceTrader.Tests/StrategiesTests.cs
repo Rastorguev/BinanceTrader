@@ -49,9 +49,7 @@ namespace BinanceTrader
             {
                 Console.WriteLine($"Start: {config.NotNull().ProfitRatio} / {config.MaxIdleHours}");
 
-                var initialAmountTotal = 0m;
-                var tradeAmountTotal = 0m;
-                var holdAmountTotal = 0m;
+                var tradeResults = new List<TradeResult>();
 
                 foreach (var value in candlesDict)
                 {
@@ -62,22 +60,27 @@ namespace BinanceTrader
                         continue;
                     }
 
-                    var result = Trade(candles, config.NotNull());
-
+                    var account = Trade(candles, config.NotNull());
                     var firstPrice = candles.First().NotNull().Close;
                     var lastPrice = candles.Last().NotNull().Close;
 
                     var tradeResult = new TradeResult(
                         config.InitialQuoteAmount,
-                        result.CurrentBaseAmount * lastPrice + result.CurrentQuoteAmount,
-                        result.InitialQuoteAmount / firstPrice * lastPrice + result.InitialBaseAmount);
+                        account.CurrentBaseAmount * lastPrice + account.CurrentQuoteAmount,
+                        account.InitialQuoteAmount / firstPrice * lastPrice + account.InitialBaseAmount,
+                        account.CompletedCount,
+                        account.CanceledCount);
 
-                    initialAmountTotal += tradeResult.InitialAmount;
-                    tradeAmountTotal += tradeResult.TradeAmount;
-                    holdAmountTotal += tradeResult.HoldAmount;
+                    tradeResults.Add(tradeResult);
                 }
 
-                var tradesResult = new TradeResult(initialAmountTotal, tradeAmountTotal, holdAmountTotal);
+                var tradesResult = new TradeResult(
+                    tradeResults.Sum(r => r.NotNull().InitialAmount),
+                    tradeResults.Sum(r => r.NotNull().TradeAmount),
+                    tradeResults.Sum(r => r.NotNull().HoldAmount),
+                    tradeResults.Sum(r => r.NotNull().CompletedCount),
+                    tradeResults.Sum(r => r.NotNull().CanceledCount));
+
                 results[config.NotNull()] = tradesResult;
 
                 Console.WriteLine($"End: {config.ProfitRatio} / {config.MaxIdleHours}");

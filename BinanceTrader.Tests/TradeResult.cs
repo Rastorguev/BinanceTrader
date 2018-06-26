@@ -11,12 +11,21 @@ namespace BinanceTrader
         public decimal HoldProfit { get; }
         public decimal Diff { get; }
         public decimal Afficiency { get; }
+        public int CompletedCount { get; }
+        public int CanceledCount { get; }
 
-        public TradeResult(decimal initialAmount, decimal tradeAmount, decimal holdAmount)
+        public TradeResult(
+            decimal initialAmount,
+            decimal tradeAmount,
+            decimal holdAmount,
+            int completedCount,
+            int canceledCount)
         {
             InitialAmount = initialAmount;
             TradeAmount = tradeAmount;
             HoldAmount = holdAmount;
+            CompletedCount = completedCount;
+            CanceledCount = canceledCount;
             TradeProfit = MathUtils.Gain(InitialAmount, TradeAmount);
             HoldProfit = MathUtils.Gain(InitialAmount, HoldAmount);
             Diff = MathUtils.Gain(HoldAmount, TradeAmount);
