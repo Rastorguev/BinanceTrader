@@ -39,8 +39,8 @@ namespace BinanceTrader
             foreach (var candle in candles)
             {
                 var isExpired = _lastActionDate == null ||
-                            candle.CloseTime.GetTime() - _lastActionDate.Value >=
-                            TimeSpan.FromHours((double) _config.MaxIdleHours);
+                                candle.CloseTime.GetTime() - _lastActionDate.Value >=
+                                TimeSpan.FromHours((double) _config.MaxIdleHours);
 
                 //decimal ProfitRatio() => CalculateProfitRatio(candles, candle, TimeSpan.FromHours((double)_config.MaxIdleHours));
                 decimal ProfitRatio() => _config.ProfitRatio;
@@ -51,19 +51,19 @@ namespace BinanceTrader
                     if (inRange)
                     {
                         var price = _nextPrice;
+                        var nextPrice = price + price.Percents(ProfitRatio());
 
-                        Buy(account, price, candle);
+                        Buy(account, price, nextPrice, candle);
 
-                        _nextPrice = price + price.Percents(ProfitRatio());
                         _nextAction = OrderSide.Sell;
                         _lastActionDate = candle.OpenTime.GetTime();
                     }
                     else if (isExpired)
                     {
                         var price = candle.High;
+                        var nextPrice = price - price.Percents(ProfitRatio());
 
-                        _nextPrice = price - price.Percents(ProfitRatio());
-                        account.IncreseCanceledCount();
+                        Cancel(account, nextPrice, candle);
                     }
                 }
                 else if (_nextAction == OrderSide.Sell)
@@ -71,19 +71,16 @@ namespace BinanceTrader
                     if (inRange)
                     {
                         var price = _nextPrice;
+                        var nextPrice = price - price.Percents(ProfitRatio());
 
-                        Sell(account, price, candle);
-
-                        _nextPrice = price - price.Percents(ProfitRatio());
-                        _nextAction = OrderSide.Buy;
-                        _lastActionDate = candle.OpenTime.GetTime();
+                        Sell(account, price, nextPrice, candle);
                     }
                     else if (isExpired)
                     {
                         var price = candle.Low;
+                        var nextPrice = price + price.Percents(ProfitRatio());
 
-                        _nextPrice = price + price.Percents(ProfitRatio());
-                        account.IncreseCanceledCount();
+                        Cancel(account, nextPrice, candle);
                     }
                 }
             }
@@ -91,22 +88,39 @@ namespace BinanceTrader
             return account;
         }
 
-        private void Buy([NotNull] ITradeAccount account, decimal price, [NotNull] Candlestick candle)
+        private void Buy([NotNull] ITradeAccount account, decimal price, decimal nextPrice,
+            [NotNull] Candlestick candle)
         {
             var estimatedBaseAmount = Math.Floor(account.CurrentQuoteAmount / price);
             if (account.CurrentQuoteAmount > _config.MinQuoteAmount && estimatedBaseAmount > 0)
             {
                 account.Buy(estimatedBaseAmount, price, candle.OpenTime.GetTime());
+
+                _nextPrice = nextPrice;
+                _nextAction = OrderSide.Buy;
+                _lastActionDate = candle.OpenTime.GetTime();
             }
         }
 
-        private void Sell([NotNull] ITradeAccount account, decimal price, [NotNull] Candlestick candle)
+        private void Sell([NotNull] ITradeAccount account, decimal price, decimal nextPrice,
+            [NotNull] Candlestick candle)
         {
             var baseAmount = Math.Floor(account.CurrentBaseAmount);
             if (baseAmount > 0)
             {
                 account.Sell(baseAmount, price, candle.OpenTime.GetTime());
+
+                _nextPrice = nextPrice;
+                _nextAction = OrderSide.Buy;
+                _lastActionDate = candle.OpenTime.GetTime();
             }
+        }
+
+        private void Cancel([NotNull] ITradeAccount account, decimal nextPrice, [NotNull] Candlestick candle)
+        {
+            _nextPrice = nextPrice;
+            _lastActionDate = candle.OpenTime.GetTime();
+            account.IncreseCanceledCount();
         }
 
         private decimal CalculateProfitRatio([NotNull] IReadOnlyList<Candlestick> candles,

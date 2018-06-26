@@ -11,6 +11,9 @@ namespace BinanceTrader
         decimal CurrentQuoteAmount { get; }
         int CompletedCount { get; }
         int CanceledCount { get; }
+        void IncreseCompletedCount();
+        void IncreseCanceledCount();
+
 
         void Buy(decimal baseAmount, decimal price, DateTime timestamp);
         void Sell(decimal baseAmount, decimal price, DateTime timestamp);
