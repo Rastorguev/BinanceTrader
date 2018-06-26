@@ -36,7 +36,7 @@ namespace BinanceTrader
             var results = tests.CompareStrategies(assets,
                     "ETH",
                     //new DateTime(2017, 09, 01, 0, 0, 0),
-                    //new DateTime(2018, 06, 25, 9, 0, 0),    
+                    //new DateTime(2018, 06, 25, 9, 0, 0),
                     new DateTime(2018, 06, 01, 0, 0, 0),
                     new DateTime(2018, 06, 15, 0, 0, 0),
                     TimeInterval.Minutes_1,
@@ -48,7 +48,7 @@ namespace BinanceTrader
 
             var ordered = results.NotNull().OrderByDescending(r => r.Value.NotNull().TradeProfit).ToList();
             var max = ordered.First();
-            var min = ordered.First();
+            var min = ordered.Last();
             var x2_12 = ordered.First(r => r.Key.NotNull().ProfitRatio == 2 && r.Key.NotNull().MaxIdleHours == 12);
             var x1_1 = ordered.First(r => r.Key.NotNull().ProfitRatio == 1 && r.Key.NotNull().MaxIdleHours == 1);
             var x1_12 = ordered.First(r => r.Key.NotNull().ProfitRatio == 1 && r.Key.NotNull().MaxIdleHours == 12);
