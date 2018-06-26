@@ -45,7 +45,10 @@ namespace BinanceTrader
                 Console.WriteLine($"{asset} load completed");
             }
 
-            Parallel.ForEach(configs, config =>
+            Parallel.ForEach(
+                configs,
+                //new ParallelOptions { MaxDegreeOfParallelism = 1 },
+                config =>
             {
                 Console.WriteLine($"Start: {config.NotNull().ProfitRatio} / {config.MaxIdleHours}");
 

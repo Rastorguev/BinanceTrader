@@ -27,7 +27,10 @@ namespace BinanceTrader
             var binanceClient = new BinanceClient(apiClient);
             var candlesProvider = new CandlesProvider(binanceClient);
 
+            //var rules = binanceClient.LoadTradingRules().Result;
+            //var assets = rules.Rules.Where(r => r.NotNull().QuoteAsset == "ETH").Select(r => r.BaseAsset).ToList();
             var assets = AssetsProvider.Assets;
+
             var configs = GetConfigs();
             var tests = new StrategiesTests(candlesProvider);
 
@@ -35,10 +38,10 @@ namespace BinanceTrader
 
             var results = tests.CompareStrategies(assets,
                     "ETH",
-                    //new DateTime(2017, 09, 01, 0, 0, 0),
-                    //new DateTime(2018, 06, 25, 9, 0, 0),
-                    new DateTime(2018, 06, 01, 0, 0, 0),
-                    new DateTime(2018, 06, 15, 0, 0, 0),
+                    new DateTime(2017, 09, 01, 0, 0, 0),
+                    new DateTime(2018, 06, 25, 9, 0, 0),
+                    //new DateTime(2018, 03, 01, 0, 0, 0),
+                    //new DateTime(2018, 06, 01, 0, 0, 0),
                     TimeInterval.Minutes_1,
                     configs)
                 .Result;
@@ -102,13 +105,13 @@ namespace BinanceTrader
             var configs = new List<TradeSessionConfig>();
 
             const decimal profitStep = 0.1m;
-            const decimal idleStep = 0.5m;
+            const decimal idleStep = 0.1m;
 
-            var profit = 0.1m;
+            var profit = 1m;
             while (profit <= 2)
             {
-                var idle = 0.5m;
-                while (idle <= 12m)
+                var idle = 0.1m;
+                while (idle <= 2m)
                 {
                     configs.Add(CreateConfig(profit, idle));
                     idle += idleStep;
@@ -116,8 +119,6 @@ namespace BinanceTrader
 
                 profit += profitStep;
             }
-
-            //configs.Add(CreateConfig(1, 1));
 
             return configs;
         }
