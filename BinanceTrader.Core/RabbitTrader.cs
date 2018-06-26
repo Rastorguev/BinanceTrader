@@ -21,8 +21,13 @@ namespace BinanceTrader.Trader
         private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan StreamResetInterval = TimeSpan.FromMinutes(60);
 
-        private readonly TimeSpan _sellWaitingTime = TimeSpan.FromHours(12);
-        private readonly TimeSpan _buyWaitingTime = TimeSpan.FromHours(12);
+        private const decimal MinProfitRatio = 1m;
+        private const decimal MaxProfitRatio = 1.1m;
+        private const string QuoteAsset = "ETH";
+        private const string FeeAsset = "BNB";
+        private const decimal MinOrderSize = 0.015m;
+        private readonly TimeSpan _sellWaitingTime = TimeSpan.FromHours(1);
+        private readonly TimeSpan _buyWaitingTime = TimeSpan.FromHours(1);
 
         [NotNull] private readonly Timer _ordersCheckTimer = new Timer
         {
@@ -41,13 +46,6 @@ namespace BinanceTrader.Trader
             Interval = StreamResetInterval.TotalMilliseconds,
             AutoReset = true
         };
-
-        private const decimal MinProfitRatio = 2m;
-        private const decimal MaxProfitRatio = 3m;
-        private const string QuoteAsset = "ETH";
-        private const string FeeAsset = "BNB";
-
-        private const decimal MinOrderSize = 0.015m;
 
         [NotNull] private readonly IBinanceClient _client;
         [NotNull] private readonly ILogger _logger;
