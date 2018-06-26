@@ -11,8 +11,8 @@ namespace BinanceTrader
         decimal CurrentQuoteAmount { get; }
         int CompletedCount { get; }
         int CanceledCount { get; }
-        void IncreseCompletedCount();
-        void IncreseCanceledCount();
+        void IncreaseCompletedCount();
+        void IncreaseCanceledCount();
 
 
         void Buy(decimal baseAmount, decimal price, DateTime timestamp);
@@ -48,7 +48,7 @@ namespace BinanceTrader
             CurrentQuoteAmount -= quoteAmount;
             CurrentBaseAmount += baseAmount - baseAmount.Percents(_fee);
 
-            IncreseCompletedCount();
+            IncreaseCompletedCount();
         }
 
         public void Sell(decimal baseAmount, decimal price, DateTime timestamp)
@@ -62,15 +62,15 @@ namespace BinanceTrader
             CurrentBaseAmount -= baseAmount;
             CurrentQuoteAmount += quoteAmount - quoteAmount.Percents(_fee);
 
-            IncreseCompletedCount();
+            IncreaseCompletedCount();
         }
 
-        public void IncreseCompletedCount()
+        public void IncreaseCompletedCount()
         {
             CompletedCount++;
         }
 
-        public void IncreseCanceledCount()
+        public void IncreaseCanceledCount()
         {
             CanceledCount++;
         }

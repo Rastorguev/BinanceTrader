@@ -120,7 +120,7 @@ namespace BinanceTrader
         {
             _nextPrice = nextPrice;
             _lastActionDate = candle.OpenTime.GetTime();
-            account.IncreseCanceledCount();
+            account.IncreaseCanceledCount();
         }
 
         private decimal CalculateProfitRatio([NotNull] IReadOnlyList<Candlestick> candles,
