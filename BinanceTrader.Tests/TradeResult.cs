@@ -10,7 +10,7 @@ namespace BinanceTrader
         public decimal TradeProfit { get; }
         public decimal HoldProfit { get; }
         public decimal Diff { get; }
-        public decimal Afficiency { get; }
+        public decimal Efficiency { get; }
         public int CompletedCount { get; }
         public int CanceledCount { get; }
 
@@ -29,7 +29,7 @@ namespace BinanceTrader
             TradeProfit = MathUtils.Gain(InitialAmount, TradeAmount);
             HoldProfit = MathUtils.Gain(InitialAmount, HoldAmount);
             Diff = MathUtils.Gain(HoldAmount, TradeAmount);
-            Afficiency = TradeProfit - HoldProfit;
+            Efficiency = TradeProfit - HoldProfit;
         }
     }
 }
