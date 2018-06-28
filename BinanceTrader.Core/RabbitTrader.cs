@@ -237,6 +237,14 @@ namespace BinanceTrader.Trader
                             CancelOrder(order.NotNull()).Wait();
                             _logger.LogOrder("Canceled", order);
                         }
+                        catch (AggregateException ex)
+                        {
+                            ex.Handle(e =>
+                            {
+                                _logger.LogException(e.NotNull());
+                                return true;
+                            });
+                        }
                         catch (Exception ex)
                         {
                             _logger.LogException(ex);
@@ -290,6 +298,14 @@ namespace BinanceTrader.Trader
                                     profitRatio += profitStepSize;
                                 }
                             }
+                        }
+                        catch (AggregateException ex)
+                        {
+                            ex.Handle(e =>
+                            {
+                                _logger.LogException(e.NotNull());
+                                return true;
+                            });
                         }
                         catch (Exception ex)
                         {
@@ -351,6 +367,14 @@ namespace BinanceTrader.Trader
                                     profitRatio += profitStepSize;
                                 }
                             }
+                        }
+                        catch (AggregateException ex)
+                        {
+                            ex.Handle(e =>
+                            {
+                                _logger.LogException(e.NotNull());
+                                return true;
+                            });
                         }
                         catch (Exception ex)
                         {
