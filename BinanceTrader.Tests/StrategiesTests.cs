@@ -50,7 +50,7 @@ namespace BinanceTrader
                 //new ParallelOptions { MaxDegreeOfParallelism = 1 },
                 config =>
             {
-                Console.WriteLine($"Start: {config.NotNull().ProfitRatio} / {config.MaxIdleHours}");
+                Console.WriteLine($"Start: {config.NotNull().ProfitRatio} / {config.MaxIdlePeriod}");
 
                 var tradeResults = new List<TradeResult>();
 
@@ -86,7 +86,7 @@ namespace BinanceTrader
 
                 results[config.NotNull()] = tradesResult;
 
-                Console.WriteLine($"End: {config.ProfitRatio} / {config.MaxIdleHours}");
+                Console.WriteLine($"End: {config.ProfitRatio} / {config.MaxIdlePeriod}");
             });
 
             return results;

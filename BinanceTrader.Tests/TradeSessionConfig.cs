@@ -1,4 +1,6 @@
-﻿namespace BinanceTrader
+﻿using System;
+
+namespace BinanceTrader
 {
     public class TradeSessionConfig
     {
@@ -6,21 +8,21 @@
         public decimal Fee { get; }
         public decimal MinQuoteAmount { get; }
         public decimal ProfitRatio { get; }
-        public decimal MaxIdleHours { get; }
+        public TimeSpan MaxIdlePeriod { get; }
 
         public TradeSessionConfig(
             decimal initialQuoteAmount,
             decimal fee,
             decimal minQuoteAmount,
             decimal profitRatio,
-            decimal maxIdleHours
+            TimeSpan maxIdle
         )
         {
             InitialQuoteAmount = initialQuoteAmount;
             Fee = fee;
             MinQuoteAmount = minQuoteAmount;
             ProfitRatio = profitRatio;
-            MaxIdleHours = maxIdleHours;
+            MaxIdlePeriod = maxIdle;
         }
 
         public override bool Equals(object obj) =>
@@ -29,7 +31,7 @@
             Fee == config.Fee &&
             MinQuoteAmount == config.MinQuoteAmount &&
             ProfitRatio == config.ProfitRatio &&
-            MaxIdleHours == config.MaxIdleHours;
+            MaxIdlePeriod == config.MaxIdlePeriod;
 
         public override int GetHashCode()
         {
@@ -38,7 +40,7 @@
             hashCode = hashCode * -1521134295 + Fee.GetHashCode();
             hashCode = hashCode * -1521134295 + MinQuoteAmount.GetHashCode();
             hashCode = hashCode * -1521134295 + ProfitRatio.GetHashCode();
-            hashCode = hashCode * -1521134295 + MaxIdleHours.GetHashCode();
+            hashCode = hashCode * -1521134295 + MaxIdlePeriod.GetHashCode();
             return hashCode;
         }
     }

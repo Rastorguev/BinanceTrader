@@ -40,9 +40,9 @@ namespace BinanceTrader
             {
                 var isExpired = _lastActionDate == null ||
                                 candle.CloseTime.GetTime() - _lastActionDate.Value >=
-                                TimeSpan.FromHours((double) _config.MaxIdleHours);
+                                _config.MaxIdlePeriod;
 
-                //decimal ProfitRatio() => CalculateProfitRatio(candles, candle, TimeSpan.FromHours((double)_config.MaxIdleHours));
+                //decimal ProfitRatio() => CalculateProfitRatio(candles, candle, TimeSpan.FromHours((double)_config.MaxIdlePeriod));
                 decimal ProfitRatio() => _config.ProfitRatio;
                 var inRange = _nextPrice >= candle.Low && _nextPrice <= candle.High;
 
