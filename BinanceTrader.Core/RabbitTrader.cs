@@ -17,17 +17,18 @@ namespace BinanceTrader.Trader
 {
     public class RabbitTrader
     {
-        private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
-        private static readonly TimeSpan StreamResetInterval = TimeSpan.FromMinutes(60);
+        private static readonly TimeSpan StreamResetInterval = TimeSpan.FromMinutes(30);
 
         private const decimal MinProfitRatio = 1m;
         private const decimal MaxProfitRatio = 1.1m;
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
         private const decimal MinOrderSize = 0.015m;
-        private readonly TimeSpan _sellWaitingTime = TimeSpan.FromHours(1);
-        private readonly TimeSpan _buyWaitingTime = TimeSpan.FromHours(1);
+        private readonly TimeSpan _sellWaitingTime = TimeSpan.FromMinutes(1);
+        private readonly TimeSpan _buyWaitingTime = TimeSpan.FromMinutes(1);
+        private const int MaxDegreeOfParallelism = 5;
 
         [NotNull] private readonly Timer _ordersCheckTimer = new Timer
         {
@@ -226,11 +227,21 @@ namespace BinanceTrader.Trader
                                 now.ToLocalTime() - o.NotNull().UnixTime.GetTime().ToLocalTime() > _buyWaitingTime)
                     .ToList();
 
-                foreach (var order in expiredSellOrders.Concat(expiredBuyOrders))
-                {
-                    await CancelOrder(order.NotNull());
-                    _logger.LogOrder("Canceled", order);
-                }
+                Parallel.ForEach(
+                    expiredSellOrders.Concat(expiredBuyOrders),
+                    new ParallelOptions {MaxDegreeOfParallelism = MaxDegreeOfParallelism},
+                    order =>
+                    {
+                        try
+                        {
+                            CancelOrder(order.NotNull()).Wait();
+                            _logger.LogOrder("Canceled", order);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogException(ex);
+                        }
+                    });
             }
             catch (Exception ex)
             {
@@ -246,42 +257,45 @@ namespace BinanceTrader.Trader
                     = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull()
                     .Where(b => b.NotNull().Free > 0 && _assets.Contains(b.Asset)).ToList();
 
-                foreach (var balance in freeBalances)
-                {
-                    try
+                Parallel.ForEach(
+                    freeBalances,
+                    new ParallelOptions {MaxDegreeOfParallelism = MaxDegreeOfParallelism},
+                    balance =>
                     {
-                        var symbol = SymbolUtils.GetCurrencySymbol(balance.NotNull().Asset.NotNull(), QuoteAsset);
-                        var price = await GetActualPrice(symbol, OrderSide.Sell);
-                        var tradingRules = _rulesProvider.GetRulesFor(symbol);
-
-                        var sellAmounts =
-                            OrderDistributor.SplitIntoSellOrders(
-                                balance.Free,
-                                MinOrderSize,
-                                price,
-                                tradingRules.StepSize);
-
-                        var profitStepSize = GetProfitStepSize(sellAmounts.Count);
-                        var profitRatio = MinProfitRatio;
-
-                        foreach (var amount in sellAmounts)
+                        try
                         {
-                            var sellPrice =
-                                AdjustPriceAccordingRules(price + price.Percents(profitRatio), tradingRules);
-                            var orderRequest = new OrderRequest(symbol, OrderSide.Sell, amount, sellPrice);
+                            var symbol = SymbolUtils.GetCurrencySymbol(balance.NotNull().Asset.NotNull(), QuoteAsset);
+                            var price = GetActualPrice(symbol, OrderSide.Sell).Result;
+                            var tradingRules = _rulesProvider.GetRulesFor(symbol);
 
-                            if (MeetsTradingRules(orderRequest))
+                            var sellAmounts =
+                                OrderDistributor.SplitIntoSellOrders(
+                                    balance.Free,
+                                    MinOrderSize,
+                                    price,
+                                    tradingRules.StepSize);
+
+                            var profitStepSize = GetProfitStepSize(sellAmounts.Count);
+                            var profitRatio = MinProfitRatio;
+
+                            foreach (var amount in sellAmounts)
                             {
-                                await PlaceOrder(orderRequest);
-                                profitRatio += profitStepSize;
+                                var sellPrice =
+                                    AdjustPriceAccordingRules(price + price.Percents(profitRatio), tradingRules);
+                                var orderRequest = new OrderRequest(symbol, OrderSide.Sell, amount, sellPrice);
+
+                                if (MeetsTradingRules(orderRequest))
+                                {
+                                    PlaceOrder(orderRequest).Wait();
+                                    profitRatio += profitStepSize;
+                                }
                             }
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogException(ex);
-                    }
-                }
+                        catch (Exception ex)
+                        {
+                            _logger.LogException(ex);
+                        }
+                    });
             }
             catch (Exception ex)
             {
@@ -309,36 +323,40 @@ namespace BinanceTrader.Trader
                 var amounts =
                     OrderDistributor.SplitIntoBuyOrders(freeQuoteBalance, MinOrderSize, openOrdersCount);
 
-                foreach (var symbolAmounts in amounts)
-                {
-                    try
+                Parallel.ForEach(
+                    amounts,
+                    new ParallelOptions {MaxDegreeOfParallelism = MaxDegreeOfParallelism},
+                    symbolAmounts =>
                     {
-                        var symbol = symbolAmounts.Key;
-                        var price = await GetActualPrice(symbol, OrderSide.Buy);
-                        var tradingRules = _rulesProvider.GetRulesFor(symbol);
-                        var buyAmounts = symbolAmounts.Value.NotNull();
-                        var profitStepSize = GetProfitStepSize(buyAmounts.Count);
-                        var profitRatio = MinProfitRatio;
-
-                        foreach (var quoteAmount in buyAmounts)
+                        try
                         {
-                            var buyPrice = AdjustPriceAccordingRules(price - price.Percents(profitRatio), tradingRules);
-                            var baseAmount =
-                                OrderDistributor.GetFittingBaseAmount(quoteAmount, buyPrice, tradingRules.StepSize);
-                            var orderRequest = new OrderRequest(symbol, OrderSide.Buy, baseAmount, buyPrice);
+                            var symbol = symbolAmounts.Key;
+                            var price = GetActualPrice(symbol, OrderSide.Buy).Result;
+                            var tradingRules = _rulesProvider.GetRulesFor(symbol);
+                            var buyAmounts = symbolAmounts.Value.NotNull();
+                            var profitStepSize = GetProfitStepSize(buyAmounts.Count);
+                            var profitRatio = MinProfitRatio;
 
-                            if (MeetsTradingRules(orderRequest))
+                            foreach (var quoteAmount in buyAmounts)
                             {
-                                await PlaceOrder(orderRequest);
-                                profitRatio += profitStepSize;
+                                var buyPrice = AdjustPriceAccordingRules(price - price.Percents(profitRatio),
+                                    tradingRules);
+                                var baseAmount =
+                                    OrderDistributor.GetFittingBaseAmount(quoteAmount, buyPrice, tradingRules.StepSize);
+                                var orderRequest = new OrderRequest(symbol, OrderSide.Buy, baseAmount, buyPrice);
+
+                                if (MeetsTradingRules(orderRequest))
+                                {
+                                    PlaceOrder(orderRequest).Wait();
+                                    profitRatio += profitStepSize;
+                                }
                             }
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogException(ex);
-                    }
-                }
+                        catch (Exception ex)
+                        {
+                            _logger.LogException(ex);
+                        }
+                    });
             }
             catch (Exception ex)
             {
