@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
@@ -14,6 +15,8 @@ namespace BinanceTrader.Cli
     {
         private static void Main(string[] args)
         {
+            ServicePointManager.DefaultConnectionLimit = 10;
+
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 

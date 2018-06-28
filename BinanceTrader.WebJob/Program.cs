@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Net;
 using Microsoft.Azure.WebJobs;
 
 namespace BinanceTrader.WebJob
@@ -7,6 +8,8 @@ namespace BinanceTrader.WebJob
     {
         private static void Main()
         {
+            ServicePointManager.DefaultConnectionLimit = 10;
+
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
