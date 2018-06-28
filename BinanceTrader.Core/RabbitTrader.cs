@@ -28,7 +28,6 @@ namespace BinanceTrader.Trader
         private const decimal MinOrderSize = 0.015m;
         private readonly TimeSpan _sellWaitingTime = TimeSpan.FromMinutes(5);
         private readonly TimeSpan _buyWaitingTime = TimeSpan.FromMinutes(5);
-        private const int MaxDegreeOfParallelism = 5;
 
         [NotNull] private readonly Timer _ordersCheckTimer = new Timer
         {
@@ -227,29 +226,21 @@ namespace BinanceTrader.Trader
                                 now.ToLocalTime() - o.NotNull().UnixTime.GetTime().ToLocalTime() > _buyWaitingTime)
                     .ToList();
 
-                Parallel.ForEach(
-                    expiredSellOrders.Concat(expiredBuyOrders),
-                    new ParallelOptions {MaxDegreeOfParallelism = MaxDegreeOfParallelism},
-                    order =>
+                var cancelTasks = expiredSellOrders.Concat(expiredBuyOrders).Select(
+                    async order =>
                     {
                         try
                         {
-                            CancelOrder(order.NotNull()).Wait();
+                            await CancelOrder(order.NotNull());
                             _logger.LogOrder("Canceled", order);
-                        }
-                        catch (AggregateException ex)
-                        {
-                            ex.Handle(e =>
-                            {
-                                _logger.LogException(e.NotNull());
-                                return true;
-                            });
                         }
                         catch (Exception ex)
                         {
                             _logger.LogException(ex);
                         }
                     });
+
+                await Task.WhenAll(cancelTasks).NotNull();
             }
             catch (Exception ex)
             {
@@ -265,14 +256,13 @@ namespace BinanceTrader.Trader
                     = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull()
                     .Where(b => b.NotNull().Free > 0 && _assets.Contains(b.Asset)).ToList();
 
-                Parallel.ForEach(
-                    freeBalances,
-                    new ParallelOptions {MaxDegreeOfParallelism = MaxDegreeOfParallelism},
-                    balance =>
+                var placeTasks = freeBalances.Select(
+                    async balance =>
                     {
                         try
                         {
-                            var symbol = SymbolUtils.GetCurrencySymbol(balance.NotNull().Asset.NotNull(), QuoteAsset);
+                            var symbol =
+                                SymbolUtils.GetCurrencySymbol(balance.NotNull().Asset.NotNull(), QuoteAsset);
                             var price = GetActualPrice(symbol, OrderSide.Sell).Result;
                             var tradingRules = _rulesProvider.GetRulesFor(symbol);
 
@@ -294,24 +284,18 @@ namespace BinanceTrader.Trader
 
                                 if (MeetsTradingRules(orderRequest))
                                 {
-                                    PlaceOrder(orderRequest).Wait();
+                                    await PlaceOrder(orderRequest);
                                     profitRatio += profitStepSize;
                                 }
                             }
-                        }
-                        catch (AggregateException ex)
-                        {
-                            ex.Handle(e =>
-                            {
-                                _logger.LogException(e.NotNull());
-                                return true;
-                            });
                         }
                         catch (Exception ex)
                         {
                             _logger.LogException(ex);
                         }
                     });
+
+                await Task.WhenAll(placeTasks).NotNull();
             }
             catch (Exception ex)
             {
@@ -339,10 +323,8 @@ namespace BinanceTrader.Trader
                 var amounts =
                     OrderDistributor.SplitIntoBuyOrders(freeQuoteBalance, MinOrderSize, openOrdersCount);
 
-                Parallel.ForEach(
-                    amounts,
-                    new ParallelOptions {MaxDegreeOfParallelism = MaxDegreeOfParallelism},
-                    symbolAmounts =>
+                var placeTasks = amounts.Select(
+                    async symbolAmounts =>
                     {
                         try
                         {
@@ -363,24 +345,18 @@ namespace BinanceTrader.Trader
 
                                 if (MeetsTradingRules(orderRequest))
                                 {
-                                    PlaceOrder(orderRequest).Wait();
+                                    await PlaceOrder(orderRequest);
                                     profitRatio += profitStepSize;
                                 }
                             }
-                        }
-                        catch (AggregateException ex)
-                        {
-                            ex.Handle(e =>
-                            {
-                                _logger.LogException(e.NotNull());
-                                return true;
-                            });
                         }
                         catch (Exception ex)
                         {
                             _logger.LogException(ex);
                         }
                     });
+
+                await Task.WhenAll(placeTasks).NotNull();
             }
             catch (Exception ex)
             {
