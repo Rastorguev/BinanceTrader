@@ -15,7 +15,7 @@ namespace BinanceTrader.Cli
     {
         private static void Main(string[] args)
         {
-            ServicePointManager.DefaultConnectionLimit = 5;
+            ServicePointManager.DefaultConnectionLimit = 3;
 
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
