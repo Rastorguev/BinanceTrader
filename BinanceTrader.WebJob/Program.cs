@@ -8,7 +8,7 @@ namespace BinanceTrader.WebJob
     {
         private static void Main()
         {
-            ServicePointManager.DefaultConnectionLimit = 1;
+            ServicePointManager.DefaultConnectionLimit = 10;
 
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
