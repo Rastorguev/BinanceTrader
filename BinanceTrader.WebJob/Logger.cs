@@ -20,19 +20,23 @@ namespace BinanceTrader.WebJob
             _client = new TelemetryClient {InstrumentationKey = key};
         }
 
-        public void LogOrder(string eventName, IOrder order)
+        public void LogOrderPlaced(IOrder order)
         {
-            _client.TrackEvent(eventName, new Dictionary<string, string>
-            {
-                {"Symbol", order.Symbol},
-                {"Side", order.Side.ToString()},
-                {"Status", order.Status.ToString()},
-                {"Price", order.Price.Round().ToString(CultureInfo.InvariantCulture)},
-                {"Qty", order.OrigQty.Round().ToString(CultureInfo.InvariantCulture)},
-                {"Total", (order.OrigQty * order.Price).Round().ToString(CultureInfo.InvariantCulture)}
-            });
+#if DEBUG
+            LogOrder("Placed", order);
+#endif
+        }
 
-            _client.Flush();
+        public void LogOrderCompleted(IOrder order)
+        {
+            LogOrder("Completed", order);
+        }
+
+        public void LogOrderCanceled(IOrder order)
+        {
+#if DEBUG
+            LogOrder("Canceled", order);
+#endif
         }
 
         public void LogOrderRequest(string eventName, OrderRequest orderRequest)
@@ -82,6 +86,21 @@ namespace BinanceTrader.WebJob
             }
 
             _client.TrackException(ex, properties);
+            _client.Flush();
+        }
+
+        private void LogOrder(string eventName, IOrder order)
+        {
+            _client.TrackEvent(eventName, new Dictionary<string, string>
+            {
+                {"Symbol", order.Symbol},
+                {"Side", order.Side.ToString()},
+                {"Status", order.Status.ToString()},
+                {"Price", order.Price.Round().ToString(CultureInfo.InvariantCulture)},
+                {"Qty", order.OrigQty.Round().ToString(CultureInfo.InvariantCulture)},
+                {"Total", (order.OrigQty * order.Price).Round().ToString(CultureInfo.InvariantCulture)}
+            });
+
             _client.Flush();
         }
     }

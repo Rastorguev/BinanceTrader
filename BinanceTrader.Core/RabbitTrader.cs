@@ -173,7 +173,7 @@ namespace BinanceTrader.Trader
                     return;
                 }
 
-                _logger.LogOrder("Completed", message);
+                _logger.LogOrderCompleted(message);
 
                 switch (message.Side)
                 {
@@ -392,7 +392,7 @@ namespace BinanceTrader.Trader
                     .NotNull())
                 .NotNull();
 
-            _logger.LogOrder("Placed", newOrder);
+            _logger.LogOrderPlaced(newOrder);
 
             return newOrder;
         }
@@ -421,9 +421,8 @@ namespace BinanceTrader.Trader
         {
             var canceledOrder = await _client.CancelOrder(order.Symbol, order.OrderId).NotNull();
 
-#if DEBUG
-            _logger.LogOrder("Canceled", order);
-#endif
+            _logger.LogOrderCanceled(order);
+
             return canceledOrder;
         }
 

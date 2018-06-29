@@ -8,24 +8,19 @@ namespace BinanceTrader.Cli
 {
     public class Logger : ILogger
     {
-        public void LogOrder(string eventName, IOrder order)
+        public void LogOrderPlaced(IOrder order)
         {
-            LogTime();
+            LogOrder("Placed", order);
+        }
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine(order.Symbol);
-            Console.ResetColor();
+        public void LogOrderCompleted(IOrder order)
+        {
+            LogOrder("Completed", order);
+        }
 
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine(eventName);
-            Console.ResetColor();
-
-            Console.WriteLine($"Side:\t\t {order.Side}");
-            Console.WriteLine($"Status:\t\t {order.Status}");
-            Console.WriteLine($"Price:\t\t {order.Price.Round()}");
-            Console.WriteLine($"Qty:\t\t {order.OrigQty.Round()}");
-
-            Console.WriteLine();
+        public void LogOrderCanceled(IOrder order)
+        {
+            LogOrder("Canceled", order);
         }
 
         public void LogOrderRequest(string eventName, OrderRequest orderRequest)
@@ -98,6 +93,26 @@ namespace BinanceTrader.Cli
             var timeToLog = time ?? DateTime.Now;
 
             Console.WriteLine(timeToLog);
+        }
+
+        private void LogOrder(string eventName, IOrder order)
+        {
+            LogTime();
+
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine(order.Symbol);
+            Console.ResetColor();
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine(eventName);
+            Console.ResetColor();
+
+            Console.WriteLine($"Side:\t\t {order.Side}");
+            Console.WriteLine($"Status:\t\t {order.Status}");
+            Console.WriteLine($"Price:\t\t {order.Price.Round()}");
+            Console.WriteLine($"Qty:\t\t {order.OrigQty.Round()}");
+
+            Console.WriteLine();
         }
     }
 }
