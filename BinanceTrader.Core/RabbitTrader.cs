@@ -255,27 +255,31 @@ namespace BinanceTrader.Trader
                     = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull()
                     .Where(b => b.NotNull().Free > 0 && _assets.Contains(b.Asset)).ToList();
 
-                var placeTasks = freeBalances.Select(
-                    async balance =>
+                var prices = (await _client.GetAllPrices().NotNull()).ToList();
+                var placeTasks = new List<Task>();
+
+                foreach (var balance in freeBalances)
+                {
+                    try
                     {
-                        try
+                        var symbol =
+                            SymbolUtils.GetCurrencySymbol(balance.NotNull().Asset.NotNull(), QuoteAsset);
+                        var price = prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
+                        var tradingRules = _rulesProvider.GetRulesFor(symbol);
+
+                        var sellAmounts =
+                            OrderDistributor.SplitIntoSellOrders(
+                                balance.Free,
+                                MinOrderSize,
+                                price,
+                                tradingRules.StepSize);
+
+                        var profitStepSize = GetProfitStepSize(sellAmounts.Count);
+                        var profitRatio = MinProfitRatio;
+
+                        var tasks = sellAmounts.Select(async amount =>
                         {
-                            var symbol =
-                                SymbolUtils.GetCurrencySymbol(balance.NotNull().Asset.NotNull(), QuoteAsset);
-                            var price = GetActualPrice(symbol, OrderSide.Sell).Result;
-                            var tradingRules = _rulesProvider.GetRulesFor(symbol);
-
-                            var sellAmounts =
-                                OrderDistributor.SplitIntoSellOrders(
-                                    balance.Free,
-                                    MinOrderSize,
-                                    price,
-                                    tradingRules.StepSize);
-
-                            var profitStepSize = GetProfitStepSize(sellAmounts.Count);
-                            var profitRatio = MinProfitRatio;
-
-                            foreach (var amount in sellAmounts)
+                            try
                             {
                                 var sellPrice =
                                     AdjustPriceAccordingRules(price + price.Percents(profitRatio), tradingRules);
@@ -287,12 +291,19 @@ namespace BinanceTrader.Trader
                                     profitRatio += profitStepSize;
                                 }
                             }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogException(ex);
-                        }
-                    });
+                            catch (Exception ex)
+                            {
+                                _logger.LogException(ex);
+                            }
+                        });
+
+                        placeTasks.AddRange(tasks);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogException(ex);
+                    }
+                }
 
                 await Task.WhenAll(placeTasks).NotNull();
             }
@@ -322,19 +333,23 @@ namespace BinanceTrader.Trader
                 var amounts =
                     OrderDistributor.SplitIntoBuyOrders(freeQuoteBalance, MinOrderSize, openOrdersCount);
 
-                var placeTasks = amounts.Select(
-                    async symbolAmounts =>
-                    {
-                        try
-                        {
-                            var symbol = symbolAmounts.Key;
-                            var price = GetActualPrice(symbol, OrderSide.Buy).Result;
-                            var tradingRules = _rulesProvider.GetRulesFor(symbol);
-                            var buyAmounts = symbolAmounts.Value.NotNull();
-                            var profitStepSize = GetProfitStepSize(buyAmounts.Count);
-                            var profitRatio = MinProfitRatio;
+                var prices = (await _client.GetAllPrices().NotNull()).ToList();
+                var placeTasks = new List<Task>();
 
-                            foreach (var quoteAmount in buyAmounts)
+                foreach (var symbolAmounts in amounts)
+                {
+                    try
+                    {
+                        var symbol = symbolAmounts.Key;
+                        var price = prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
+                        var tradingRules = _rulesProvider.GetRulesFor(symbol);
+                        var buyAmounts = symbolAmounts.Value.NotNull();
+                        var profitStepSize = GetProfitStepSize(buyAmounts.Count);
+                        var profitRatio = MinProfitRatio;
+
+                        var tasks = buyAmounts.Select(async quoteAmount =>
+                        {
+                            try
                             {
                                 var buyPrice = AdjustPriceAccordingRules(price - price.Percents(profitRatio),
                                     tradingRules);
@@ -348,12 +363,19 @@ namespace BinanceTrader.Trader
                                     profitRatio += profitStepSize;
                                 }
                             }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogException(ex);
-                        }
-                    });
+                            catch (Exception ex)
+                            {
+                                _logger.LogException(ex);
+                            }
+                        });
+
+                        placeTasks.AddRange(tasks);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogException(ex);
+                    }
+                }
 
                 await Task.WhenAll(placeTasks).NotNull();
             }
