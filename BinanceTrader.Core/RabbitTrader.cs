@@ -232,7 +232,6 @@ namespace BinanceTrader.Trader
                         try
                         {
                             await CancelOrder(order.NotNull());
-                            _logger.LogOrder("Canceled", order);
                         }
                         catch (Exception ex)
                         {
@@ -422,8 +421,9 @@ namespace BinanceTrader.Trader
         {
             var canceledOrder = await _client.CancelOrder(order.Symbol, order.OrderId).NotNull();
 
+#if DEBUG
             _logger.LogOrder("Canceled", order);
-
+#endif
             return canceledOrder;
         }
 
