@@ -17,21 +17,20 @@ namespace BinanceTrader.Trader
 {
     public class RabbitTrader
     {
-        private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(1);
+        private static readonly TimeSpan ExpiredOrdersCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
-        private static readonly TimeSpan StreamResetInterval = TimeSpan.FromMinutes(30);
+        private static readonly TimeSpan FreeAmountsCheckInterval = TimeSpan.FromMinutes(30);
 
         private const decimal MinProfitRatio = 1m;
         private const decimal MaxProfitRatio = 1.1m;
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
         private const decimal MinOrderSize = 0.015m;
-        private readonly TimeSpan _sellWaitingTime = TimeSpan.FromMinutes(5);
-        private readonly TimeSpan _buyWaitingTime = TimeSpan.FromMinutes(5);
+        private readonly TimeSpan _waitingTime = TimeSpan.FromMinutes(5);
 
-        [NotNull] private readonly Timer _ordersCheckTimer = new Timer
+        [NotNull] private readonly Timer _expiredOrdersCheckTimer = new Timer
         {
-            Interval = OrdersCheckInterval.TotalMilliseconds,
+            Interval = ExpiredOrdersCheckInterval.TotalMilliseconds,
             AutoReset = true
         };
 
@@ -41,9 +40,9 @@ namespace BinanceTrader.Trader
             AutoReset = true
         };
 
-        [NotNull] private readonly Timer _streamResetTimer = new Timer
+        [NotNull] private readonly Timer _freeAmountsCheckTimer = new Timer
         {
-            Interval = StreamResetInterval.TotalMilliseconds,
+            Interval = FreeAmountsCheckInterval.TotalMilliseconds,
             AutoReset = true
         };
 
@@ -65,8 +64,8 @@ namespace BinanceTrader.Trader
             _fundsStateChecker = new FundsStateChecker(_client, _logger, QuoteAsset);
 
             _fundsCheckTimer.Elapsed += OnFundsEvent;
-            _streamResetTimer.Elapsed += OnStreamResetEvent;
-            _ordersCheckTimer.Elapsed += OnOrdersCheckEvent;
+            _freeAmountsCheckTimer.Elapsed += OnFreeAmountsCheckEvent;
+            _expiredOrdersCheckTimer.Elapsed += OnExpiredOrdersCheckEvent;
         }
 
         public async void Start()
@@ -79,11 +78,15 @@ namespace BinanceTrader.Trader
 
                 await ResetOrderUpdatesListening();
                 await BuyFeeCurrencyIfNeeded();
-                await CheckOrders();
+
+                await CancelExpiredOrders();
+                await PlaceSellOrders();
+                await PlaceBuyOrders();
+
                 await _fundsStateChecker.LogFundsState();
 
-                _ordersCheckTimer.Start();
-                _streamResetTimer.Start();
+                _expiredOrdersCheckTimer.Start();
+                _freeAmountsCheckTimer.Start();
                 _fundsCheckTimer.Start();
             }
             catch (Exception ex)
@@ -92,16 +95,11 @@ namespace BinanceTrader.Trader
             }
         }
 
-        private async void OnOrdersCheckEvent(object sender, ElapsedEventArgs e)
+        private async void OnExpiredOrdersCheckEvent(object sender, ElapsedEventArgs e)
         {
             try
             {
-                await _rulesProvider.UpdateRulesIfNeeded();
-                _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
-                _fundsStateChecker.Assets = _assets;
-
-                await BuyFeeCurrencyIfNeeded();
-                await CheckOrders();
+                await CancelExpiredOrders();
                 await KeepStreamAlive();
             }
             catch (Exception ex)
@@ -122,10 +120,17 @@ namespace BinanceTrader.Trader
             }
         }
 
-        private async void OnStreamResetEvent(object sender, ElapsedEventArgs e)
+        private async void OnFreeAmountsCheckEvent(object sender, ElapsedEventArgs e)
         {
             try
             {
+                await _rulesProvider.UpdateRulesIfNeeded();
+                _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
+                _fundsStateChecker.Assets = _assets;
+
+                await BuyFeeCurrencyIfNeeded();
+                await PlaceBuyOrders();
+                await PlaceSellOrders();
                 await ResetOrderUpdatesListening();
             }
             catch (Exception ex)
@@ -142,7 +147,7 @@ namespace BinanceTrader.Trader
 
         private void StartListenOrderUpdates()
         {
-            _listenKey = _client.ListenUserDataEndpoint(m => { }, OnTrade, m => { });
+            _listenKey = _client.ListenUserDataEndpoint(m => { }, OnTrade, OnOrderUpdated);
         }
 
         private async Task StopListenOrderUpdates()
@@ -175,10 +180,12 @@ namespace BinanceTrader.Trader
 
                 _logger.LogOrderCompleted(message);
 
+                var price = message.Price;
+
                 switch (message.Side)
                 {
                     case OrderSide.Buy:
-                        var sellRequest = CreateSellOrder(message);
+                        var sellRequest = CreateSellOrder(message, price);
                         if (MeetsTradingRules(sellRequest))
                         {
                             await PlaceOrder(sellRequest);
@@ -187,13 +194,14 @@ namespace BinanceTrader.Trader
                         break;
 
                     case OrderSide.Sell:
-                        var buyRequest = CreateBuyOrder(message);
+                        var buyRequest = CreateBuyOrder(message, price);
                         if (MeetsTradingRules(buyRequest))
                         {
                             await PlaceOrder(buyRequest);
                         }
 
                         break;
+
                     default:
                         throw new ArgumentOutOfRangeException(nameof(OrderSide));
                 }
@@ -204,11 +212,45 @@ namespace BinanceTrader.Trader
             }
         }
 
-        private async Task CheckOrders()
+        private async void OnOrderUpdated([NotNull] OrderOrTradeUpdatedMessage message)
         {
-            await CancelExpiredOrders();
-            await PlaceSellOrders();
-            await PlaceBuyOrders();
+            try
+            {
+                if (message.Status != OrderStatus.Canceled)
+                {
+                    return;
+                }
+
+                var price = await GetActualPrice(message.Symbol, message.Side);
+
+                switch (message.Side)
+                {
+                    case OrderSide.Buy:
+                        var buyRequest = CreateBuyOrder(message, price);
+                        if (MeetsTradingRules(buyRequest))
+                        {
+                            await PlaceOrder(buyRequest);
+                        }
+
+                        break;
+
+                    case OrderSide.Sell:
+                        var sellRequest = CreateSellOrder(message, price);
+                        if (MeetsTradingRules(sellRequest))
+                        {
+                            await PlaceOrder(sellRequest);
+                        }
+
+                        break;
+
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(OrderSide));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
         }
 
         private async Task CancelExpiredOrders()
@@ -217,16 +259,12 @@ namespace BinanceTrader.Trader
             {
                 var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
                 var now = DateTime.Now;
-                var expiredSellOrders = openOrders
-                    .Where(o => o.NotNull().Side == OrderSide.Sell &&
-                                now.ToLocalTime() - o.NotNull().UnixTime.GetTime().ToLocalTime() > _sellWaitingTime)
-                    .ToList();
-                var expiredBuyOrders = openOrders
-                    .Where(o => o.NotNull().Side == OrderSide.Buy &&
-                                now.ToLocalTime() - o.NotNull().UnixTime.GetTime().ToLocalTime() > _buyWaitingTime)
+
+                var expireOrders = openOrders
+                    .Where(o => now.ToLocalTime() - o.NotNull().UnixTime.GetTime().ToLocalTime() > _waitingTime)
                     .ToList();
 
-                var cancelTasks = expiredSellOrders.Concat(expiredBuyOrders).Select(
+                var cancelTasks = expireOrders.Select(
                     async order =>
                     {
                         try
@@ -255,7 +293,7 @@ namespace BinanceTrader.Trader
                     = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull()
                     .Where(b => b.NotNull().Free > 0 && _assets.Contains(b.Asset)).ToList();
 
-                var prices = (await _client.GetAllPrices().NotNull()).ToList();
+                var prices = (await _client.GetAllPrices().NotNull()).NotNull().ToList();
                 var placeTasks = new List<Task>();
 
                 foreach (var balance in freeBalances)
@@ -490,12 +528,12 @@ namespace BinanceTrader.Trader
         }
 
         [NotNull]
-        private OrderRequest CreateSellOrder([NotNull] IOrder message)
+        private OrderRequest CreateSellOrder([NotNull] IOrder message, decimal price)
         {
             var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
 
             var sellPrice =
-                AdjustPriceAccordingRules(message.Price + message.Price.Percents(MinProfitRatio), tradingRules);
+                AdjustPriceAccordingRules(price + price.Percents(MinProfitRatio), tradingRules);
 
             var orderRequest = new OrderRequest(message.Symbol, OrderSide.Sell, message.OrigQty, sellPrice);
 
@@ -503,14 +541,14 @@ namespace BinanceTrader.Trader
         }
 
         [NotNull]
-        private OrderRequest CreateBuyOrder([NotNull] IOrder message)
+        private OrderRequest CreateBuyOrder([NotNull] IOrder message, decimal price)
         {
             var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
 
             var buyPrice =
-                AdjustPriceAccordingRules(message.Price - message.Price.Percents(MinProfitRatio), tradingRules);
+                AdjustPriceAccordingRules(price - price.Percents(MinProfitRatio), tradingRules);
 
-            var qty = AdjustQtyAccordingRules(message.Price * message.OrigQty / buyPrice, tradingRules);
+            var qty = AdjustQtyAccordingRules(price * message.OrigQty / buyPrice, tradingRules);
 
             var orderRequest = new OrderRequest(message.Symbol, OrderSide.Buy, qty, buyPrice);
             return orderRequest;
