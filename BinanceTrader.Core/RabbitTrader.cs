@@ -77,6 +77,7 @@ namespace BinanceTrader.Trader
                 _fundsStateChecker.Assets = _assets;
 
                 await BuyFeeCurrencyIfNeeded();
+                await CancelBuyOrders();
                 await CheckOrders();
                 await ResetOrderUpdatesListening();
                 await _fundsStateChecker.LogFundsState();
@@ -126,6 +127,7 @@ namespace BinanceTrader.Trader
 
                 await BuyFeeCurrencyIfNeeded();
                 await StopListenOrderUpdates();
+                await CancelBuyOrders();
                 await CheckOrders();
                 StartListenOrderUpdates();
             }
@@ -268,6 +270,34 @@ namespace BinanceTrader.Trader
                     .ToList();
 
                 var cancelTasks = expireOrders.Select(
+                    async order =>
+                    {
+                        try
+                        {
+                            await CancelOrder(order.NotNull());
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogException(ex);
+                        }
+                    });
+
+                await Task.WhenAll(cancelTasks).NotNull();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
+        }
+
+        private async Task CancelBuyOrders()
+        {
+            try
+            {
+                var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
+                var buyOrders = openOrders.Where(o => o.NotNull().Side == OrderSide.Buy);
+
+                var cancelTasks = buyOrders.Select(
                     async order =>
                     {
                         try
