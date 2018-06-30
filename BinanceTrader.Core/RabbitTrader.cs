@@ -25,7 +25,7 @@ namespace BinanceTrader.Trader
         private const decimal MaxProfitRatio = 1.1m;
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
-        private const decimal MinOrderSize = 0.015m;
+        private const decimal MinOrderSize = 0.01m;
         private readonly TimeSpan _waitingTime = TimeSpan.FromMinutes(5);
 
         [NotNull] private readonly Timer _expiredOrdersCheckTimer = new Timer
