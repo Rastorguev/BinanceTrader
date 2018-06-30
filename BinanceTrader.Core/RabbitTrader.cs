@@ -26,7 +26,7 @@ namespace BinanceTrader.Trader
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
         private const decimal MinOrderSize = 0.01m;
-        private readonly TimeSpan _waitingTime = TimeSpan.FromMinutes(5);
+        private readonly TimeSpan _waitingTime = TimeSpan.FromMinutes(1);
 
         [NotNull] private readonly Timer _expiredOrdersCheckTimer = new Timer
         {
