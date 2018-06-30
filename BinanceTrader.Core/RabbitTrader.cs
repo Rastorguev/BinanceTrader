@@ -25,8 +25,8 @@ namespace BinanceTrader.Trader
         private const decimal MaxProfitRatio = 1.1m;
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
-        private const decimal MinOrderSize = 0.011m;
-        private readonly TimeSpan _waitingTime = TimeSpan.FromMinutes(5);
+        private const decimal MinOrderSize = 0.015m;
+        private readonly TimeSpan _waitingTime = TimeSpan.FromMinutes(1);
 
         [NotNull] private readonly Timer _expiredOrdersCheckTimer = new Timer
         {
@@ -76,8 +76,8 @@ namespace BinanceTrader.Trader
                 _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
                 _fundsStateChecker.Assets = _assets;
 
-                await BuyFeeCurrencyIfNeeded();
                 await CancelBuyOrders();
+                await BuyFeeCurrencyIfNeeded();
                 await CheckOrders();
                 await ResetOrderUpdatesListening();
                 await _fundsStateChecker.LogFundsState();
@@ -125,9 +125,9 @@ namespace BinanceTrader.Trader
                 _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
                 _fundsStateChecker.Assets = _assets;
 
-                await BuyFeeCurrencyIfNeeded();
                 await StopListenOrderUpdates();
                 await CancelBuyOrders();
+                await BuyFeeCurrencyIfNeeded();
                 await CheckOrders();
                 StartListenOrderUpdates();
             }
