@@ -76,13 +76,9 @@ namespace BinanceTrader.Trader
                 _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
                 _fundsStateChecker.Assets = _assets;
 
-                await ResetOrderUpdatesListening();
                 await BuyFeeCurrencyIfNeeded();
-
-                await CancelExpiredOrders();
-                await PlaceSellOrders();
-                await PlaceBuyOrders();
-
+                await CheckOrders();
+                await ResetOrderUpdatesListening();
                 await _fundsStateChecker.LogFundsState();
 
                 _expiredOrdersCheckTimer.Start();
@@ -128,10 +124,10 @@ namespace BinanceTrader.Trader
                 _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
                 _fundsStateChecker.Assets = _assets;
 
-                await ResetOrderUpdatesListening();
                 await BuyFeeCurrencyIfNeeded();
-                await PlaceBuyOrders();
-                await PlaceSellOrders();
+                await StopListenOrderUpdates();
+                await CheckOrders();
+                StartListenOrderUpdates();
             }
             catch (Exception ex)
             {
@@ -253,6 +249,13 @@ namespace BinanceTrader.Trader
             }
         }
 
+        private async Task CheckOrders()
+        {
+            await CancelExpiredOrders();
+            await PlaceSellOrders();
+            await PlaceBuyOrders();
+        }
+
         private async Task CancelExpiredOrders()
         {
             try
@@ -371,7 +374,7 @@ namespace BinanceTrader.Trader
                 var amounts =
                     OrderDistributor.SplitIntoBuyOrders(freeQuoteBalance, MinOrderSize, openOrdersCount);
 
-                var prices = (await _client.GetAllPrices().NotNull()).ToList();
+                var prices = (await _client.GetAllPrices().NotNull()).NotNull().ToList();
                 var placeTasks = new List<Task>();
 
                 foreach (var symbolAmounts in amounts)
