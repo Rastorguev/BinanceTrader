@@ -128,10 +128,10 @@ namespace BinanceTrader.Trader
                 _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
                 _fundsStateChecker.Assets = _assets;
 
+                await ResetOrderUpdatesListening();
                 await BuyFeeCurrencyIfNeeded();
                 await PlaceBuyOrders();
                 await PlaceSellOrders();
-                await ResetOrderUpdatesListening();
             }
             catch (Exception ex)
             {
