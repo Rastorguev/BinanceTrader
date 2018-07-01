@@ -167,9 +167,18 @@ namespace BinanceTrader.Trader
 
         private async Task KeepStreamAlive()
         {
-            if (_listenKey != null)
+            try
             {
-                await _client.KeepAliveUserStream(_listenKey).NotNull();
+                if (_listenKey != null)
+                {
+                    await _client.KeepAliveUserStream(_listenKey).NotNull();
+                }
+            }
+            catch (Exception)
+            {
+                await ResetOrderUpdatesListening();
+
+                throw;
             }
         }
 
