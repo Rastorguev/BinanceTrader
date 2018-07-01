@@ -19,14 +19,14 @@ namespace BinanceTrader.Trader
     {
         private static readonly TimeSpan ExpiredOrdersCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
-        private static readonly TimeSpan FreeAmountsCheckInterval = TimeSpan.FromMinutes(30);
+        private static readonly TimeSpan FreeAmountsCheckInterval = TimeSpan.FromMinutes(60);
 
         private const decimal MinProfitRatio = 1m;
         private const decimal MaxProfitRatio = 1.1m;
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
         private const decimal MinOrderSize = 0.015m;
-        private readonly TimeSpan _waitingTime = TimeSpan.FromMinutes(5);
+        private readonly TimeSpan _orderExpirationInterval = TimeSpan.FromMinutes(10);
         private bool _ignoreCanceledEvents;
 
         [NotNull] private readonly Timer _expiredOrdersCheckTimer = new Timer
@@ -284,7 +284,7 @@ namespace BinanceTrader.Trader
                 var now = DateTime.Now;
 
                 var expireOrders = openOrders
-                    .Where(o => now.ToLocalTime() - o.NotNull().UnixTime.GetTime().ToLocalTime() > _waitingTime)
+                    .Where(o => now.ToLocalTime() - o.NotNull().UnixTime.GetTime().ToLocalTime() > _orderExpirationInterval)
                     .ToList();
 
                 var cancelTasks = expireOrders.Select(
