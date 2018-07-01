@@ -26,7 +26,8 @@ namespace BinanceTrader.Trader
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
         private const decimal MinOrderSize = 0.015m;
-        private readonly TimeSpan _waitingTime = TimeSpan.FromMinutes(1);
+        private readonly TimeSpan _waitingTime = TimeSpan.FromMinutes(5);
+        private bool _ignoreCanceledEvents;
 
         [NotNull] private readonly Timer _expiredOrdersCheckTimer = new Timer
         {
@@ -125,15 +126,23 @@ namespace BinanceTrader.Trader
                 _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
                 _fundsStateChecker.Assets = _assets;
 
-                await StopListenOrderUpdates();
+                await ResetOrderUpdatesListening();
+
+                _ignoreCanceledEvents = true;
                 await CancelBuyOrders();
+                _ignoreCanceledEvents = false;
+
                 await BuyFeeCurrencyIfNeeded();
                 await CheckOrders();
-                StartListenOrderUpdates();
             }
+
             catch (Exception ex)
             {
                 _logger.LogException(ex);
+            }
+            finally
+            {
+                _ignoreCanceledEvents = false;
             }
         }
 
@@ -214,7 +223,7 @@ namespace BinanceTrader.Trader
         {
             try
             {
-                if (message.Status != OrderStatus.Canceled)
+                if (message.Status != OrderStatus.Canceled || _ignoreCanceledEvents)
                 {
                     return;
                 }
