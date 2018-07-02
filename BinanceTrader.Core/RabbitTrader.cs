@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using Binance.API.Csharp.Client.Domain.Interfaces;
 using Binance.API.Csharp.Client.Models;
 using Binance.API.Csharp.Client.Models.Account;
@@ -13,14 +12,15 @@ using Binance.API.Csharp.Client.Models.Market.TradingRules;
 using Binance.API.Csharp.Client.Models.WebSocket;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
-using Timer = System.Timers.Timer;
 
+// ReSharper disable FunctionNeverReturns
 namespace BinanceTrader.Trader
 {
     public class RabbitTrader
     {
         private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
-        private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromSeconds(0.5);
+        private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(0.5);
+        private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
 
         private const decimal MinProfitRatio = 1m;
         private const decimal MaxProfitRatio = 1.1m;
@@ -29,19 +29,14 @@ namespace BinanceTrader.Trader
         private const decimal MinOrderSize = 0.015m;
         private readonly TimeSpan _newOrderExpiration = TimeSpan.FromMinutes(5);
         private string _listenKey;
-
-        [NotNull] private readonly Timer _fundsCheckTimer = new Timer
-        {
-            Interval = FundsCheckInterval.TotalMilliseconds,
-            AutoReset = true
-        };
+        private IReadOnlyList<IBalance> _funds;
 
         [NotNull] private readonly IBinanceClient _client;
         [NotNull] private readonly ILogger _logger;
         [NotNull] private readonly TradingRulesProvider _rulesProvider;
 
         [NotNull] [ItemNotNull] private IReadOnlyList<string> _assets = new List<string>();
-        [NotNull] private readonly FundsStateChecker _fundsStateChecker;
+        [NotNull] private readonly FundsStateLogger _fundsStateLogger;
 
         public RabbitTrader(
             [NotNull] IBinanceClient client,
@@ -50,17 +45,20 @@ namespace BinanceTrader.Trader
             _logger = logger;
             _client = client;
             _rulesProvider = new TradingRulesProvider(client);
-            _fundsStateChecker = new FundsStateChecker(_client, _logger, QuoteAsset);
-
-            _fundsCheckTimer.Elapsed += OnFundsEvent;
+            _fundsStateLogger = new FundsStateLogger(_client, _logger, QuoteAsset);
         }
 
-        public void Start()
+        public async Task Start()
         {
             try
             {
-                _fundsCheckTimer.Start();
+                await _rulesProvider.UpdateRulesIfNeeded();
+                _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
+                _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull().ToList();
+
                 StartCheckOrders();
+                StartCheckFunds();
+                StartCheckDataStream();
             }
             catch (Exception ex)
             {
@@ -76,13 +74,63 @@ namespace BinanceTrader.Trader
                     {
                         await Task.WhenAll(CheckOrders(), Task.Delay(OrdersCheckInterval)).NotNull();
                     }
-
-                    // ReSharper disable FunctionNeverReturns
                 },
-                CancellationToken.None,
-                TaskCreationOptions.LongRunning,
-                TaskScheduler.Default);
-            // ReSharper restore FunctionNeverReturns
+                TaskCreationOptions.LongRunning);
+        }
+
+        private void StartCheckFunds()
+        {
+            Task.Factory.StartNew(async () =>
+                {
+                    while (true)
+                    {
+                        await Task.WhenAll(CheckFunds(), Task.Delay(FundsCheckInterval)).NotNull();
+                    }
+                },
+                TaskCreationOptions.LongRunning);
+        }
+
+        private void StartCheckDataStream()
+        {
+            Task.Factory.StartNew(async () =>
+                {
+                    while (true)
+                    {
+                        await Task.WhenAll(KeepDataStreamAlive(), Task.Delay(DataStreamCheckInterval)).NotNull();
+                    }
+                },
+                TaskCreationOptions.LongRunning);
+        }
+
+        private async Task CheckOrders()
+        {
+            try
+            {
+                await CancelExpiredOrders();
+                await CheckFeeCurrency();
+                await PlaceBuyOrders();
+                await PlaceSellOrders();
+            }
+
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
+        }
+
+        private async Task CheckFunds()
+        {
+            try
+            {
+                await _rulesProvider.UpdateRulesIfNeeded();
+                _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
+
+                await _fundsStateLogger.LogFundsState(_funds.NotNull(), _assets);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
         }
 
         private void OnTrade([NotNull] OrderOrTradeUpdatedMessage message)
@@ -104,25 +152,10 @@ namespace BinanceTrader.Trader
             }
         }
 
-        private async Task CheckOrders()
+        private void OnAccountInfoUpdated([NotNull] AccountUpdatedMessage message)
         {
-            try
-            {
-                await _rulesProvider.UpdateRulesIfNeeded();
-                _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
-                _fundsStateChecker.Assets = _assets;
-
-                await KeepDataStreamAlive();
-                await CancelExpiredOrders();
-                await CheckFeeCurrency();
-                await PlaceBuyOrders();
-                await PlaceSellOrders();
-            }
-
-            catch (Exception ex)
-            {
-                _logger.LogException(ex);
-            }
+            var funds = message.Balances.NotNull().ToList();
+            Interlocked.Exchange(ref _funds, funds);
         }
 
         private async Task KeepDataStreamAlive()
@@ -154,7 +187,7 @@ namespace BinanceTrader.Trader
 
         private void StartListenDataStream()
         {
-            _listenKey = _client.ListenUserDataEndpoint(m => { }, OnTrade, m => { });
+            _listenKey = _client.ListenUserDataEndpoint(OnAccountInfoUpdated, OnTrade, m => { });
         }
 
         private async Task StopListenDataStream()
@@ -166,21 +199,9 @@ namespace BinanceTrader.Trader
             }
         }
 
-        private async void OnFundsEvent(object sender, ElapsedEventArgs e)
-        {
-            try
-            {
-                await _fundsStateChecker.LogFundsState();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogException(ex);
-            }
-        }
-
         private async Task CheckFeeCurrency()
         {
-            if (await NeedToBuyFeeCurrency())
+            if (NeedToBuyFeeCurrency())
             {
                 await BuyFeeCurrency();
             }
@@ -227,9 +248,8 @@ namespace BinanceTrader.Trader
         {
             try
             {
-                var freeBalances
-                    = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull()
-                    .Where(b => b.NotNull().Free > 0 && _assets.Contains(b.Asset)).ToList();
+                var freeBalances =
+                    _funds.NotNull().Where(b => b.NotNull().Free > 0 && _assets.Contains(b.Asset)).ToList();
 
                 var prices = (await _client.GetAllPrices().NotNull()).NotNull().ToList();
                 var placeTasks = new List<Task>();
@@ -293,7 +313,7 @@ namespace BinanceTrader.Trader
         {
             try
             {
-                var freeQuoteBalance = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull()
+                var freeQuoteBalance = _funds.NotNull()
                     .First(b => b.NotNull().Asset == QuoteAsset).NotNull().Free;
 
                 var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
@@ -424,10 +444,9 @@ namespace BinanceTrader.Trader
             return canceledOrder;
         }
 
-        private async Task<bool> NeedToBuyFeeCurrency()
+        private bool NeedToBuyFeeCurrency()
         {
-            var balance = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull().ToList();
-            var feeAmount = balance.First(b => b.NotNull().Asset == FeeAsset).NotNull().Free;
+            var feeAmount = _funds.NotNull().First(b => b.NotNull().Asset == FeeAsset).NotNull().Free;
 
             return feeAmount < 1;
         }

@@ -11,7 +11,7 @@ using JetBrains.Annotations;
 
 namespace BinanceTrader.Trader
 {
-    public class FundsStateChecker
+    public class FundsStateLogger
     {
         private const string UsdtAsset = "USDT";
 
@@ -19,7 +19,7 @@ namespace BinanceTrader.Trader
         [NotNull] private readonly ILogger _logger;
         [NotNull] private readonly string _quoteAsset;
 
-        public FundsStateChecker(
+        public FundsStateLogger(
             [NotNull] IBinanceClient client,
             [NotNull] ILogger logger,
             [NotNull] string quoteAsset)
@@ -29,18 +29,12 @@ namespace BinanceTrader.Trader
             _quoteAsset = quoteAsset;
         }
 
-        [NotNull]
-        public IReadOnlyList<string> Assets { get; set; } = new List<string>();
-
-        public async Task LogFundsState()
+        public async Task LogFundsState([NotNull] IReadOnlyList<IBalance> funds, IReadOnlyList<string> assets)
         {
             try
             {
                 var prices = (await _client.GetAllPrices().NotNull().NotNull()).ToList();
-                var assetsAveragePrice = GetTradingAssetsAveragePrice(prices);
-
-                var funds = (await _client.GetAccountInfo().NotNull()).NotNull()
-                    .Balances.NotNull().Where(b => b.NotNull().Free + b.NotNull().Locked > 0).ToList();
+                var assetsAveragePrice = GetTradingAssetsAveragePrice(prices, assets);
 
                 var quoteUsdtSymbol = SymbolUtils.GetCurrencySymbol(_quoteAsset, UsdtAsset);
                 var quoteTotal = GetFundsTotal(funds, prices);
@@ -61,30 +55,38 @@ namespace BinanceTrader.Trader
         }
 
         private decimal GetFundsTotal(
-            [NotNull] IReadOnlyList<Balance> funds,
+            [NotNull] IReadOnlyList<IBalance> funds,
             [NotNull] IReadOnlyList<SymbolPrice> prices)
         {
             var total = 0m;
-            foreach (var fund in funds)
+            foreach (var balance in funds)
             {
-                var assetTotal = fund.NotNull().Free + fund.NotNull().Locked;
-                if (fund.NotNull().Asset == _quoteAsset)
+                var assetTotal = balance.NotNull().Free + balance.NotNull().Locked;
+                if (balance.NotNull().Asset == _quoteAsset)
                 {
                     total += assetTotal;
                 }
                 else
                 {
-                    var symbol = $"{fund.NotNull().Asset}{_quoteAsset}";
-                    total += assetTotal * prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
+                    var symbol = $"{balance.NotNull().Asset}{_quoteAsset}";
+                    var symbolPrice = prices.FirstOrDefault(p => p.NotNull().Symbol == symbol);
+
+                    if (symbolPrice == null)
+                    {
+                        continue;
+                    }
+
+                    total += assetTotal * symbolPrice.Price;
                 }
             }
 
             return total;
         }
 
-        private decimal GetTradingAssetsAveragePrice([NotNull] IReadOnlyList<SymbolPrice> prices)
+        private decimal GetTradingAssetsAveragePrice([NotNull] IReadOnlyList<SymbolPrice> prices,
+            [NotNull] IReadOnlyList<string> assets)
         {
-            var symbols = Assets.Select(a => SymbolUtils.GetCurrencySymbol(a, _quoteAsset));
+            var symbols = assets.Select(a => SymbolUtils.GetCurrencySymbol(a, _quoteAsset));
             var tradingAssetsPrices =
                 prices.Where(p => symbols.Contains(p.NotNull().Symbol)).Select(p => p.Price).ToList();
             return tradingAssetsPrices.Average().Round();
