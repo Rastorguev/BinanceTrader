@@ -20,7 +20,7 @@ namespace BinanceTrader.Trader
     public class RabbitTrader
     {
         private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
-        private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(0.5);
+        private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromSeconds(0.5);
 
         private const decimal MinProfitRatio = 1m;
         private const decimal MaxProfitRatio = 1.1m;
@@ -28,6 +28,7 @@ namespace BinanceTrader.Trader
         private const string FeeAsset = "BNB";
         private const decimal MinOrderSize = 0.015m;
         private readonly TimeSpan _newOrderExpiration = TimeSpan.FromMinutes(5);
+        private string _listenKey;
 
         [NotNull] private readonly Timer _fundsCheckTimer = new Timer
         {
@@ -54,29 +55,16 @@ namespace BinanceTrader.Trader
             _fundsCheckTimer.Elapsed += OnFundsEvent;
         }
 
-        public async void Start()
+        public void Start()
         {
-            while (true)
+            try
             {
-                try
-                {
-                    await _rulesProvider.UpdateRulesIfNeeded();
-                    _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
-                    _fundsStateChecker.Assets = _assets;
-
-                    await CancelExpiredOrders();
-                    await CheckFeeCurrency();
-                    await PlaceSellOrders();
-                    await PlaceBuyOrders();
-                    await _fundsStateChecker.LogFundsState();
-
-                    _fundsCheckTimer.Start();
-                    StartCheckOrders();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogException(ex);
-                }
+                _fundsCheckTimer.Start();
+                StartCheckOrders();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
             }
         }
 
@@ -97,11 +85,18 @@ namespace BinanceTrader.Trader
             // ReSharper restore FunctionNeverReturns
         }
 
-        private async void OnFundsEvent(object sender, ElapsedEventArgs e)
+        private void OnTrade([NotNull] OrderOrTradeUpdatedMessage message)
         {
             try
             {
-                await _fundsStateChecker.LogFundsState();
+                var baseAsset = SymbolUtils.GetBaseAsset(message.Symbol.NotNull(), QuoteAsset);
+                if (message.Status != OrderStatus.Filled ||
+                    baseAsset == FeeAsset)
+                {
+                    return;
+                }
+
+                _logger.LogOrderCompleted(message);
             }
             catch (Exception ex)
             {
@@ -117,12 +112,66 @@ namespace BinanceTrader.Trader
                 _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
                 _fundsStateChecker.Assets = _assets;
 
+                await KeepDataStreamAlive();
                 await CancelExpiredOrders();
                 await CheckFeeCurrency();
                 await PlaceBuyOrders();
                 await PlaceSellOrders();
             }
 
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
+        }
+
+        private async Task KeepDataStreamAlive()
+        {
+            try
+            {
+                if (_listenKey != null)
+                {
+                    await _client.KeepAliveUserStream(_listenKey).NotNull();
+                }
+                else
+                {
+                    StartListenDataStream();
+                }
+            }
+            catch (Exception)
+            {
+                await ResetOrderUpdatesListening();
+
+                throw;
+            }
+        }
+
+        private async Task ResetOrderUpdatesListening()
+        {
+            await StopListenDataStream();
+            StartListenDataStream();
+        }
+
+        private void StartListenDataStream()
+        {
+            _listenKey = _client.ListenUserDataEndpoint(m => { }, OnTrade, m => { });
+        }
+
+        private async Task StopListenDataStream()
+        {
+            if (_listenKey != null)
+            {
+                await _client.CloseUserStream(_listenKey).NotNull();
+                _listenKey = null;
+            }
+        }
+
+        private async void OnFundsEvent(object sender, ElapsedEventArgs e)
+        {
+            try
+            {
+                await _fundsStateChecker.LogFundsState();
+            }
             catch (Exception ex)
             {
                 _logger.LogException(ex);
