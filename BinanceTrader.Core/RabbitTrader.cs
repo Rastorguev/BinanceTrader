@@ -19,7 +19,7 @@ namespace BinanceTrader.Trader
     public class RabbitTrader
     {
         private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
-        private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(0.5);
+        private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
 
         private const decimal MinProfitRatio = 1m;
@@ -57,7 +57,7 @@ namespace BinanceTrader.Trader
                 _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull().ToList();
 
                 StartCheckDataStream();
-                //StartCheckOrders();
+                StartCheckOrders();
                 StartCheckFunds();
             }
             catch (Exception ex)
@@ -477,10 +477,8 @@ namespace BinanceTrader.Trader
         private OrderRequest CreateSellOrder([NotNull] IOrder message, decimal qty, decimal price)
         {
             var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
-
             var sellPrice =
                 AdjustPriceAccordingRules(price + price.Percents(MinProfitRatio), tradingRules);
-
             var orderRequest =
                 new OrderRequest(message.Symbol, OrderSide.Sell, qty, sellPrice);
 
@@ -491,13 +489,10 @@ namespace BinanceTrader.Trader
         private OrderRequest CreateBuyOrder([NotNull] IOrder message, decimal quoteAmount, decimal price)
         {
             var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
-
             var buyPrice =
                 AdjustPriceAccordingRules(price - price.Percents(MinProfitRatio), tradingRules);
-
             var qty = quoteAmount / buyPrice;
             var adjustedQty = AdjustQtyAccordingRules(qty, tradingRules);
-
             var orderRequest = new OrderRequest(message.Symbol, OrderSide.Buy, adjustedQty, buyPrice);
 
             return orderRequest;
