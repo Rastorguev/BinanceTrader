@@ -196,12 +196,13 @@ namespace BinanceTrader.Trader
 
                 _logger.LogOrderCompleted(message);
 
-                var price = message.Price;
+                var tradePrice = message.Price;
 
                 switch (message.Side)
                 {
                     case OrderSide.Buy:
-                        var sellRequest = CreateSellOrder(message, price);
+                        var qty = message.OrigQty;
+                        var sellRequest = CreateSellOrder(message, qty, tradePrice);
                         if (MeetsTradingRules(sellRequest))
                         {
                             await PlaceOrder(sellRequest);
@@ -210,7 +211,8 @@ namespace BinanceTrader.Trader
                         break;
 
                     case OrderSide.Sell:
-                        var buyRequest = CreateBuyOrder(message, price);
+                        var quoteAmount = message.OrigQty * message.Price;
+                        var buyRequest = CreateBuyOrder(message, quoteAmount, tradePrice);
                         if (MeetsTradingRules(buyRequest))
                         {
                             await PlaceOrder(buyRequest);
@@ -237,12 +239,14 @@ namespace BinanceTrader.Trader
                     return;
                 }
 
-                var price = await GetActualPrice(message.Symbol, message.Side);
+                var actualPrice = await GetActualPrice(message.Symbol, message.Side);
 
                 switch (message.Side)
                 {
                     case OrderSide.Buy:
-                        var buyRequest = CreateBuyOrder(message, price);
+
+                        var quoteAmount = (message.OrigQty - message.LastFilledTradeQuantity) * message.Price;
+                        var buyRequest = CreateBuyOrder(message, quoteAmount, actualPrice);
                         if (MeetsTradingRules(buyRequest))
                         {
                             await PlaceOrder(buyRequest);
@@ -251,7 +255,8 @@ namespace BinanceTrader.Trader
                         break;
 
                     case OrderSide.Sell:
-                        var sellRequest = CreateSellOrder(message, price);
+                        var qty = message.OrigQty - message.LastFilledTradeQuantity;
+                        var sellRequest = CreateSellOrder(message, qty, actualPrice);
                         if (MeetsTradingRules(sellRequest))
                         {
                             await PlaceOrder(sellRequest);
@@ -608,7 +613,7 @@ namespace BinanceTrader.Trader
         }
 
         [NotNull]
-        private OrderRequest CreateSellOrder([NotNull] OrderOrTradeUpdatedMessage message, decimal price)
+        private OrderRequest CreateSellOrder([NotNull] IOrder message, decimal qty, decimal price)
         {
             var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
 
@@ -616,22 +621,24 @@ namespace BinanceTrader.Trader
                 AdjustPriceAccordingRules(price + price.Percents(MinProfitRatio), tradingRules);
 
             var orderRequest =
-                new OrderRequest(message.Symbol, OrderSide.Sell, message.LastFilledTradeQuantity, sellPrice);
+                new OrderRequest(message.Symbol, OrderSide.Sell, qty, sellPrice);
 
             return orderRequest;
         }
 
         [NotNull]
-        private OrderRequest CreateBuyOrder([NotNull] OrderOrTradeUpdatedMessage message, decimal price)
+        private OrderRequest CreateBuyOrder([NotNull] IOrder message, decimal quoteAmount, decimal price)
         {
             var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
 
             var buyPrice =
                 AdjustPriceAccordingRules(price - price.Percents(MinProfitRatio), tradingRules);
 
-            var qty = AdjustQtyAccordingRules(price * message.LastFilledTradeQuantity / buyPrice, tradingRules);
+            var qty = quoteAmount / buyPrice;
+            var adjustedQty = AdjustQtyAccordingRules(qty, tradingRules);
 
-            var orderRequest = new OrderRequest(message.Symbol, OrderSide.Buy, qty, buyPrice);
+            var orderRequest = new OrderRequest(message.Symbol, OrderSide.Buy, adjustedQty, buyPrice);
+
             return orderRequest;
         }
 
