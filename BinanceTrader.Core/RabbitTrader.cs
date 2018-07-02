@@ -19,14 +19,14 @@ namespace BinanceTrader.Trader
     {
         private static readonly TimeSpan ExpiredOrdersCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
-        private static readonly TimeSpan FreeAmountsCheckInterval = TimeSpan.FromMinutes(60);
+        private static readonly TimeSpan FreeAmountsCheckInterval = TimeSpan.FromMinutes(30);
 
         private const decimal MinProfitRatio = 1m;
         private const decimal MaxProfitRatio = 1.1m;
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
         private const decimal MinOrderSize = 0.015m;
-        private readonly TimeSpan _orderExpirationInterval = TimeSpan.FromMinutes(10);
+        private readonly TimeSpan _orderExpirationInterval = TimeSpan.FromMinutes(5);
         private bool _ignoreCanceledEvents;
 
         [NotNull] private readonly Timer _expiredOrdersCheckTimer = new Timer
@@ -77,10 +77,9 @@ namespace BinanceTrader.Trader
                 _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
                 _fundsStateChecker.Assets = _assets;
 
-                await CancelBuyOrders();
-                await BuyFeeCurrencyIfNeeded();
+                await CheckFeeCurrency();
                 await CheckOrders();
-                await ResetOrderUpdatesListening();
+                await KeepDataStreamAlive();
                 await _fundsStateChecker.LogFundsState();
 
                 _expiredOrdersCheckTimer.Start();
@@ -97,8 +96,8 @@ namespace BinanceTrader.Trader
         {
             try
             {
+                await KeepDataStreamAlive();               
                 await CancelExpiredOrders();
-                await KeepStreamAlive();
             }
             catch (Exception ex)
             {
@@ -126,14 +125,9 @@ namespace BinanceTrader.Trader
                 _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
                 _fundsStateChecker.Assets = _assets;
 
-                await ResetOrderUpdatesListening();
-
-                _ignoreCanceledEvents = true;
-                await CancelBuyOrders();
-                _ignoreCanceledEvents = false;
-
-                await BuyFeeCurrencyIfNeeded();
-                await CheckOrders();
+                await CheckFeeCurrency();
+                await PlaceSellOrders();
+                await PlaceBuyOrders();
             }
 
             catch (Exception ex)
@@ -148,24 +142,11 @@ namespace BinanceTrader.Trader
 
         private async Task ResetOrderUpdatesListening()
         {
-            await StopListenOrderUpdates();
-            StartListenOrderUpdates();
+            await StopListenDataStream();
+            StartListenDataStream();
         }
 
-        private void StartListenOrderUpdates()
-        {
-            _listenKey = _client.ListenUserDataEndpoint(m => { }, OnTrade, OnOrderUpdated);
-        }
-
-        private async Task StopListenOrderUpdates()
-        {
-            if (_listenKey != null)
-            {
-                await _client.CloseUserStream(_listenKey).NotNull();
-            }
-        }
-
-        private async Task KeepStreamAlive()
+        private async Task KeepDataStreamAlive()
         {
             try
             {
@@ -173,12 +154,30 @@ namespace BinanceTrader.Trader
                 {
                     await _client.KeepAliveUserStream(_listenKey).NotNull();
                 }
+                else
+                {
+                    StartListenDataStream();
+                }
             }
             catch (Exception)
             {
                 await ResetOrderUpdatesListening();
 
                 throw;
+            }
+        }
+
+        private void StartListenDataStream()
+        {
+            _listenKey = _client.ListenUserDataEndpoint(m => { }, OnTrade, OnOrderUpdated);
+        }
+
+        private async Task StopListenDataStream()
+        {
+            if (_listenKey != null)
+            {
+                await _client.CloseUserStream(_listenKey).NotNull();
+                _listenKey = null;
             }
         }
 
@@ -276,6 +275,28 @@ namespace BinanceTrader.Trader
             await PlaceBuyOrders();
         }
 
+        private async Task CheckFeeCurrency()
+        {
+            if (await NeedToBuyFeeCurrency())
+            {
+                try
+                {
+                    _ignoreCanceledEvents = true;
+                    await Task.Delay(TimeSpan.FromSeconds(1)).NotNull();
+                    await CancelBuyOrders();
+                    await BuyFeeCurrency();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogException(ex);
+                }
+                finally
+                {
+                    _ignoreCanceledEvents = false;
+                }
+            }
+        }
+
         private async Task CancelExpiredOrders()
         {
             try
@@ -284,7 +305,8 @@ namespace BinanceTrader.Trader
                 var now = DateTime.Now;
 
                 var expireOrders = openOrders
-                    .Where(o => now.ToLocalTime() - o.NotNull().UnixTime.GetTime().ToLocalTime() > _orderExpirationInterval)
+                    .Where(o => now.ToLocalTime() - o.NotNull().UnixTime.GetTime().ToLocalTime() >
+                                _orderExpirationInterval)
                     .ToList();
 
                 var cancelTasks = expireOrders.Select(
@@ -537,32 +559,33 @@ namespace BinanceTrader.Trader
             return canceledOrder;
         }
 
-        private async Task BuyFeeCurrencyIfNeeded()
+        private async Task<bool> NeedToBuyFeeCurrency()
+        {
+            var balance = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull().ToList();
+            var feeAmount = balance.First(b => b.NotNull().Asset == FeeAsset).NotNull().Free;
+
+            return feeAmount < 1;
+        }
+
+        private async Task BuyFeeCurrency()
         {
             try
             {
                 const int qty = 1;
+
                 var feeSymbol = SymbolUtils.GetCurrencySymbol(FeeAsset, QuoteAsset);
-
-                var balance = (await _client.GetAccountInfo().NotNull()).NotNull().Balances.NotNull().ToList();
-
-                var feeAmount = balance.First(b => b.NotNull().Asset == FeeAsset).NotNull().Free;
-                var quoteAmount = balance.First(b => b.NotNull().Asset == QuoteAsset).NotNull().Free;
                 var price = await GetActualPrice(feeSymbol, OrderSide.Buy);
 
-                if (feeAmount < 1 && quoteAmount >= price * qty)
+                var orderRequest = new OrderRequest(feeSymbol, OrderSide.Buy, qty, price);
+
+                if (MeetsTradingRules(orderRequest))
                 {
-                    var orderRequest = new OrderRequest(feeSymbol, OrderSide.Buy, qty, price);
+                    var order = await PlaceOrder(orderRequest, OrderType.Market, TimeInForce.IOC).NotNull();
+                    var status = order.Status;
+                    var executedQty = order.ExecutedQty;
 
-                    if (MeetsTradingRules(orderRequest))
-                    {
-                        var order = await PlaceOrder(orderRequest, OrderType.Market, TimeInForce.IOC).NotNull();
-                        var status = order.Status;
-                        var executedQty = order.ExecutedQty;
-
-                        _logger.LogMessage("BuyFeeCurrency",
-                            $"Status {status}, Quantity {executedQty}, Price {price}");
-                    }
+                    _logger.LogMessage("BuyFeeCurrency",
+                        $"Status {status}, Quantity {executedQty}, Price {price}");
                 }
             }
             catch (Exception ex)
