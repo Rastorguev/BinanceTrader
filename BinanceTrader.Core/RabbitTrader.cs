@@ -26,7 +26,8 @@ namespace BinanceTrader.Trader
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
         private const decimal MinOrderSize = 0.015m;
-        private readonly TimeSpan _orderExpirationInterval = TimeSpan.FromMinutes(5);
+        private readonly TimeSpan _newOrderExpiration = TimeSpan.FromMinutes(5);
+        private readonly TimeSpan _partiallyFilledOrderExpiration = TimeSpan.FromMinutes(60);
         private bool _ignoreCanceledEvents;
 
         [NotNull] private readonly Timer _expiredOrdersCheckTimer = new Timer
@@ -96,7 +97,7 @@ namespace BinanceTrader.Trader
         {
             try
             {
-                await KeepDataStreamAlive();               
+                await KeepDataStreamAlive();
                 await CancelExpiredOrders();
             }
             catch (Exception ex)
@@ -304,12 +305,17 @@ namespace BinanceTrader.Trader
                 var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
                 var now = DateTime.Now;
 
-                var expireOrders = openOrders
-                    .Where(o => now.ToLocalTime() - o.NotNull().UnixTime.GetTime().ToLocalTime() >
-                                _orderExpirationInterval)
+                var expiredOrders = openOrders
+                    .Where(o =>
+                    {
+                        var orderTime = o.NotNull().UnixTime.GetTime().ToLocalTime();
+                        return o.Status == OrderStatus.New && now.ToLocalTime() - orderTime > _newOrderExpiration ||
+                               o.Status == OrderStatus.PartiallyFilled &&
+                               now.ToLocalTime() - orderTime > _partiallyFilledOrderExpiration;
+                    })
                     .ToList();
 
-                var cancelTasks = expireOrders.Select(
+                var cancelTasks = expiredOrders.Select(
                     async order =>
                     {
                         try
@@ -335,7 +341,7 @@ namespace BinanceTrader.Trader
             try
             {
                 var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
-                var buyOrders = openOrders.Where(o => o.NotNull().Side == OrderSide.Buy);
+                var buyOrders = openOrders.Where(o => o.NotNull().Side == OrderSide.Buy && o.Status == OrderStatus.New);
 
                 var cancelTasks = buyOrders.Select(
                     async order =>
@@ -602,27 +608,28 @@ namespace BinanceTrader.Trader
         }
 
         [NotNull]
-        private OrderRequest CreateSellOrder([NotNull] IOrder message, decimal price)
+        private OrderRequest CreateSellOrder([NotNull] OrderOrTradeUpdatedMessage message, decimal price)
         {
             var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
 
             var sellPrice =
                 AdjustPriceAccordingRules(price + price.Percents(MinProfitRatio), tradingRules);
 
-            var orderRequest = new OrderRequest(message.Symbol, OrderSide.Sell, message.OrigQty, sellPrice);
+            var orderRequest =
+                new OrderRequest(message.Symbol, OrderSide.Sell, message.LastFilledTradeQuantity, sellPrice);
 
             return orderRequest;
         }
 
         [NotNull]
-        private OrderRequest CreateBuyOrder([NotNull] IOrder message, decimal price)
+        private OrderRequest CreateBuyOrder([NotNull] OrderOrTradeUpdatedMessage message, decimal price)
         {
             var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
 
             var buyPrice =
                 AdjustPriceAccordingRules(price - price.Percents(MinProfitRatio), tradingRules);
 
-            var qty = AdjustQtyAccordingRules(price * message.OrigQty / buyPrice, tradingRules);
+            var qty = AdjustQtyAccordingRules(price * message.LastFilledTradeQuantity / buyPrice, tradingRules);
 
             var orderRequest = new OrderRequest(message.Symbol, OrderSide.Buy, qty, buyPrice);
             return orderRequest;
