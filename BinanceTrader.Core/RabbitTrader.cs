@@ -56,9 +56,9 @@ namespace BinanceTrader.Trader
                 _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
                 _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull().ToList();
 
-                StartCheckOrders();
-                StartCheckFunds();
                 StartCheckDataStream();
+                //StartCheckOrders();
+                StartCheckFunds();
             }
             catch (Exception ex)
             {
@@ -133,11 +133,12 @@ namespace BinanceTrader.Trader
             }
         }
 
-        private void OnTrade([NotNull] OrderOrTradeUpdatedMessage message)
+        private async void OnTrade([NotNull] OrderOrTradeUpdatedMessage message)
         {
             try
             {
                 var baseAsset = SymbolUtils.GetBaseAsset(message.Symbol.NotNull(), QuoteAsset);
+
                 if (message.Status != OrderStatus.Filled ||
                     baseAsset == FeeAsset)
                 {
@@ -145,6 +146,34 @@ namespace BinanceTrader.Trader
                 }
 
                 _logger.LogOrderCompleted(message);
+
+                var tradePrice = message.Price;
+
+                switch (message.Side)
+                {
+                    case OrderSide.Buy:
+                        var qty = message.OrigQty;
+                        var sellRequest = CreateSellOrder(message, qty, tradePrice);
+                        if (MeetsTradingRules(sellRequest))
+                        {
+                            await PlaceOrder(sellRequest);
+                        }
+
+                        break;
+
+                    case OrderSide.Sell:
+                        var quoteAmount = message.OrigQty * message.Price;
+                        var buyRequest = CreateBuyOrder(message, quoteAmount, tradePrice);
+                        if (MeetsTradingRules(buyRequest))
+                        {
+                            await PlaceOrder(buyRequest);
+                        }
+
+                        break;
+
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(OrderSide));
+                }
             }
             catch (Exception ex)
             {
@@ -444,6 +473,36 @@ namespace BinanceTrader.Trader
             return canceledOrder;
         }
 
+        [NotNull]
+        private OrderRequest CreateSellOrder([NotNull] IOrder message, decimal qty, decimal price)
+        {
+            var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
+
+            var sellPrice =
+                AdjustPriceAccordingRules(price + price.Percents(MinProfitRatio), tradingRules);
+
+            var orderRequest =
+                new OrderRequest(message.Symbol, OrderSide.Sell, qty, sellPrice);
+
+            return orderRequest;
+        }
+
+        [NotNull]
+        private OrderRequest CreateBuyOrder([NotNull] IOrder message, decimal quoteAmount, decimal price)
+        {
+            var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
+
+            var buyPrice =
+                AdjustPriceAccordingRules(price - price.Percents(MinProfitRatio), tradingRules);
+
+            var qty = quoteAmount / buyPrice;
+            var adjustedQty = AdjustQtyAccordingRules(qty, tradingRules);
+
+            var orderRequest = new OrderRequest(message.Symbol, OrderSide.Buy, adjustedQty, buyPrice);
+
+            return orderRequest;
+        }
+
         private bool NeedToBuyFeeCurrency()
         {
             var feeAmount = _funds.NotNull().First(b => b.NotNull().Asset == FeeAsset).NotNull().Free;
@@ -488,6 +547,11 @@ namespace BinanceTrader.Trader
         private static decimal AdjustPriceAccordingRules(decimal price, [NotNull] ITradingRules rules)
         {
             return (int) (price / rules.TickSize) * rules.TickSize;
+        }
+
+        private static decimal AdjustQtyAccordingRules(decimal qty, [NotNull] ITradingRules rules)
+        {
+            return (int) (qty / rules.StepSize) * rules.StepSize;
         }
     }
 }
