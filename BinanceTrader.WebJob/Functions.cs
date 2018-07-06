@@ -23,11 +23,9 @@ namespace BinanceTrader.WebJob
 
             try
             {
-                var assembly = Assembly.GetExecutingAssembly();
-                var keysPath = Path.Combine(Path.GetDirectoryName(assembly.Location).NotNull(), "Configs", "Keys.config");
-                var keyProvider = new ConfigFileKeyProvider(keysPath);
-                var keys = keyProvider.GetKeys().NotNull();
-                var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
+                var keyProvider = new BlobKeyProvider("Rambler");
+                var keys = keyProvider.GetKeys();
+                var apiClient = new ApiClient(keys.Api, keys.Secret);
                 var binanceClient = new BinanceClient(apiClient);
 
                 var trader = new RabbitTrader(binanceClient, logger);

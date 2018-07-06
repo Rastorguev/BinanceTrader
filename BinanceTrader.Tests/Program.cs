@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
 using Binance.API.Csharp.Client.Models.Enums;
 using BinanceTrader.Tools;
+using BinanceTrader.Tools.KeyProviders;
 using JetBrains.Annotations;
 
 namespace BinanceTrader
@@ -21,9 +22,9 @@ namespace BinanceTrader
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
-            var keyProvider = new BinanceKeyProvider(@"D:/Keys.config");
+            var keyProvider = new ConfigFileKeyProvider(@"D:/Keys.config");
             var keys = keyProvider.GetKeys().NotNull();
-            var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
+            var apiClient = new ApiClient(keys.Api, keys.Secret);
             var binanceClient = new BinanceClient(apiClient);
             var candlesProvider = new CandlesProvider(binanceClient);
 
