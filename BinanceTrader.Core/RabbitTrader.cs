@@ -12,6 +12,8 @@ using Binance.API.Csharp.Client.Models.Market.TradingRules;
 using Binance.API.Csharp.Client.Models.WebSocket;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
+using Polly;
+using Polly.Retry;
 
 // ReSharper disable FunctionNeverReturns
 namespace BinanceTrader.Trader
@@ -37,6 +39,15 @@ namespace BinanceTrader.Trader
 
         [NotNull] [ItemNotNull] private IReadOnlyList<string> _assets = new List<string>();
         [NotNull] private readonly FundsStateLogger _fundsStateLogger;
+        [NotNull] private readonly RetryPolicy _startRetryPolicy = Policy
+            .Handle<Exception>(ex => !(ex is OperationCanceledException))
+            .WaitAndRetryAsync(new[]
+            {
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromSeconds(30),
+                TimeSpan.FromSeconds(60)
+            })
+            .NotNull();
 
         public RabbitTrader(
             [NotNull] IBinanceClient client,
@@ -52,13 +63,16 @@ namespace BinanceTrader.Trader
         {
             try
             {
-                await _rulesProvider.UpdateRulesIfNeeded();
-                _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
-                _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull().ToList();
+                await _startRetryPolicy.ExecuteAsync(async () =>
+                {
+                    await _rulesProvider.UpdateRulesIfNeeded();
+                    _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
+                    _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull().ToList();
 
-                StartCheckDataStream();
-                StartCheckOrders();
-                StartCheckFunds();
+                    StartCheckDataStream();
+                    StartCheckOrders();
+                    StartCheckFunds();
+                }).NotNull();
             }
             catch (Exception ex)
             {
