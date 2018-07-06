@@ -3,6 +3,7 @@ using System.IO;
 using System.Reflection;
 using Binance.API.Csharp.Client;
 using BinanceTrader.Tools;
+using BinanceTrader.Tools.KeyProviders;
 using BinanceTrader.Trader;
 using Microsoft.Azure.WebJobs;
 
@@ -23,8 +24,8 @@ namespace BinanceTrader.WebJob
             try
             {
                 var assembly = Assembly.GetExecutingAssembly();
-                var keysPath = Path.Combine(Path.GetDirectoryName(assembly.Location).NotNull(), "Keys.config");
-                var keyProvider = new BinanceKeyProvider(keysPath);
+                var keysPath = Path.Combine(Path.GetDirectoryName(assembly.Location).NotNull(), "Configs", "Keys.config");
+                var keyProvider = new ConfigFileKeyProvider(keysPath);
                 var keys = keyProvider.GetKeys().NotNull();
                 var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
                 var binanceClient = new BinanceClient(apiClient);

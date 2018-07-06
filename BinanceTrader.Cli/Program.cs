@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
 using BinanceTrader.Tools;
+using BinanceTrader.Tools.KeyProviders;
 using BinanceTrader.Trader;
 
 namespace BinanceTrader.Cli
@@ -25,8 +26,8 @@ namespace BinanceTrader.Cli
             try
             {
                 var assembly = Assembly.GetExecutingAssembly();
-                var keysPath = Path.Combine(Path.GetDirectoryName(assembly.Location).NotNull(), "Keys.config");
-                var keyProvider = new BinanceKeyProvider(keysPath);
+                var keysPath = Path.Combine(Path.GetDirectoryName(assembly.Location).NotNull(), "Configs", "Keys.config");
+                var keyProvider = new ConfigFileKeyProvider(keysPath);
                 var keys = keyProvider.GetKeys().NotNull();
                 var apiClient = new ApiClient(keys.ApiKey, keys.SecretKey);
                 var binanceClient = new BinanceClient(apiClient);

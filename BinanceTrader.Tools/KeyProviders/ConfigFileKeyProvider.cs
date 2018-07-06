@@ -1,27 +1,13 @@
 ﻿using System.Configuration;
 using System.IO;
 
-namespace BinanceTrader.Tools
+namespace BinanceTrader.Tools.KeyProviders
 {
-    public interface IBinanceKeyProvider
-    {
-        BinanceKeys GetKeys();
-    }
-
-    public class MockKeyProvider : IBinanceKeyProvider
-    {
-        public BinanceKeys GetKeys()
-        {
-            return new BinanceKeys();
-        }
-    }
-
-
-    public class BinanceKeyProvider : IBinanceKeyProvider
+    public class ConfigFileKeyProvider : IKeyProvider
     {
         private readonly string _keysFilePath;
 
-        public BinanceKeyProvider(string keysFilePath) => _keysFilePath = keysFilePath;
+        public ConfigFileKeyProvider(string keysFilePath) => _keysFilePath = keysFilePath;
 
         public BinanceKeys GetKeys()
         {
@@ -43,11 +29,5 @@ namespace BinanceTrader.Tools
                 SecretKey = setting["SecretKey"].NotNull().Value
             };
         }
-    }
-
-    public class BinanceKeys
-    {
-        public string ApiKey { get; set; }
-        public string SecretKey { get; set; }
     }
 }
