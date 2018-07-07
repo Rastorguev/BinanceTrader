@@ -24,9 +24,9 @@ namespace BinanceTrader.Trader
         private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
 
         private const decimal ProfitRatio = 1m;
-        private const string QuoteAsset = "ETH";
+        [NotNull] private readonly string _quoteAsset;
         private const string FeeAsset = "BNB";
-        private readonly TimeSpan _orderExpiration = TimeSpan.FromMinutes(5);
+        private readonly TimeSpan _orderExpiration;
         private string _listenKey;
         private IReadOnlyList<IBalance> _funds;
 
@@ -49,13 +49,17 @@ namespace BinanceTrader.Trader
 
         public RabbitTrader(
             [NotNull] IBinanceClient client,
-            [NotNull] ILogger logger)
+            [NotNull] ILogger logger,
+            [NotNull] RabbitTraderConfig config)
         {
+            _quoteAsset = config.QuoteAsset;
+            _orderExpiration = config.OrderExpiration;
+
             _logger = logger;
             _client = client;
             _rulesProvider = new TradingRulesProvider(client);
-            _fundsStateLogger = new FundsStateLogger(_client, _logger, QuoteAsset);
-            _orderDistributor = new OrderDistributor(QuoteAsset, ProfitRatio, _rulesProvider, logger);
+            _fundsStateLogger = new FundsStateLogger(_client, _logger, _quoteAsset);
+            _orderDistributor = new OrderDistributor(_quoteAsset, ProfitRatio, _rulesProvider, logger);
         }
 
         public async Task Start()
@@ -65,7 +69,7 @@ namespace BinanceTrader.Trader
                 await _startRetryPolicy.ExecuteAsync(async () =>
                 {
                     await _rulesProvider.UpdateRulesIfNeeded();
-                    _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
+                    _assets = _rulesProvider.GetBaseAssetsFor(_quoteAsset).Where(r => r != FeeAsset).ToList();
                     _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull().ToList();
 
                     StartCheckDataStream();
@@ -136,7 +140,7 @@ namespace BinanceTrader.Trader
             try
             {
                 await _rulesProvider.UpdateRulesIfNeeded();
-                _assets = _rulesProvider.GetBaseAssetsFor(QuoteAsset).Where(r => r != FeeAsset).ToList();
+                _assets = _rulesProvider.GetBaseAssetsFor(_quoteAsset).Where(r => r != FeeAsset).ToList();
 
                 await _fundsStateLogger.LogFundsState(_funds.NotNull(), _assets);
             }
@@ -150,7 +154,7 @@ namespace BinanceTrader.Trader
         {
             try
             {
-                var baseAsset = SymbolUtils.GetBaseAsset(message.Symbol.NotNull(), QuoteAsset);
+                var baseAsset = SymbolUtils.GetBaseAsset(message.Symbol.NotNull(), _quoteAsset);
 
                 if (message.Status != OrderStatus.Filled ||
                     baseAsset == FeeAsset)
@@ -301,7 +305,7 @@ namespace BinanceTrader.Trader
                     try
                     {
                         var symbol =
-                            SymbolUtils.GetCurrencySymbol(balance.NotNull().Asset.NotNull(), QuoteAsset);
+                            SymbolUtils.GetCurrencySymbol(balance.NotNull().Asset.NotNull(), _quoteAsset);
 
                         var tradingRules = _rulesProvider.GetRulesFor(symbol);
                         var price = prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
@@ -353,7 +357,7 @@ namespace BinanceTrader.Trader
             try
             {
                 var freeQuoteBalance = _funds.NotNull()
-                    .First(b => b.NotNull().Asset == QuoteAsset).NotNull().Free;
+                    .First(b => b.NotNull().Asset == _quoteAsset).NotNull().Free;
 
                 var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
                 var prices = (await _client.GetAllPrices().NotNull()).NotNull().ToList();
@@ -481,7 +485,7 @@ namespace BinanceTrader.Trader
             {
                 const int qty = 1;
 
-                var feeSymbol = SymbolUtils.GetCurrencySymbol(FeeAsset, QuoteAsset);
+                var feeSymbol = SymbolUtils.GetCurrencySymbol(FeeAsset, _quoteAsset);
                 var price = await GetActualPrice(feeSymbol, OrderSide.Buy);
 
                 var orderRequest = new OrderRequest(feeSymbol, OrderSide.Buy, qty, price);

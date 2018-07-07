@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Net;
-using System.Reflection;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
 using BinanceTrader.Tools;
@@ -25,12 +22,13 @@ namespace BinanceTrader.Cli
 
             try
             {
-                var keyProvider = new BlobKeyProvider("Rambler");
-                var keys = keyProvider.GetKeys();
+                var keyProvider = new BlobKeyProvider(new ConnectionStringsProvider());
+                var keys = keyProvider.GetKeys("Rambler");
                 var apiClient = new ApiClient(keys.Api, keys.Secret);
                 var binanceClient = new BinanceClient(apiClient);
+                var config = new RabbitTraderConfig("ETH", TimeSpan.FromMinutes(5));
 
-                var trader = new RabbitTrader(binanceClient, logger);
+                var trader = new RabbitTrader(binanceClient, logger, config);
 
                 trader.Start().Wait();
             }

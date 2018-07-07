@@ -22,8 +22,8 @@ namespace BinanceTrader
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
-            var keyProvider = new ConfigFileKeyProvider(@"D:/Keys.config");
-            var keys = keyProvider.GetKeys().NotNull();
+            var keyProvider = new ConfigFileKeyProvider();
+            var keys = keyProvider.GetKeys("Rambler").NotNull();
             var apiClient = new ApiClient(keys.Api, keys.Secret);
             var binanceClient = new BinanceClient(apiClient);
             var candlesProvider = new CandlesProvider(binanceClient);

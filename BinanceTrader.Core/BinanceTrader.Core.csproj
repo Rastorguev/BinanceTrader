@@ -82,7 +82,7 @@
     <None Include="Configs\ConnectionStrings.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="Configs\Keys.config">
+    <None Include="Configs\Keys_Rambler.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />

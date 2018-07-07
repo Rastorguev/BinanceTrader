@@ -1,5 +1,6 @@
 ﻿using System.Configuration;
 using System.IO;
+using System.Reflection;
 using JetBrains.Annotations;
 using Microsoft.WindowsAzure.Storage;
 using Newtonsoft.Json;
@@ -9,29 +10,29 @@ namespace BinanceTrader.Tools.KeyProviders
     public interface IKeyProvider
     {
         [NotNull]
-        BinanceKeys GetKeys();
+        BinanceKeys GetKeys([NotNull] string keySetName);
     }
 
     public class ConfigFileKeyProvider : IKeyProvider
     {
-        [NotNull] private readonly string _keysFilePath;
-
-        public ConfigFileKeyProvider([NotNull] string connectionString)
+        public BinanceKeys GetKeys(string keySetName)
         {
-            _keysFilePath = connectionString;
-        }
+            var assembly = Assembly.GetExecutingAssembly();
 
-        public BinanceKeys GetKeys()
-        {
+            var keysPath = Path.Combine(
+                Path.GetDirectoryName(assembly.Location).NotNull(),
+                "Configs",
+                $"Keys_{keySetName}.config");
+
             var configMap = new ExeConfigurationFileMap
             {
-                ExeConfigFilename = _keysFilePath
+                ExeConfigFilename = keysPath
             };
 
             var config = ConfigurationManager.OpenMappedExeConfiguration(configMap, ConfigurationUserLevel.None);
             if (config.HasFile == false)
             {
-                throw new FileNotFoundException("Keys config file not found", _keysFilePath);
+                throw new FileNotFoundException("Keys config file not found", keysPath);
             }
 
             var setting = config.AppSettings.NotNull().Settings.NotNull();
@@ -45,23 +46,23 @@ namespace BinanceTrader.Tools.KeyProviders
 
     public class BlobKeyProvider : IKeyProvider
     {
-        [NotNull] private readonly string _keySetName;
+        [NotNull] private readonly IConnectionStringsProvider _connectionStringsProvider;
 
-        public BlobKeyProvider([NotNull] string keySetName)
+        public BlobKeyProvider(
+            [NotNull] IConnectionStringsProvider connectionStringsProvider)
         {
-            _keySetName = keySetName;
+            _connectionStringsProvider = connectionStringsProvider;
         }
 
-        public BinanceKeys GetKeys()
+        public BinanceKeys GetKeys(string keySetName)
         {
-            var connectionStringsProvider = new ConnectionStringsProvider();
-            var connectionString = connectionStringsProvider.GetConnectionString(_keySetName);
+            var connectionString = _connectionStringsProvider.GetConnectionString(keySetName);
 
             const string containerName = "configs";
             var account = CloudStorageAccount.Parse(connectionString).NotNull();
             var client = account.CreateCloudBlobClient().NotNull();
             var container = client.GetContainerReference(containerName).NotNull();
-            var blob = container.GetBlobReference($"Keys_{_keySetName}.json").NotNull();
+            var blob = container.GetBlobReference($"Keys_{keySetName}.json").NotNull();
 
             string content;
             using (var reader = new StreamReader(blob.OpenRead().NotNull()))
@@ -69,7 +70,7 @@ namespace BinanceTrader.Tools.KeyProviders
                 content = reader.ReadToEnd();
             }
 
-            var keys = JsonConvert.DeserializeObject<BinanceKeys>(content);
+            var keys = JsonConvert.DeserializeObject<BinanceKeys>(content).NotNull();
 
             return keys;
         }

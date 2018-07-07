@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Binance.API.Csharp.Client;
+using BinanceTrader.Tools;
 using BinanceTrader.Tools.KeyProviders;
 using BinanceTrader.Trader;
 using JetBrains.Annotations;
@@ -23,12 +24,13 @@ namespace BinanceTrader.WebJob
 
             try
             {
-                var keyProvider = new BlobKeyProvider("Rambler");
-                var keys = keyProvider.GetKeys();
+                var keyProvider = new BlobKeyProvider(new ConnectionStringsProvider());
+                var keys = keyProvider.GetKeys("Rambler");
                 var apiClient = new ApiClient(keys.Api, keys.Secret);
                 var binanceClient = new BinanceClient(apiClient);
+                var config = new RabbitTraderConfig("ETH", TimeSpan.FromMinutes(5));
 
-                var trader = new RabbitTrader(binanceClient, logger);
+                var trader = new RabbitTrader(binanceClient, logger, config);
 
                 logger.LogMessage("StartRequested", new Dictionary<string, string>
                 {
