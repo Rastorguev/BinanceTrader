@@ -151,50 +151,5 @@ namespace BinanceTrader
             Assert.True(amounts.First(o => o.Key == "9").Value.NotNull().Count == 5);
             Assert.True(amounts.First(o => o.Key == "4").Value.NotNull().Last() == 15.25m);
         }
-
-        [Fact]
-        public void SplitIntoSellOrders_BaseAmountEqualsToOrderMinSize()
-        {
-            const decimal baseAmount = 1000;
-            const int minOrderSize = 10;
-            const decimal price = 0.01m;
-            const decimal stepSize = 1;
-
-            var amounts = OrderDistributor.SplitIntoSellOrders(baseAmount, minOrderSize, price, stepSize);
-
-            Assert.Equal(baseAmount, amounts.Sum(r => r));
-            Assert.Single(amounts);
-            Assert.True(amounts.First() == 1000);
-        }
-
-        [Fact]
-        public void SplitIntoSellOrders_BaseAmountGreaterThanOrderMinSize()
-        {
-            const decimal baseAmount = 1050.18m;
-            const int minOrderSize = 10;
-            const decimal price = 0.01m;
-            const decimal stepSize = 1;
-
-            var amounts = OrderDistributor.SplitIntoSellOrders(baseAmount, minOrderSize, price, stepSize);
-
-            Assert.Equal(baseAmount, amounts.Sum(r => r) + 0.18m);
-            Assert.Single(amounts);
-            Assert.Equal(1050, amounts.First());
-        }
-
-        [Fact]
-        public void SplitIntoSellOrders_BasePriceIsGreaterThanQuotePrice()
-        {
-            const decimal baseAmount = 10.013m;
-            const int minOrderSize = 10;
-            const decimal price = 10m;
-            const decimal stepSize = 0.01m;
-
-            var amounts = OrderDistributor.SplitIntoSellOrders(baseAmount, minOrderSize, price, stepSize);
-
-            Assert.Equal(baseAmount, amounts.Sum(r => r) + 0.003m);
-            Assert.Equal(10, amounts.Count);
-            Assert.Equal(1.01m, amounts.Last());
-        }
     }
 }

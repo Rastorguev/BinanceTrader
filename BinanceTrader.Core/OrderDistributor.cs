@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Binance.API.Csharp.Client.Models.Market.TradingRules;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
@@ -50,35 +51,6 @@ namespace BinanceTrader.Trader
                     remainingQuoteAmount -= orderSize;
                 }
             }
-        }
-
-        [NotNull]
-        public static List<decimal> SplitIntoSellOrders(
-            decimal freeBaseAmount,
-            decimal minOrderSize,
-            decimal price,
-            decimal stepSize)
-        {
-            var amounts = new List<decimal>();
-            var remainingStepsAmount = (int)(freeBaseAmount / stepSize);
-
-            var minOrderSizeInSteps = (int)(minOrderSize / stepSize / price);
-            while (remainingStepsAmount >= minOrderSizeInSteps)
-            {
-                var orderSizeInSteps = remainingStepsAmount >= minOrderSizeInSteps * 2
-                    ? minOrderSizeInSteps
-                    : remainingStepsAmount;
-
-                amounts.Add(orderSizeInSteps * stepSize);
-                remainingStepsAmount -= orderSizeInSteps;
-            }
-
-            return amounts;
-        }
-
-        public static decimal GetFittingBaseAmount(decimal quoteAmount, decimal price, decimal stepSize)
-        {
-            return (int)(quoteAmount / price / stepSize) * stepSize;
         }
     }
 }

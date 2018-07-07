@@ -31,7 +31,8 @@ namespace BinanceTrader.Cli
                 var binanceClient = new BinanceClient(apiClient);
 
                 var trader = new RabbitTrader(binanceClient, logger);
-                trader.Start();
+
+                trader.Start().Wait();
             }
             catch (Exception ex)
             {

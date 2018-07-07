@@ -8,7 +8,6 @@ using Binance.API.Csharp.Client.Models;
 using Binance.API.Csharp.Client.Models.Account;
 using Binance.API.Csharp.Client.Models.Enums;
 using Binance.API.Csharp.Client.Models.Market;
-using Binance.API.Csharp.Client.Models.Market.TradingRules;
 using Binance.API.Csharp.Client.Models.WebSocket;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
@@ -303,40 +302,37 @@ namespace BinanceTrader.Trader
                     {
                         var symbol =
                             SymbolUtils.GetCurrencySymbol(balance.NotNull().Asset.NotNull(), QuoteAsset);
-                        var price = prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
+
                         var tradingRules = _rulesProvider.GetRulesFor(symbol);
+                        var price = prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
+                        var sellPrice =
+                            RulesHelper.GetMaxFittingPrice(price + price.Percents(MinProfitRatio), tradingRules);
 
-                        var sellAmounts =
-                            OrderDistributor.SplitIntoSellOrders(
-                                balance.Free,
-                                MinOrderSize,
-                                price,
-                                tradingRules.StepSize);
+                        var minNotionalOrder = RulesHelper.GetMinNotionalQty(price, tradingRules);
+                        var maxOrderSize = RulesHelper.GetMaxFittingQty(balance.Free, tradingRules);
 
-                        var profitStepSize = GetProfitStepSize(sellAmounts.Count);
-                        var profitRatio = MinProfitRatio;
-
-                        var tasks = sellAmounts.Select(async amount =>
+                        if (maxOrderSize >= minNotionalOrder)
                         {
-                            try
-                            {
-                                var sellPrice =
-                                    AdjustPriceAccordingRules(price + price.Percents(profitRatio), tradingRules);
-                                var orderRequest = new OrderRequest(symbol, OrderSide.Sell, amount, sellPrice);
+                            var orderRequest =
+                                new OrderRequest(symbol, OrderSide.Sell, maxOrderSize, sellPrice);
 
-                                if (MeetsTradingRules(orderRequest))
+                            if (MeetsTradingRules(orderRequest))
+                            {
+                                var task = Task.Factory.StartNew(async () =>
                                 {
-                                    await PlaceOrder(orderRequest);
-                                    profitRatio += profitStepSize;
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogException(ex);
-                            }
-                        });
+                                    try
+                                    {
+                                        await PlaceOrder(orderRequest);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _logger.LogException(ex);
+                                    }
+                                });
 
-                        placeTasks.AddRange(tasks);
+                                placeTasks.Add(task);
+                            }
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -390,10 +386,11 @@ namespace BinanceTrader.Trader
                         {
                             try
                             {
-                                var buyPrice = AdjustPriceAccordingRules(price - price.Percents(profitRatio),
+                                var buyPrice = RulesHelper.GetMaxFittingPrice(
+                                    price - price.Percents(profitRatio),
                                     tradingRules);
                                 var baseAmount =
-                                    OrderDistributor.GetFittingBaseAmount(quoteAmount, buyPrice, tradingRules.StepSize);
+                                    RulesHelper.GetFittingBaseAmount(quoteAmount, buyPrice, tradingRules.StepSize);
                                 var orderRequest = new OrderRequest(symbol, OrderSide.Buy, baseAmount, buyPrice);
 
                                 if (MeetsTradingRules(orderRequest))
@@ -458,6 +455,15 @@ namespace BinanceTrader.Trader
             return newOrder;
         }
 
+        private async Task<CanceledOrder> CancelOrder([NotNull] IOrder order)
+        {
+            var canceledOrder = await _client.CancelOrder(order.Symbol, order.OrderId).NotNull();
+
+            _logger.LogOrderCanceled(order);
+
+            return canceledOrder;
+        }
+
         private bool MeetsTradingRules([NotNull] OrderRequest orderRequest)
         {
             var rules = _rulesProvider.GetRulesFor(orderRequest.Symbol);
@@ -478,21 +484,11 @@ namespace BinanceTrader.Trader
             return priceInfo;
         }
 
-        private async Task<CanceledOrder> CancelOrder([NotNull] IOrder order)
-        {
-            var canceledOrder = await _client.CancelOrder(order.Symbol, order.OrderId).NotNull();
-
-            _logger.LogOrderCanceled(order);
-
-            return canceledOrder;
-        }
-
         [NotNull]
         private OrderRequest CreateSellOrder([NotNull] IOrder message, decimal qty, decimal price)
         {
             var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
-            var sellPrice =
-                AdjustPriceAccordingRules(price + price.Percents(MinProfitRatio), tradingRules);
+            var sellPrice = RulesHelper.GetMaxFittingPrice(price + price.Percents(MinProfitRatio), tradingRules);
             var orderRequest =
                 new OrderRequest(message.Symbol, OrderSide.Sell, qty, sellPrice);
 
@@ -503,10 +499,9 @@ namespace BinanceTrader.Trader
         private OrderRequest CreateBuyOrder([NotNull] IOrder message, decimal quoteAmount, decimal price)
         {
             var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
-            var buyPrice =
-                AdjustPriceAccordingRules(price - price.Percents(MinProfitRatio), tradingRules);
+            var buyPrice = RulesHelper.GetMaxFittingPrice(price - price.Percents(MinProfitRatio), tradingRules);
             var qty = quoteAmount / buyPrice;
-            var adjustedQty = AdjustQtyAccordingRules(qty, tradingRules);
+            var adjustedQty = RulesHelper.GetMaxFittingQty(qty, tradingRules);
             var orderRequest = new OrderRequest(message.Symbol, OrderSide.Buy, adjustedQty, buyPrice);
 
             return orderRequest;
@@ -551,16 +546,6 @@ namespace BinanceTrader.Trader
             var stepSize = ordersCount > 0 ? (MaxProfitRatio - MinProfitRatio) / ordersCount : 0;
 
             return stepSize.Round();
-        }
-
-        private static decimal AdjustPriceAccordingRules(decimal price, [NotNull] ITradingRules rules)
-        {
-            return (int) (price / rules.TickSize) * rules.TickSize;
-        }
-
-        private static decimal AdjustQtyAccordingRules(decimal qty, [NotNull] ITradingRules rules)
-        {
-            return (int) (qty / rules.StepSize) * rules.StepSize;
         }
     }
 }
