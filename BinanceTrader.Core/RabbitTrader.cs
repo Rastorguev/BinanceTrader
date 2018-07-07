@@ -23,12 +23,10 @@ namespace BinanceTrader.Trader
         private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
 
-        private const decimal MinProfitRatio = 1m;
-        private const decimal MaxProfitRatio = 1.1m;
+        private const decimal ProfitRatio = 1m;
         private const string QuoteAsset = "ETH";
         private const string FeeAsset = "BNB";
-        private const decimal MinOrderSize = 0.015m;
-        private readonly TimeSpan _newOrderExpiration = TimeSpan.FromMinutes(5);
+        private readonly TimeSpan _orderExpiration = TimeSpan.FromMinutes(5);
         private string _listenKey;
         private IReadOnlyList<IBalance> _funds;
 
@@ -38,6 +36,7 @@ namespace BinanceTrader.Trader
 
         [NotNull] [ItemNotNull] private IReadOnlyList<string> _assets = new List<string>();
         [NotNull] private readonly FundsStateLogger _fundsStateLogger;
+        [NotNull] private readonly OrderDistributor _orderDistributor;
         [NotNull] private readonly RetryPolicy _startRetryPolicy = Policy
             .Handle<Exception>(ex => !(ex is OperationCanceledException))
             .WaitAndRetryAsync(new[]
@@ -56,6 +55,7 @@ namespace BinanceTrader.Trader
             _client = client;
             _rulesProvider = new TradingRulesProvider(client);
             _fundsStateLogger = new FundsStateLogger(_client, _logger, QuoteAsset);
+            _orderDistributor = new OrderDistributor(QuoteAsset, ProfitRatio, _rulesProvider, logger);
         }
 
         public async Task Start()
@@ -261,7 +261,7 @@ namespace BinanceTrader.Trader
                     {
                         var orderTime = o.NotNull().UnixTime.GetTime().ToLocalTime();
 
-                        return now.ToLocalTime() - orderTime > _newOrderExpiration;
+                        return now.ToLocalTime() - orderTime > _orderExpiration;
                     })
                     .ToList();
 
@@ -306,15 +306,15 @@ namespace BinanceTrader.Trader
                         var tradingRules = _rulesProvider.GetRulesFor(symbol);
                         var price = prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
                         var sellPrice =
-                            RulesHelper.GetMaxFittingPrice(price + price.Percents(MinProfitRatio), tradingRules);
+                            RulesHelper.GetMaxFittingPrice(price + price.Percents(ProfitRatio), tradingRules);
 
-                        var minNotionalOrder = RulesHelper.GetMinNotionalQty(price, tradingRules);
-                        var maxOrderSize = RulesHelper.GetMaxFittingQty(balance.Free, tradingRules);
+                        var minNotionalQty = RulesHelper.GetMinNotionalQty(price, tradingRules);
+                        var maxFittingQty = RulesHelper.GetMaxFittingQty(balance.Free, tradingRules);
 
-                        if (maxOrderSize >= minNotionalOrder)
+                        if (maxFittingQty >= minNotionalQty)
                         {
                             var orderRequest =
-                                new OrderRequest(symbol, OrderSide.Sell, maxOrderSize, sellPrice);
+                                new OrderRequest(symbol, OrderSide.Sell, maxFittingQty, sellPrice);
 
                             if (MeetsTradingRules(orderRequest))
                             {
@@ -356,62 +356,23 @@ namespace BinanceTrader.Trader
                     .First(b => b.NotNull().Asset == QuoteAsset).NotNull().Free;
 
                 var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
-
-                var openOrdersCount = _assets.Select(asset =>
-                    {
-                        var symbol = SymbolUtils.GetCurrencySymbol(asset, QuoteAsset);
-                        var count = openOrders.Count(o => o.NotNull().Symbol == symbol);
-                        return (symbol: symbol, count: count);
-                    })
-                    .ToDictionary(x => x.symbol, x => x.count);
-
-                var amounts =
-                    OrderDistributor.SplitIntoBuyOrders(freeQuoteBalance, MinOrderSize, openOrdersCount);
-
                 var prices = (await _client.GetAllPrices().NotNull()).NotNull().ToList();
-                var placeTasks = new List<Task>();
+                var orderRequests = _orderDistributor.SplitIntoBuyOrders(freeQuoteBalance, _assets, openOrders, prices);
 
-                foreach (var symbolAmounts in amounts)
+                var placeTasks = orderRequests.Select(async r =>
                 {
                     try
                     {
-                        var symbol = symbolAmounts.Key;
-                        var price = prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
-                        var tradingRules = _rulesProvider.GetRulesFor(symbol);
-                        var buyAmounts = symbolAmounts.Value.NotNull();
-                        var profitStepSize = GetProfitStepSize(buyAmounts.Count);
-                        var profitRatio = MinProfitRatio;
-
-                        var tasks = buyAmounts.Select(async quoteAmount =>
+                        if (MeetsTradingRules(r.NotNull()))
                         {
-                            try
-                            {
-                                var buyPrice = RulesHelper.GetMaxFittingPrice(
-                                    price - price.Percents(profitRatio),
-                                    tradingRules);
-                                var baseAmount =
-                                    RulesHelper.GetFittingBaseAmount(quoteAmount, buyPrice, tradingRules.StepSize);
-                                var orderRequest = new OrderRequest(symbol, OrderSide.Buy, baseAmount, buyPrice);
-
-                                if (MeetsTradingRules(orderRequest))
-                                {
-                                    await PlaceOrder(orderRequest);
-                                    profitRatio += profitStepSize;
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogException(ex);
-                            }
-                        });
-
-                        placeTasks.AddRange(tasks);
+                            await PlaceOrder(r);
+                        }
                     }
                     catch (Exception ex)
                     {
                         _logger.LogException(ex);
                     }
-                }
+                });
 
                 await Task.WhenAll(placeTasks).NotNull();
             }
@@ -488,7 +449,7 @@ namespace BinanceTrader.Trader
         private OrderRequest CreateSellOrder([NotNull] IOrder message, decimal qty, decimal price)
         {
             var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
-            var sellPrice = RulesHelper.GetMaxFittingPrice(price + price.Percents(MinProfitRatio), tradingRules);
+            var sellPrice = RulesHelper.GetMaxFittingPrice(price + price.Percents(ProfitRatio), tradingRules);
             var orderRequest =
                 new OrderRequest(message.Symbol, OrderSide.Sell, qty, sellPrice);
 
@@ -499,7 +460,7 @@ namespace BinanceTrader.Trader
         private OrderRequest CreateBuyOrder([NotNull] IOrder message, decimal quoteAmount, decimal price)
         {
             var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
-            var buyPrice = RulesHelper.GetMaxFittingPrice(price - price.Percents(MinProfitRatio), tradingRules);
+            var buyPrice = RulesHelper.GetMaxFittingPrice(price - price.Percents(ProfitRatio), tradingRules);
             var qty = quoteAmount / buyPrice;
             var adjustedQty = RulesHelper.GetMaxFittingQty(qty, tradingRules);
             var orderRequest = new OrderRequest(message.Symbol, OrderSide.Buy, adjustedQty, buyPrice);
@@ -539,13 +500,6 @@ namespace BinanceTrader.Trader
             {
                 _logger.LogException(ex);
             }
-        }
-
-        private static decimal GetProfitStepSize(int ordersCount)
-        {
-            var stepSize = ordersCount > 0 ? (MaxProfitRatio - MinProfitRatio) / ordersCount : 0;
-
-            return stepSize.Round();
         }
     }
 }

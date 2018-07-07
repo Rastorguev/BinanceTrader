@@ -1,56 +1,89 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using Binance.API.Csharp.Client.Models.Market.TradingRules;
+using Binance.API.Csharp.Client.Models.Enums;
+using Binance.API.Csharp.Client.Models.Market;
+using Binance.API.Csharp.Client.Models.WebSocket;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
 namespace BinanceTrader.Trader
 {
-    public static class OrderDistributor
+    public class OrderDistributor
     {
-        [NotNull]
-        public static Dictionary<string, List<decimal>> SplitIntoBuyOrders(
-            decimal freeQuoteAmount,
-            decimal minOrderSize,
-            [NotNull] Dictionary<string, int> openOrdersCount)
+        [NotNull] private readonly string _quoteAsset;
+        private readonly decimal _profitRatio;
+        [NotNull] private readonly TradingRulesProvider _rulesProvider;
+        [NotNull] private readonly ILogger _logger;
+
+        public OrderDistributor(
+            [NotNull] string quoteAsset,
+            decimal profitRatio,
+            [NotNull] TradingRulesProvider rulesProvider,
+            [NotNull] ILogger logger)
         {
-            var amounts = new Dictionary<string, List<decimal>>();
+            _quoteAsset = quoteAsset;
+            _profitRatio = profitRatio;
+            _rulesProvider = rulesProvider;
+            _logger = logger;
+        }
+
+        [NotNull]
+        public IReadOnlyList<OrderRequest> SplitIntoBuyOrders(
+            decimal freeQuoteAmount,
+            [NotNull] [ItemNotNull] IReadOnlyList<string> assets,
+            [NotNull] IReadOnlyList<IOrder> openOrders,
+            [NotNull] IReadOnlyList<SymbolPrice> prices)
+        {
+            var requests = new List<OrderRequest>();
             var remainingQuoteAmount = freeQuoteAmount;
 
-            while (true)
+            var openOrdersCount = assets.Select(asset =>
             {
-                var minOrdersCountSymbols = openOrdersCount.Select(
-                        o =>
-                        {
-                            var requestsCount = amounts.ContainsKey(o.Key.NotNull())
-                                ? amounts[o.Key.NotNull()].NotNull().Count
-                                : 0;
+                var symbol = SymbolUtils.GetCurrencySymbol(asset, _quoteAsset);
+                var count = openOrders.Count(o => o.NotNull().Symbol == symbol);
+                return (symbol: symbol, count: count);
+            });
 
-                            return (Symbol: o.Key, Count: requestsCount + o.Value);
-                        })
-                    .GroupBy(x => x.Count)
-                    .OrderBy(g => g.Key)
-                    .First().NotNull()
-                    .Select(g => g.Symbol)
-                    .ToList();
+            var minOrdersCountSymbols = openOrdersCount
+                .GroupBy(x => x.count)
+                .OrderBy(g => g.Key)
+                .First().NotNull()
+                .Select(g => g.symbol)
+                .ToList();
 
-                foreach (var symbol in minOrdersCountSymbols)
+            var amountPerSymbol = freeQuoteAmount / minOrdersCountSymbols.Count;
+
+            foreach (var symbol in minOrdersCountSymbols)
+            {
+                try
                 {
-                    if (remainingQuoteAmount < minOrderSize)
-                    {
-                        return amounts;
-                    }
+                    var tradingRules = _rulesProvider.GetRulesFor(symbol);
+                    var currentPrice = prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
+                    var buyPrice =
+                        RulesHelper.GetMaxFittingPrice(currentPrice - currentPrice.Percents(_profitRatio),
+                            tradingRules);
+                    var minNotionalQty = RulesHelper.GetMinNotionalQty(buyPrice, tradingRules);
+                    var fittingAmount =
+                        RulesHelper.GetFittingBaseAmount(amountPerSymbol, buyPrice, tradingRules);
+                    var maxFittingQty = RulesHelper.GetMaxFittingQty(fittingAmount, tradingRules);
 
-                    if (!amounts.ContainsKey(symbol.NotNull()))
-                    {
-                        amounts[symbol] = new List<decimal>();
-                    }
+                    var qty = Math.Max(minNotionalQty, maxFittingQty);
+                    var quoteAmount = qty * buyPrice;
 
-                    var orderSize = remainingQuoteAmount >= minOrderSize * 2 ? minOrderSize : remainingQuoteAmount;
-                    amounts[symbol].NotNull().Add(orderSize);
-                    remainingQuoteAmount -= orderSize;
+                    if (remainingQuoteAmount >= quoteAmount)
+                    {
+                        remainingQuoteAmount -= quoteAmount;
+                        requests.Add(new OrderRequest(symbol, OrderSide.Buy, qty, buyPrice));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogException(ex);
                 }
             }
+
+            return requests;
         }
     }
 }

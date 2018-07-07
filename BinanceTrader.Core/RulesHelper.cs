@@ -23,9 +23,9 @@ namespace BinanceTrader.Trader
             return Math.Ceiling(qty / rules.StepSize) * rules.StepSize;
         }
 
-        public static decimal GetFittingBaseAmount(decimal quoteAmount, decimal price, decimal stepSize)
+        public static decimal GetFittingBaseAmount(decimal quoteAmount, decimal price, [NotNull] ITradingRules rules)
         {
-            return (int)(quoteAmount / price / stepSize) * stepSize;
+            return (int) (quoteAmount / price / rules.StepSize) * rules.StepSize;
         }
 
         public static bool MeetsTradingRules([NotNull] this OrderRequest order, [NotNull] ITradingRules rules)
