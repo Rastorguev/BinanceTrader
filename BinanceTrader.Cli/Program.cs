@@ -2,9 +2,7 @@
 using System.Globalization;
 using System.Net;
 using System.Threading.Tasks;
-using Binance.API.Csharp.Client;
 using BinanceTrader.Tools;
-using BinanceTrader.Tools.KeyProviders;
 using BinanceTrader.Trader;
 
 namespace BinanceTrader.Cli
@@ -19,18 +17,12 @@ namespace BinanceTrader.Cli
             CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
             var logger = new Logger();
+            const string traderName = "Rambler";
 
             try
             {
-                var keyProvider = new BlobKeyProvider(new ConnectionStringsProvider());
-                var keys = keyProvider.GetKeys("Rambler");
-                var apiClient = new ApiClient(keys.Api, keys.Secret);
-                var binanceClient = new BinanceClient(apiClient);
-                var config = new RabbitTraderConfig("ETH", TimeSpan.FromMinutes(5));
-
-                var trader = new RabbitTrader(binanceClient, logger, config);
-
-                trader.Start().Wait();
+                var starter = new TradeStarter(logger);
+                starter.Start(traderName).Wait();
             }
             catch (Exception ex)
             {

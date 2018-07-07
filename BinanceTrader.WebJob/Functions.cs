@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using Binance.API.Csharp.Client;
-using BinanceTrader.Tools;
-using BinanceTrader.Tools.KeyProviders;
 using BinanceTrader.Trader;
 using JetBrains.Annotations;
 using Microsoft.Azure.WebJobs;
@@ -12,7 +8,7 @@ namespace BinanceTrader.WebJob
 {
     public class Functions
     {
-        public static void ProcessQueueMessage([QueueTrigger("queue")] string message, TextWriter log)
+        public static void ProcessQueueMessage([QueueTrigger("queue")] string message, [NotNull] TextWriter log)
         {
             log.WriteLine(message);
         }
@@ -21,43 +17,17 @@ namespace BinanceTrader.WebJob
         public static void Start(TextWriter log)
         {
             var logger = new Logger();
+            const string traderName = "Rambler";
 
             try
             {
-                var keyProvider = new BlobKeyProvider(new ConnectionStringsProvider());
-                var keys = keyProvider.GetKeys("Rambler");
-                var apiClient = new ApiClient(keys.Api, keys.Secret);
-                var binanceClient = new BinanceClient(apiClient);
-                var config = new RabbitTraderConfig("ETH", TimeSpan.FromMinutes(5));
-
-                var trader = new RabbitTrader(binanceClient, logger, config);
-
-                logger.LogMessage("StartRequested", new Dictionary<string, string>
-                {
-                    {"Api", keys.Api != null ? GetTruncatedKey(keys.Api) : "Invalid Api Key"},
-                    {"Secret", keys.Secret != null ? GetTruncatedKey(keys.Secret) : "Invalid Secret Key"}
-                });
-
-                trader.Start().Wait();
+                var starter = new TradeStarter(logger);
+                starter.Start(traderName).Wait();
             }
             catch (Exception ex)
             {
                 logger.LogException(ex);
             }
-        }
-
-        private static string GetTruncatedKey([NotNull] string key)
-        {
-            const int n = 5;
-
-            if (key.Length < n * 2 + 10)
-            {
-                return key;
-            }
-
-            var truncated = $"{key.Substring(0, n)}...{key.Substring(key.Length - n, n)}";
-
-            return truncated;
         }
     }
 }
