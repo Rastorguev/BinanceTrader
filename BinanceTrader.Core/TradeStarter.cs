@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
 using BinanceTrader.Tools.KeyProviders;
@@ -29,7 +30,8 @@ namespace BinanceTrader.Trader
                 {"Api", keys.Api != null ? GetTruncatedKey(keys.Api) : "Invalid Api Key"},
                 {"Secret", keys.Secret != null ? GetTruncatedKey(keys.Secret) : "Invalid Secret Key"},
                 {"QuoteAsset", config.QuoteAsset},
-                {"OrderExpiration", config.OrderExpiration.ToString()}
+                {"OrderExpiration", config.OrderExpiration.ToString()},
+                {"ProfitRatio", config.ProfitRatio.ToString(CultureInfo.InvariantCulture)}
             });
 
             await trader.Start();

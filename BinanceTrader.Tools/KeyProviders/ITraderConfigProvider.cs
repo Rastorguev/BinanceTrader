@@ -8,7 +8,7 @@ namespace BinanceTrader.Tools.KeyProviders
     public interface ITraderConfigProvider
     {
         [NotNull]
-        RabbitTraderConfig GetConfig([NotNull] string name);
+        TraderConfig GetConfig([NotNull] string name);
     }
 
     public class BlobConfigProvider : ITraderConfigProvider
@@ -20,7 +20,7 @@ namespace BinanceTrader.Tools.KeyProviders
             _connectionStringsProvider = connectionStringsProvider;
         }
 
-        public RabbitTraderConfig GetConfig(string name)
+        public TraderConfig GetConfig(string name)
         {
             var connectionString = _connectionStringsProvider.GetConnectionString(name);
 
@@ -36,7 +36,7 @@ namespace BinanceTrader.Tools.KeyProviders
                 content = reader.ReadToEnd();
             }
 
-            var config = JsonConvert.DeserializeObject<RabbitTraderConfig>(content).NotNull();
+            var config = JsonConvert.DeserializeObject<TraderConfig>(content).NotNull();
 
             return config;
         }

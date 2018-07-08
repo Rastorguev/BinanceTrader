@@ -23,7 +23,7 @@ namespace BinanceTrader.Trader
         private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
 
-        private const decimal ProfitRatio = 1m;
+        private readonly decimal _profitRatio;
         [NotNull] private readonly string _quoteAsset;
         private const string FeeAsset = "BNB";
         private readonly TimeSpan _orderExpiration;
@@ -50,16 +50,17 @@ namespace BinanceTrader.Trader
         public RabbitTrader(
             [NotNull] IBinanceClient client,
             [NotNull] ILogger logger,
-            [NotNull] RabbitTraderConfig config)
+            [NotNull] TraderConfig config)
         {
             _quoteAsset = config.QuoteAsset;
             _orderExpiration = config.OrderExpiration;
+            _profitRatio = config.ProfitRatio;
 
             _logger = logger;
             _client = client;
             _rulesProvider = new TradingRulesProvider(client);
             _fundsStateLogger = new FundsStateLogger(_client, _logger, _quoteAsset);
-            _orderDistributor = new OrderDistributor(_quoteAsset, ProfitRatio, _rulesProvider, logger);
+            _orderDistributor = new OrderDistributor(_quoteAsset, _profitRatio, _rulesProvider, logger);
         }
 
         public async Task Start()
@@ -310,7 +311,7 @@ namespace BinanceTrader.Trader
                         var tradingRules = _rulesProvider.GetRulesFor(symbol);
                         var price = prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
                         var sellPrice =
-                            RulesHelper.GetMaxFittingPrice(price + price.Percents(ProfitRatio), tradingRules);
+                            RulesHelper.GetMaxFittingPrice(price + price.Percents(_profitRatio), tradingRules);
 
                         var minNotionalQty = RulesHelper.GetMinNotionalQty(price, tradingRules);
                         var maxFittingQty = RulesHelper.GetMaxFittingQty(balance.Free, tradingRules);
@@ -453,7 +454,7 @@ namespace BinanceTrader.Trader
         private OrderRequest CreateSellOrder([NotNull] IOrder message, decimal qty, decimal price)
         {
             var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
-            var sellPrice = RulesHelper.GetMaxFittingPrice(price + price.Percents(ProfitRatio), tradingRules);
+            var sellPrice = RulesHelper.GetMaxFittingPrice(price + price.Percents(_profitRatio), tradingRules);
             var orderRequest =
                 new OrderRequest(message.Symbol, OrderSide.Sell, qty, sellPrice);
 
@@ -464,7 +465,7 @@ namespace BinanceTrader.Trader
         private OrderRequest CreateBuyOrder([NotNull] IOrder message, decimal quoteAmount, decimal price)
         {
             var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
-            var buyPrice = RulesHelper.GetMaxFittingPrice(price - price.Percents(ProfitRatio), tradingRules);
+            var buyPrice = RulesHelper.GetMaxFittingPrice(price - price.Percents(_profitRatio), tradingRules);
             var qty = quoteAmount / buyPrice;
             var adjustedQty = RulesHelper.GetMaxFittingQty(qty, tradingRules);
             var orderRequest = new OrderRequest(message.Symbol, OrderSide.Buy, adjustedQty, buyPrice);

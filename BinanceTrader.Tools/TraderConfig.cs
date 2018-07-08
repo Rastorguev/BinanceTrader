@@ -3,16 +3,18 @@ using JetBrains.Annotations;
 
 namespace BinanceTrader.Tools
 {
-    public class RabbitTraderConfig
+    public class TraderConfig
     {
         [NotNull]
         public string QuoteAsset { get; }
         public TimeSpan OrderExpiration { get; }
+        public decimal ProfitRatio { get; }
 
-        public RabbitTraderConfig([NotNull] string quoteAsset, TimeSpan orderExpiration)
+        public TraderConfig([NotNull] string quoteAsset, TimeSpan orderExpiration, decimal profitRatio)
         {
             QuoteAsset = quoteAsset;
             OrderExpiration = orderExpiration;
+            ProfitRatio = profitRatio;
         }
     }
 }
