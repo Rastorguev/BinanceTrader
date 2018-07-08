@@ -13,7 +13,7 @@ namespace BinanceTrader.Trader
     {
         [NotNull] private readonly IBinanceClient _client;
         private DateTime? _lastUpdateTime;
-        private readonly TimeSpan _expiration = TimeSpan.FromHours(1);
+        private readonly TimeSpan _expiration = TimeSpan.FromMinutes(1);
         private TradingRulesContainer _rulesContainer;
 
         public TradingRulesProvider([NotNull] IBinanceClient client)
