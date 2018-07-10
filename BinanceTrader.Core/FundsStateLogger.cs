@@ -41,8 +41,12 @@ namespace BinanceTrader.Trader
                 var btcUsdtSymbol = SymbolUtils.GetCurrencySymbol(_quoteAsset, BtcAsset);
 
                 var quoteTotal = GetFundsTotal(funds, prices);
-                var btcTotal = quoteTotal *
-                               prices.First(p => p.NotNull().Symbol == btcUsdtSymbol).NotNull().Price;
+
+                var btcTotal = _quoteAsset != BtcAsset
+                    ? quoteTotal *
+                      prices.First(p => p.NotNull().Symbol == btcUsdtSymbol).NotNull().Price
+                    : quoteTotal;
+
                 var usdtTotal = quoteTotal *
                                 prices.First(p => p.NotNull().Symbol == quoteUsdtSymbol).NotNull().Price;
 
