@@ -16,8 +16,8 @@ namespace BinanceTrader.WebJob
         [NoAutomaticTrigger]
         public static void Start(TextWriter log)
         {
-            var logger = new Logger();
             const string traderName = "Rambler";
+            var logger = new Logger(traderName);
 
             try
             {

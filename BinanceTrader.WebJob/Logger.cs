@@ -12,12 +12,14 @@ namespace BinanceTrader.WebJob
 {
     public class Logger : ILogger
     {
+        private const string Key = "5d67a61a-6cc1-4a03-9989-5b838583d5a1";
+        private readonly string _traderName;
         [NotNull] private readonly TelemetryClient _client;
 
-        public Logger()
+        public Logger(string traderName)
         {
-            const string key = "5d67a61a-6cc1-4a03-9989-5b838583d5a1";
-            _client = new TelemetryClient {InstrumentationKey = key};
+            _client = new TelemetryClient {InstrumentationKey = Key};
+            _traderName = traderName;
         }
 
         public void LogOrderPlaced(IOrder order)
@@ -42,13 +44,14 @@ namespace BinanceTrader.WebJob
         public void LogOrderRequest(string eventName, OrderRequest orderRequest)
         {
             _client.TrackEvent(eventName, new Dictionary<string, string>
-            {
-                {"Symbol", orderRequest.Symbol},
-                {"Side", orderRequest.Side.ToString()},
-                {"Price", orderRequest.Price.Round().ToString(CultureInfo.InvariantCulture)},
-                {"Qty", orderRequest.Qty.Round().ToString(CultureInfo.InvariantCulture)},
-                {"Total", (orderRequest.Qty * orderRequest.Price).Round().ToString(CultureInfo.InvariantCulture)}
-            });
+                {
+                    {"Symbol", orderRequest.Symbol},
+                    {"Side", orderRequest.Side.ToString()},
+                    {"Price", orderRequest.Price.Round().ToString(CultureInfo.InvariantCulture)},
+                    {"Qty", orderRequest.Qty.Round().ToString(CultureInfo.InvariantCulture)},
+                    {"Total", (orderRequest.Qty * orderRequest.Price).Round().ToString(CultureInfo.InvariantCulture)}
+                }
+                .AddTraderName(_traderName));
 
             _client.Flush();
         }
@@ -56,15 +59,17 @@ namespace BinanceTrader.WebJob
         public void LogMessage(string eventName, string message)
         {
             _client.TrackEvent(eventName, new Dictionary<string, string>
-            {
-                {eventName, message}
-            });
+                {
+                    {eventName, message}
+                }
+                .AddTraderName(_traderName));
+
             _client.Flush();
         }
 
         public void LogMessage(string eventName, Dictionary<string, string> properties)
         {
-            _client.TrackEvent(eventName, properties);
+            _client.TrackEvent(eventName, properties.AddTraderName(_traderName));
         }
 
         public void LogWarning(string eventName, string message)
@@ -72,7 +77,7 @@ namespace BinanceTrader.WebJob
             _client.TrackEvent(eventName, new Dictionary<string, string>
             {
                 {eventName, message}
-            });
+            }.AddTraderName(_traderName));
 
             _client.Flush();
         }
@@ -82,9 +87,10 @@ namespace BinanceTrader.WebJob
             var properties = new Dictionary<string, string>();
             foreach (DictionaryEntry d in ex.Data)
             {
-                properties.Add(d.Key.ToString(), d.Value.ToString());
+                properties.Add(d.Key.NotNull().ToString(), d.Value.NotNull().ToString());
             }
 
+            properties.AddTraderName(_traderName);
             _client.TrackException(ex, properties);
             _client.Flush();
         }
@@ -99,9 +105,19 @@ namespace BinanceTrader.WebJob
                 {"Price", order.Price.Round().ToString(CultureInfo.InvariantCulture)},
                 {"Qty", order.OrigQty.Round().ToString(CultureInfo.InvariantCulture)},
                 {"Total", (order.OrigQty * order.Price).Round().ToString(CultureInfo.InvariantCulture)}
-            });
+            }.AddTraderName(_traderName));
 
             _client.Flush();
+        }
+    }
+
+    public static class LoggerHelpers
+    {
+        public static Dictionary<string, string> AddTraderName([NotNull] this Dictionary<string, string> properties,
+            string traderName)
+        {
+            properties.Add("Trader", traderName);
+            return properties;
         }
     }
 }

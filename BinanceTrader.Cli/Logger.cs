@@ -8,6 +8,13 @@ namespace BinanceTrader.Cli
 {
     public class Logger : ILogger
     {
+        private readonly string _traderName;
+
+        public Logger(string traderName)
+        {
+            _traderName = traderName;
+        }
+
         public void LogOrderPlaced(IOrder order)
         {
             LogOrder("Placed", order);
@@ -26,6 +33,7 @@ namespace BinanceTrader.Cli
         public void LogOrderRequest(string eventName, OrderRequest orderRequest)
         {
             LogTime();
+            LogTraderName();
 
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine(orderRequest.Symbol);
@@ -45,6 +53,7 @@ namespace BinanceTrader.Cli
         public void LogException(Exception ex)
         {
             LogTime();
+            LogTraderName();
 
             Console.ForegroundColor = ConsoleColor.Red;
 
@@ -57,6 +66,8 @@ namespace BinanceTrader.Cli
         public void LogMessage(string eventName, string message)
         {
             LogTime();
+            LogTraderName();
+
             Console.WriteLine(eventName);
             Console.WriteLine(message);
             Console.WriteLine();
@@ -65,6 +76,8 @@ namespace BinanceTrader.Cli
         public void LogMessage(string eventName, Dictionary<string, string> properties)
         {
             LogTime();
+            LogTraderName();
+
             Console.WriteLine(eventName);
 
             foreach (var pair in properties)
@@ -75,29 +88,10 @@ namespace BinanceTrader.Cli
             Console.WriteLine();
         }
 
-        public void LogWarning(string eventName, string message)
-        {
-            LogTime();
-
-            Console.ForegroundColor = ConsoleColor.Yellow;
-
-            Console.WriteLine(eventName);
-            Console.WriteLine(message);
-            Console.WriteLine();
-
-            Console.ResetColor();
-        }
-
-        private static void LogTime(DateTime? time = null)
-        {
-            var timeToLog = time ?? DateTime.Now;
-
-            Console.WriteLine(timeToLog);
-        }
-
         private void LogOrder(string eventName, IOrder order)
         {
             LogTime();
+            LogTraderName();
 
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine(order.Symbol);
@@ -113,6 +107,18 @@ namespace BinanceTrader.Cli
             Console.WriteLine($"Qty:\t\t {order.OrigQty.Round()}");
 
             Console.WriteLine();
+        }
+
+        private static void LogTime(DateTime? time = null)
+        {
+            var timeToLog = time ?? DateTime.Now;
+
+            Console.WriteLine(timeToLog);
+        }
+
+        private void LogTraderName()
+        {
+            Console.WriteLine($"Trader:\t {_traderName}");
         }
     }
 }

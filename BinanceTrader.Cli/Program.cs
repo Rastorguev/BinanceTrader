@@ -16,8 +16,9 @@ namespace BinanceTrader.Cli
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
-            var logger = new Logger();
+         
             const string traderName = "Rambler";
+            var logger = new Logger(traderName);
 
             try
             {
