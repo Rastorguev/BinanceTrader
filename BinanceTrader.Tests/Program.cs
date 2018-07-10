@@ -9,6 +9,7 @@ using Binance.API.Csharp.Client;
 using Binance.API.Csharp.Client.Models.Enums;
 using BinanceTrader.Tools;
 using BinanceTrader.Tools.KeyProviders;
+using BinanceTrader.Trader;
 using JetBrains.Annotations;
 
 namespace BinanceTrader
@@ -35,6 +36,16 @@ namespace BinanceTrader
                 .Select(r => r.BaseAsset)
                 .ToList();
             //var assets = AssetsProvider.Assets;
+
+            //var openOrders = binanceClient.GetCurrentOpenOrders().Result.NotNull();
+            //var openOrdersCount = assets.Select(asset =>
+            //{
+            //    var symbol = SymbolUtils.GetCurrencySymbol(asset, quoteAsset);
+            //    var count = openOrders.Count(o => o.NotNull().Symbol == symbol);
+            //    return (symbol: symbol, count: count);
+            //}).OrderBy(o => o.count).ToList();
+
+
             assets = assets.OrderBy(a => a).ToList();
 
             var configs = GetConfigs();
@@ -47,8 +58,8 @@ namespace BinanceTrader
                     //new DateTime(2018, 06, 25, 9, 0, 0),
                     //new DateTime(2018, 03, 01, 0, 0, 0),
                     //new DateTime(2018, 06, 01, 0, 0, 0),
-                    new DateTime(2018, 07, 03, 0, 0, 0),
-                    new DateTime(2018, 07, 10, 0, 0, 0),
+                    new DateTime(2018, 07, 10, 11, 0, 0),
+                    new DateTime(2018, 07, 10, 15, 12, 0),
                     TimeInterval.Minutes_1,
                     configs)
                 .Result;
