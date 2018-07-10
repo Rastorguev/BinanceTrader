@@ -22,30 +22,33 @@ namespace BinanceTrader
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
-            var keyProvider = new ConfigFileKeyProvider();
-            var keys = keyProvider.GetKeys("Rambler").NotNull();
+            var connectionStringsProvider = new ConnectionStringsProvider();
+            var keys = new BlobKeyProvider(connectionStringsProvider).GetKeys("Rambler");
             var apiClient = new ApiClient(keys.Api, keys.Secret);
             var binanceClient = new BinanceClient(apiClient);
             var candlesProvider = new CandlesProvider(binanceClient);
+            var rules = binanceClient.LoadTradingRules().Result.NotNull();
 
-            var rules = binanceClient.LoadTradingRules().Result;
-            var assets = rules.Rules.Where(r => r.NotNull().QuoteAsset == "ETH").Select(r => r.BaseAsset).ToList();
+            const string quoteAsset = "BTC";
+            var assets = rules.Rules.NotNull()
+                .Where(r => r.NotNull().QuoteAsset == quoteAsset)
+                .Select(r => r.BaseAsset)
+                .ToList();
             //var assets = AssetsProvider.Assets;
+            assets = assets.OrderBy(a => a).ToList();
 
             var configs = GetConfigs();
             var tests = new StrategiesTests(candlesProvider);
-
             var watch = Stopwatch.StartNew();
 
             var results = tests.CompareStrategies(assets,
-                    "ETH",
+                    quoteAsset,
                     //new DateTime(2017, 09, 01, 0, 0, 0),
                     //new DateTime(2018, 06, 25, 9, 0, 0),
                     //new DateTime(2018, 03, 01, 0, 0, 0),
                     //new DateTime(2018, 06, 01, 0, 0, 0),
-
-                    new DateTime(2018, 05, 1, 0, 0, 0),
-                    new DateTime(2018, 06, 28, 0, 0, 0),
+                    new DateTime(2018, 07, 03, 0, 0, 0),
+                    new DateTime(2018, 07, 10, 0, 0, 0),
                     TimeInterval.Minutes_1,
                     configs)
                 .Result;
@@ -58,7 +61,7 @@ namespace BinanceTrader
             var min = ordered.Last();
 
             var x1_1 = ordered.First(r =>
-              r.Key.NotNull().ProfitRatio == 1 && r.Key.NotNull().MaxIdlePeriod == TimeSpan.FromMinutes(60));
+                r.Key.NotNull().ProfitRatio == 1 && r.Key.NotNull().MaxIdlePeriod == TimeSpan.FromMinutes(60));
 
             var x1_01 = ordered.First(r =>
                 r.Key.NotNull().ProfitRatio == 1m && r.Key.NotNull().MaxIdlePeriod == TimeSpan.FromMinutes(1));
@@ -130,7 +133,6 @@ namespace BinanceTrader
             }
 
             configs.Add(CreateConfig(1, TimeSpan.FromHours(1)));
-
 
             return configs;
         }
