@@ -14,6 +14,7 @@ namespace BinanceTrader.Trader
     public class FundsStateLogger
     {
         private const string UsdtAsset = "USDT";
+        private const string BtcAsset = "BTC";
 
         [NotNull] private readonly IBinanceClient _client;
         [NotNull] private readonly ILogger _logger;
@@ -37,13 +38,18 @@ namespace BinanceTrader.Trader
                 var assetsAveragePrice = GetTradingAssetsAveragePrice(prices, assets);
 
                 var quoteUsdtSymbol = SymbolUtils.GetCurrencySymbol(_quoteAsset, UsdtAsset);
+                var btcUsdtSymbol = SymbolUtils.GetCurrencySymbol(_quoteAsset, BtcAsset);
+
                 var quoteTotal = GetFundsTotal(funds, prices);
+                var btcTotal = quoteTotal *
+                               prices.First(p => p.NotNull().Symbol == btcUsdtSymbol).NotNull().Price;
                 var usdtTotal = quoteTotal *
                                 prices.First(p => p.NotNull().Symbol == quoteUsdtSymbol).NotNull().Price;
 
                 _logger.LogMessage("Funds", new Dictionary<string, string>
                 {
                     {"Quote", quoteTotal.Round().ToString(CultureInfo.InvariantCulture)},
+                    {"BTC", btcTotal.Round().ToString(CultureInfo.InvariantCulture)},
                     {"Usdt", usdtTotal.Round().ToString(CultureInfo.InvariantCulture)},
                     {"AverageAssetPrice", assetsAveragePrice.Round().ToString(CultureInfo.InvariantCulture)}
                 });
@@ -83,7 +89,8 @@ namespace BinanceTrader.Trader
             return total;
         }
 
-        private decimal GetTradingAssetsAveragePrice([NotNull] IReadOnlyList<SymbolPrice> prices,
+        private decimal GetTradingAssetsAveragePrice(
+            [NotNull] IReadOnlyList<SymbolPrice> prices,
             [NotNull] IReadOnlyList<string> assets)
         {
             var symbols = assets.Select(a => SymbolUtils.GetCurrencySymbol(a, _quoteAsset));
