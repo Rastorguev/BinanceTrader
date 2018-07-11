@@ -126,8 +126,8 @@ namespace BinanceTrader.Trader
             {
                 await CancelExpiredOrders();
                 await CheckFeeCurrency();
-                await PlaceBuyOrders();
                 await PlaceSellOrders();
+                await PlaceBuyOrders();
             }
 
             catch (Exception ex)
