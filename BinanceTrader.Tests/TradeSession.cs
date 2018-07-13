@@ -32,7 +32,7 @@ namespace BinanceTrader
                 return account;
             }
 
-            _nextPrice = candles.First().NotNull().Close;
+            _nextPrice = candles.First().NotNull().Close.Round();
             _nextAction = OrderSide.Buy;
             _lastActionDate = null;
 
@@ -44,24 +44,27 @@ namespace BinanceTrader
 
                 //decimal ProfitRatio() => CalculateProfitRatio(candles, candle, TimeSpan.FromHours((double)_config.MaxIdlePeriod));
                 decimal ProfitRatio() => _config.ProfitRatio;
-                var inRange = _nextPrice >= candle.Low && _nextPrice <= candle.High;
+              
+                var inRange = _nextPrice > candle.Low.Round() && _nextPrice < candle.High.Round();
+                
 
                 if (_nextAction == OrderSide.Buy)
                 {
                     if (inRange)
                     {
                         var price = _nextPrice;
-                        var nextPrice = price + price.Percents(ProfitRatio());
+                        var nextPrice = (price + price.Percents(ProfitRatio())).Round();
 
                         Buy(account, price, nextPrice, candle);
+                        //Console.WriteLine($"Buy\t {price}\t {candle.OpenTime.GetTime().ToLocalTime()}");
 
                         _nextAction = OrderSide.Sell;
                         _lastActionDate = candle.OpenTime.GetTime();
                     }
                     else if (isExpired)
                     {
-                        var price = candle.High;
-                        var nextPrice = price - price.Percents(ProfitRatio());
+                        var price = candle.High.Round();
+                        var nextPrice = (price - price.Percents(ProfitRatio())).Round();
 
                         Cancel(account, nextPrice, candle);
                     }
@@ -71,14 +74,15 @@ namespace BinanceTrader
                     if (inRange)
                     {
                         var price = _nextPrice;
-                        var nextPrice = price - price.Percents(ProfitRatio());
+                        var nextPrice = (price - price.Percents(ProfitRatio())).Round();
 
                         Sell(account, price, nextPrice, candle);
+                        //Console.WriteLine($"Sell\t {price}\t {candle.OpenTime.GetTime().ToLocalTime()}");
                     }
                     else if (isExpired)
                     {
-                        var price = candle.Low;
-                        var nextPrice = price + price.Percents(ProfitRatio());
+                        var price = candle.Low.Round();
+                        var nextPrice = (price + price.Percents(ProfitRatio())).Round();
 
                         Cancel(account, nextPrice, candle);
                     }
