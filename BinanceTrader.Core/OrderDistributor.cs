@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Binance.API.Csharp.Client.Models.Enums;
 using Binance.API.Csharp.Client.Models.Market;
+using Binance.API.Csharp.Client.Models.Market.TradingRules;
 using Binance.API.Csharp.Client.Models.WebSocket;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
@@ -46,6 +47,7 @@ namespace BinanceTrader.Trader
             });
 
             var minOrdersCountSymbols = openOrdersCount
+                .Where(x => _rulesProvider.GetRulesFor(x.symbol).Status == SymbolStatus.Trading)
                 .GroupBy(x => x.count)
                 .OrderBy(g => g.Key)
                 .First().NotNull()

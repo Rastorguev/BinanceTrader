@@ -8,6 +8,7 @@ using Binance.API.Csharp.Client.Models;
 using Binance.API.Csharp.Client.Models.Account;
 using Binance.API.Csharp.Client.Models.Enums;
 using Binance.API.Csharp.Client.Models.Market;
+using Binance.API.Csharp.Client.Models.Market.TradingRules;
 using Binance.API.Csharp.Client.Models.WebSocket;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
@@ -309,6 +310,11 @@ namespace BinanceTrader.Trader
                             SymbolUtils.GetCurrencySymbol(balance.NotNull().Asset.NotNull(), _quoteAsset);
 
                         var tradingRules = _rulesProvider.GetRulesFor(symbol);
+                        if (tradingRules.Status != SymbolStatus.Trading)
+                        {
+                            return;
+                        }
+
                         var price = prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
                         var sellPrice =
                             RulesHelper.GetMaxFittingPrice(price + price.Percents(_profitRatio), tradingRules);

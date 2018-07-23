@@ -16,6 +16,8 @@ namespace BinanceTrader.Trader
         private readonly TimeSpan _expiration = TimeSpan.FromMinutes(1);
         private TradingRulesContainer _rulesContainer;
 
+        public IReadOnlyList<ITradingRules> Rules => _rulesContainer?.Rules.NotNull().ToList() ?? new List<ITradingRules>();
+
         public TradingRulesProvider([NotNull] IBinanceClient client)
         {
             _client = client;
@@ -57,7 +59,8 @@ namespace BinanceTrader.Trader
         [NotNull]
         public List<string> GetBaseAssetsFor(string asset)
         {
-           return _rulesContainer.NotNull().Rules.NotNull().Where(r => r.NotNull().QuoteAsset == asset).Select(r => r.BaseAsset).ToList();
+            return _rulesContainer.NotNull().Rules.NotNull().Where(r => r.NotNull().QuoteAsset == asset)
+                .Select(r => r.BaseAsset).ToList();
         }
     }
 }
