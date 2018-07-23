@@ -29,12 +29,16 @@ namespace BinanceTrader.Trader
             {
                 {"Api", keys.Api != null ? GetTruncatedKey(keys.Api) : "Invalid Api Key"},
                 {"Secret", keys.Secret != null ? GetTruncatedKey(keys.Secret) : "Invalid Secret Key"},
+                {"IsEnabled", config.IsEnabled.ToString()},
                 {"QuoteAsset", config.QuoteAsset},
                 {"OrderExpiration", config.OrderExpiration.ToString()},
                 {"ProfitRatio", config.ProfitRatio.ToString(CultureInfo.InvariantCulture)}
             });
 
-            await trader.Start();
+            if (config.IsEnabled)
+            {
+                await trader.Start();
+            }
         }
 
         private static string GetTruncatedKey([NotNull] string key)
