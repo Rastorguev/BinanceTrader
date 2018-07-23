@@ -1,7 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
-using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
+using BinanceTrader.Tools;
 using BinanceTrader.Tools.KeyProviders;
 using JetBrains.Annotations;
 
@@ -9,35 +10,49 @@ namespace BinanceTrader.Trader
 {
     public class TradeStarter
     {
-        [NotNull] private readonly ILogger _logger;
-
-        public TradeStarter([NotNull] ILogger logger)
+        public static void Start(
+            [NotNull] [ItemNotNull] IEnumerable<string> traderNames,
+            [NotNull] Func<string, ILogger> loggerResolver)
         {
-            _logger = logger;
+            foreach (var traderName in traderNames)
+            {
+                Start(traderName, loggerResolver);
+            }
         }
 
-        public async Task Start([NotNull] string traderName)
+        public static async void Start(
+            [NotNull] string traderName,
+            [NotNull] Func<string, ILogger> loggerResolver)
         {
-            var connectionStringsProvider = new ConnectionStringsProvider();
-            var keys = new BlobKeyProvider(connectionStringsProvider).GetKeys(traderName);
-            var apiClient = new ApiClient(keys.Api, keys.Secret);
-            var binanceClient = new BinanceClient(apiClient);
-            var config = new BlobConfigProvider(connectionStringsProvider).GetConfig(traderName);
-            var trader = new RabbitTrader(binanceClient, _logger, config);
+            var logger = loggerResolver(traderName).NotNull();
 
-            _logger.LogMessage("StartRequested", new Dictionary<string, string>
+            try
             {
-                {"Api", keys.Api != null ? GetTruncatedKey(keys.Api) : "Invalid Api Key"},
-                {"Secret", keys.Secret != null ? GetTruncatedKey(keys.Secret) : "Invalid Secret Key"},
-                {"IsEnabled", config.IsEnabled.ToString()},
-                {"QuoteAsset", config.QuoteAsset},
-                {"OrderExpiration", config.OrderExpiration.ToString()},
-                {"ProfitRatio", config.ProfitRatio.ToString(CultureInfo.InvariantCulture)}
-            });
+                var connectionStringsProvider = new ConnectionStringsProvider();
+                var keys = new BlobKeyProvider(connectionStringsProvider).GetKeys(traderName);
+                var apiClient = new ApiClient(keys.Api, keys.Secret);
+                var binanceClient = new BinanceClient(apiClient);
+                var config = new BlobConfigProvider(connectionStringsProvider).GetConfig(traderName);
+                var trader = new RabbitTrader(binanceClient, logger, config);
 
-            if (config.IsEnabled)
+                logger.LogMessage("StartRequested", new Dictionary<string, string>
+                {
+                    {"Api", keys.Api != null ? GetTruncatedKey(keys.Api) : "Invalid Api Key"},
+                    {"Secret", keys.Secret != null ? GetTruncatedKey(keys.Secret) : "Invalid Secret Key"},
+                    {"IsEnabled", config.IsEnabled.ToString()},
+                    {"QuoteAsset", config.QuoteAsset},
+                    {"OrderExpiration", config.OrderExpiration.ToString()},
+                    {"ProfitRatio", config.ProfitRatio.ToString(CultureInfo.InvariantCulture)}
+                });
+
+                if (config.IsEnabled)
+                {
+                    await trader.Start();
+                }
+            }
+            catch (Exception ex)
             {
-                await trader.Start();
+                logger.LogException(ex);
             }
         }
 

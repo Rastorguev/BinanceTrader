@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Net;
 using System.Threading.Tasks;
@@ -16,18 +17,18 @@ namespace BinanceTrader.Cli
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
-         
-            const string traderName = "Rambler";
-            var logger = new Logger(traderName);
-
             try
             {
-                var starter = new TradeStarter(logger);
-                starter.Start(traderName).Wait();
+                var traders = new List<string>
+                {
+                    "Rambler"
+                };
+
+                TradeStarter.Start(traders, traderName => new Logger(traderName));
             }
             catch (Exception ex)
             {
-                logger.LogException(ex);
+                new Logger(string.Empty).LogException(ex);
             }
 
             PreventAppClose();
