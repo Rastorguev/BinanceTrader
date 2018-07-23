@@ -61,7 +61,14 @@ namespace BinanceTrader.Trader
                 try
                 {
                     var tradingRules = _rulesProvider.GetRulesFor(symbol);
-                    var currentPrice = prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
+
+                    var symbolPrice = prices.FirstOrDefault(p => p.NotNull().Symbol == symbol);
+                    if (symbolPrice == null)
+                    {
+                        continue;
+                    }
+
+                    var currentPrice = symbolPrice.Price;
                     var buyPrice =
                         RulesHelper.GetMaxFittingPrice(currentPrice - currentPrice.Percents(_profitRatio),
                             tradingRules);
