@@ -312,7 +312,7 @@ namespace BinanceTrader.Trader
                         var tradingRules = _rulesProvider.GetRulesFor(symbol);
                         if (tradingRules.Status != SymbolStatus.Trading)
                         {
-                            return;
+                            continue;
                         }
 
                         var price = prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
