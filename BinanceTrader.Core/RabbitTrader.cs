@@ -249,9 +249,16 @@ namespace BinanceTrader.Trader
 
         private async Task CheckFeeCurrency()
         {
-            if (NeedToBuyFeeCurrency())
+            try
             {
-                await BuyFeeCurrency();
+                if (NeedToBuyFeeCurrency())
+                {
+                    await BuyFeeCurrency();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
             }
         }
 
@@ -488,28 +495,21 @@ namespace BinanceTrader.Trader
 
         private async Task BuyFeeCurrency()
         {
-            try
+            const int qty = 1;
+
+            var feeSymbol = SymbolUtils.GetCurrencySymbol(FeeAsset, _quoteAsset);
+            var price = await GetActualPrice(feeSymbol, OrderSide.Buy);
+
+            var orderRequest = new OrderRequest(feeSymbol, OrderSide.Buy, qty, price);
+
+            if (MeetsTradingRules(orderRequest))
             {
-                const int qty = 1;
+                var order = await PlaceOrder(orderRequest, OrderType.Market, TimeInForce.IOC).NotNull();
+                var status = order.Status;
+                var executedQty = order.ExecutedQty;
 
-                var feeSymbol = SymbolUtils.GetCurrencySymbol(FeeAsset, _quoteAsset);
-                var price = await GetActualPrice(feeSymbol, OrderSide.Buy);
-
-                var orderRequest = new OrderRequest(feeSymbol, OrderSide.Buy, qty, price);
-
-                if (MeetsTradingRules(orderRequest))
-                {
-                    var order = await PlaceOrder(orderRequest, OrderType.Market, TimeInForce.IOC).NotNull();
-                    var status = order.Status;
-                    var executedQty = order.ExecutedQty;
-
-                    _logger.LogMessage("BuyFeeCurrency",
-                        $"Status {status}, Quantity {executedQty}, Price {price}");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogException(ex);
+                _logger.LogMessage("BuyFeeCurrency",
+                    $"Status {status}, Quantity {executedQty}, Price {price}");
             }
         }
     }
