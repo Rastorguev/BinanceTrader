@@ -189,8 +189,11 @@ namespace BinanceTrader.Trader
 
                         break;
 
+                    case OrderSide.Unknown:
+                        break;
+
                     default:
-                        throw new ArgumentOutOfRangeException(nameof(OrderSide));
+                        break;
                 }
             }
             catch (Exception ex)
@@ -416,8 +419,10 @@ namespace BinanceTrader.Trader
                     return priceInfo.AskPrice;
                 case OrderSide.Sell:
                     return priceInfo.BidPrice;
+                case OrderSide.Unknown:
+                    return priceInfo.AskPrice;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(orderSide), orderSide, null);
+                    return priceInfo.AskPrice;
             }
         }
 
