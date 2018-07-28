@@ -225,11 +225,11 @@ namespace BinanceTrader.Trader
                     StartListenDataStream();
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 await ResetOrderUpdatesListening();
 
-                throw;
+                _logger.LogException(ex);
             }
         }
 
