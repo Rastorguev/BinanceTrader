@@ -130,7 +130,6 @@ namespace BinanceTrader.Trader
                 await PlaceSellOrders();
                 await PlaceBuyOrders();
             }
-
             catch (Exception ex)
             {
                 _logger.LogException(ex);
@@ -202,8 +201,15 @@ namespace BinanceTrader.Trader
 
         private void OnAccountInfoUpdated([NotNull] AccountUpdatedMessage message)
         {
-            var funds = message.Balances.NotNull().ToList();
-            Interlocked.Exchange(ref _funds, funds);
+            try
+            {
+                var funds = message.Balances.NotNull().ToList();
+                Interlocked.Exchange(ref _funds, funds);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
         }
 
         private async Task KeepDataStreamAlive()
