@@ -230,16 +230,23 @@ namespace BinanceTrader.Trader
             }
             catch (Exception ex)
             {
-                await ResetOrderUpdatesListening();
-
                 _logger.LogException(ex);
+
+                await ResetOrderUpdatesListening();
             }
         }
 
         private async Task ResetOrderUpdatesListening()
         {
-            await StopListenDataStream();
-            StartListenDataStream();
+            try
+            {
+                await StopListenDataStream();
+                StartListenDataStream();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
         }
 
         private void StartListenDataStream()
