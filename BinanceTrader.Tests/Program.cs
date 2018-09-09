@@ -9,7 +9,6 @@ using Binance.API.Csharp.Client;
 using Binance.API.Csharp.Client.Models.Enums;
 using BinanceTrader.Tools;
 using BinanceTrader.Tools.KeyProviders;
-using BinanceTrader.Trader;
 using JetBrains.Annotations;
 
 namespace BinanceTrader
@@ -45,7 +44,6 @@ namespace BinanceTrader
             //    return (symbol: symbol, count: count);
             //}).OrderBy(o => o.count).ToList();
 
-
             assets = assets.OrderBy(a => a).ToList();
 
             var configs = GetConfigs();
@@ -54,12 +52,8 @@ namespace BinanceTrader
 
             var results = tests.CompareStrategies(assets,
                     quoteAsset,
-                    //new DateTime(2017, 09, 01, 0, 0, 0),
-                    //new DateTime(2018, 06, 25, 9, 0, 0),
-                    //new DateTime(2018, 03, 01, 0, 0, 0),
-                    //new DateTime(2018, 06, 01, 0, 0, 0),
-                    new DateTime(2018, 07, 10, 11, 0, 0),
-                    new DateTime(2018, 07, 10, 15, 12, 0),
+                    new DateTime(2018, 09, 07, 17, 0, 0),
+                    new DateTime(2018, 09, 08, 17, 0, 0),
                     TimeInterval.Minutes_1,
                     configs)
                 .Result;
@@ -73,6 +67,9 @@ namespace BinanceTrader
 
             var x1_1 = ordered.First(r =>
                 r.Key.NotNull().ProfitRatio == 1 && r.Key.NotNull().MaxIdlePeriod == TimeSpan.FromMinutes(60));
+
+            var x2_8 = ordered.First(r =>
+                r.Key.NotNull().ProfitRatio == 2 && r.Key.NotNull().MaxIdlePeriod == TimeSpan.FromHours(8));
 
             var x1_01 = ordered.First(r =>
                 r.Key.NotNull().ProfitRatio == 1m && r.Key.NotNull().MaxIdlePeriod == TimeSpan.FromMinutes(1));
@@ -111,13 +108,15 @@ namespace BinanceTrader
         [ItemNotNull]
         private static IReadOnlyList<TradeSessionConfig> GetConfigs()
         {
-            TradeSessionConfig CreateConfig(decimal minProfit, TimeSpan idle) =>
-                new TradeSessionConfig(
+            TradeSessionConfig CreateConfig(decimal minProfit, TimeSpan idle)
+            {
+                return new TradeSessionConfig(
                     1m,
-                    0.05m,
+                    0.075m,
                     0.01m,
                     minProfit,
                     idle);
+            }
 
             var configs = new List<TradeSessionConfig>();
 
@@ -144,6 +143,7 @@ namespace BinanceTrader
             }
 
             configs.Add(CreateConfig(1, TimeSpan.FromHours(1)));
+            configs.Add(CreateConfig(2, TimeSpan.FromHours(8)));
 
             return configs;
         }

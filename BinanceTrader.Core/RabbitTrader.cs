@@ -23,6 +23,7 @@ namespace BinanceTrader.Trader
         private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
+        private static readonly TimeSpan ResetOrderUpdatesListeningInterval = TimeSpan.FromMinutes(60);
 
         private readonly decimal _profitRatio;
         [NotNull] private readonly string _quoteAsset;
@@ -75,6 +76,7 @@ namespace BinanceTrader.Trader
                     _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull().ToList();
 
                     StartCheckDataStream();
+                    StartResetOrderUpdatesListening();
                     StartCheckOrders();
                     StartCheckFunds();
                 }).NotNull();
@@ -116,6 +118,21 @@ namespace BinanceTrader.Trader
                     while (true)
                     {
                         await Task.WhenAll(KeepDataStreamAlive(), Task.Delay(DataStreamCheckInterval)).NotNull();
+                    }
+                },
+                TaskCreationOptions.LongRunning);
+        }
+
+        private async void StartResetOrderUpdatesListening()
+        {
+            await Task.Delay(ResetOrderUpdatesListeningInterval).NotNull();
+
+            await Task.Factory.StartNew(async () =>
+                {
+                    while (true)
+                    {
+                        await Task.WhenAll(ResetOrderUpdatesListening(), Task.Delay(ResetOrderUpdatesListeningInterval))
+                            .NotNull();
                     }
                 },
                 TaskCreationOptions.LongRunning);
