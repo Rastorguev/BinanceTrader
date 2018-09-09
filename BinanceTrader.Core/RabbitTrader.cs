@@ -7,6 +7,7 @@ using Binance.API.Csharp.Client.Domain.Interfaces;
 using Binance.API.Csharp.Client.Models;
 using Binance.API.Csharp.Client.Models.Account;
 using Binance.API.Csharp.Client.Models.Enums;
+using Binance.API.Csharp.Client.Models.Extensions;
 using Binance.API.Csharp.Client.Models.Market;
 using Binance.API.Csharp.Client.Models.Market.TradingRules;
 using Binance.API.Csharp.Client.Models.WebSocket;

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Binance.API.Csharp.Client.Models;
 using Binance.API.Csharp.Client.Models.Enums;
+using Binance.API.Csharp.Client.Models.Extensions;
 using Binance.API.Csharp.Client.Models.Market;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
@@ -43,10 +43,12 @@ namespace BinanceTrader
                                 _config.MaxIdlePeriod;
 
                 //decimal ProfitRatio() => CalculateProfitRatio(candles, candle, TimeSpan.FromHours((double)_config.MaxIdlePeriod));
-                decimal ProfitRatio() => _config.ProfitRatio;
-              
+                decimal ProfitRatio()
+                {
+                    return _config.ProfitRatio;
+                }
+
                 var inRange = _nextPrice > candle.Low.Round() && _nextPrice < candle.High.Round();
-                
 
                 if (_nextAction == OrderSide.Buy)
                 {

@@ -52,8 +52,8 @@ namespace BinanceTrader
 
             var results = tests.CompareStrategies(assets,
                     quoteAsset,
-                    new DateTime(2018, 09, 07, 17, 0, 0),
-                    new DateTime(2018, 09, 08, 17, 0, 0),
+                    new DateTime(2018, 08, 15, 0, 0, 0),
+                    new DateTime(2018, 09, 09, 19, 0, 0),
                     TimeInterval.Minutes_1,
                     configs)
                 .Result;

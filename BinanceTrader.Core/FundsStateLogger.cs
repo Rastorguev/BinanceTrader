@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client.Domain.Interfaces;
 using Binance.API.Csharp.Client.Models.Account;
+using Binance.API.Csharp.Client.Models.Extensions;
 using Binance.API.Csharp.Client.Models.Market;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
@@ -30,12 +31,13 @@ namespace BinanceTrader.Trader
             _quoteAsset = quoteAsset;
         }
 
-        public async Task LogFundsState([NotNull] IReadOnlyList<IBalance> funds, IReadOnlyList<string> assets)
+        public async Task LogFundsState([NotNull] IReadOnlyList<IBalance> funds, [NotNull] IReadOnlyList<string> assets)
         {
             try
             {
                 var prices = (await _client.GetAllPrices().NotNull().NotNull()).ToList();
-                var assetsAveragePrice = GetTradingAssetsAveragePrice(prices, assets);
+                var averagePrice = GetAveragePrice(prices, assets);
+                var medianPrice = GetMedianPrice(prices, assets);
 
                 var quoteUsdtSymbol = SymbolUtils.GetCurrencySymbol(_quoteAsset, UsdtAsset);
                 var btcUsdtSymbol = SymbolUtils.GetCurrencySymbol(_quoteAsset, BtcAsset);
@@ -55,7 +57,8 @@ namespace BinanceTrader.Trader
                     {"Quote", quoteTotal.Round().ToString(CultureInfo.InvariantCulture)},
                     {"BTC", btcTotal.Round().ToString(CultureInfo.InvariantCulture)},
                     {"Usdt", usdtTotal.Round().ToString(CultureInfo.InvariantCulture)},
-                    {"AverageAssetPrice", assetsAveragePrice.Round().ToString(CultureInfo.InvariantCulture)}
+                    {"AverageAssetPrice", averagePrice.Round().ToString(CultureInfo.InvariantCulture)},
+                    {"MedianAssetPrice", medianPrice.Round().ToString(CultureInfo.InvariantCulture)}
                 });
             }
             catch (Exception ex)
@@ -93,14 +96,33 @@ namespace BinanceTrader.Trader
             return total;
         }
 
-        private decimal GetTradingAssetsAveragePrice(
-            [NotNull] IReadOnlyList<SymbolPrice> prices,
-            [NotNull] IReadOnlyList<string> assets)
+        private decimal GetAveragePrice(
+            [NotNull] IEnumerable<SymbolPrice> prices,
+            [NotNull] IEnumerable<string> assets)
+        {
+            var assetsPrices = GetPrices(prices, assets);
+
+            return assetsPrices.Average().Round();
+        }
+
+        private decimal GetMedianPrice(
+            [NotNull] IEnumerable<SymbolPrice> prices,
+            [NotNull] IEnumerable<string> assets)
+        {
+            var assetsPrices = GetPrices(prices, assets);
+
+            return assetsPrices.Median().Round();
+        }
+
+        [NotNull]
+        private IEnumerable<decimal> GetPrices([NotNull] IEnumerable<SymbolPrice> prices,
+            [NotNull] IEnumerable<string> assets)
         {
             var symbols = assets.Select(a => SymbolUtils.GetCurrencySymbol(a, _quoteAsset));
-            var tradingAssetsPrices =
+            var assetsPrices =
                 prices.Where(p => symbols.Contains(p.NotNull().Symbol)).Select(p => p.Price).ToList();
-            return tradingAssetsPrices.Average().Round();
+
+            return assetsPrices;
         }
     }
 }
