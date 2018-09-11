@@ -22,7 +22,7 @@ namespace BinanceTrader.Trader
     {
         private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(1);
-        //private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
+        private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan ResetOrderUpdatesListeningInterval = TimeSpan.FromMinutes(30);
 
         private readonly decimal _profitRatio;
@@ -75,7 +75,7 @@ namespace BinanceTrader.Trader
                     _assets = _rulesProvider.GetBaseAssetsFor(_quoteAsset).Where(r => r != FeeAsset).ToList();
                     _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull().ToList();
 
-                    //StartCheckDataStream();
+                    StartCheckDataStream();
                     StartResetOrderUpdatesListening();
                     StartCheckOrders();
                     StartCheckFunds();
@@ -111,17 +111,17 @@ namespace BinanceTrader.Trader
                 TaskCreationOptions.LongRunning);
         }
 
-        //private void StartCheckDataStream()
-        //{
-        //    Task.Factory.StartNew(async () =>
-        //        {
-        //            while (true)
-        //            {
-        //                await Task.WhenAll(KeepDataStreamAlive(), Task.Delay(DataStreamCheckInterval)).NotNull();
-        //            }
-        //        },
-        //        TaskCreationOptions.LongRunning);
-        //}
+        private void StartCheckDataStream()
+        {
+            Task.Factory.StartNew(async () =>
+                {
+                    while (true)
+                    {
+                        await Task.WhenAll(KeepDataStreamAlive(), Task.Delay(DataStreamCheckInterval)).NotNull();
+                    }
+                },
+                TaskCreationOptions.LongRunning);
+        }
 
         private void StartResetOrderUpdatesListening()
         {
