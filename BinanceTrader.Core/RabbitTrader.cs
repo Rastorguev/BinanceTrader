@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client.Domain.Interfaces;
-using Binance.API.Csharp.Client.Models;
 using Binance.API.Csharp.Client.Models.Account;
 using Binance.API.Csharp.Client.Models.Enums;
 using Binance.API.Csharp.Client.Models.Extensions;
@@ -23,8 +22,8 @@ namespace BinanceTrader.Trader
     {
         private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(1);
-        private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
-        private static readonly TimeSpan ResetOrderUpdatesListeningInterval = TimeSpan.FromMinutes(60);
+        //private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
+        private static readonly TimeSpan ResetOrderUpdatesListeningInterval = TimeSpan.FromMinutes(30);
 
         private readonly decimal _profitRatio;
         [NotNull] private readonly string _quoteAsset;
@@ -76,7 +75,7 @@ namespace BinanceTrader.Trader
                     _assets = _rulesProvider.GetBaseAssetsFor(_quoteAsset).Where(r => r != FeeAsset).ToList();
                     _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull().ToList();
 
-                    StartCheckDataStream();
+                    //StartCheckDataStream();
                     StartResetOrderUpdatesListening();
                     StartCheckOrders();
                     StartCheckFunds();
@@ -112,24 +111,24 @@ namespace BinanceTrader.Trader
                 TaskCreationOptions.LongRunning);
         }
 
-        private void StartCheckDataStream()
+        //private void StartCheckDataStream()
+        //{
+        //    Task.Factory.StartNew(async () =>
+        //        {
+        //            while (true)
+        //            {
+        //                await Task.WhenAll(KeepDataStreamAlive(), Task.Delay(DataStreamCheckInterval)).NotNull();
+        //            }
+        //        },
+        //        TaskCreationOptions.LongRunning);
+        //}
+
+        private void StartResetOrderUpdatesListening()
         {
             Task.Factory.StartNew(async () =>
                 {
-                    while (true)
-                    {
-                        await Task.WhenAll(KeepDataStreamAlive(), Task.Delay(DataStreamCheckInterval)).NotNull();
-                    }
-                },
-                TaskCreationOptions.LongRunning);
-        }
+                    await Task.Delay(ResetOrderUpdatesListeningInterval).NotNull();
 
-        private async void StartResetOrderUpdatesListening()
-        {
-            await Task.Delay(ResetOrderUpdatesListeningInterval).NotNull();
-
-            await Task.Factory.StartNew(async () =>
-                {
                     while (true)
                     {
                         await Task.WhenAll(ResetOrderUpdatesListening(), Task.Delay(ResetOrderUpdatesListeningInterval))
