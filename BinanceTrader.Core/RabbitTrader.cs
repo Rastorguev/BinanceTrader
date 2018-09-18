@@ -363,7 +363,7 @@ namespace BinanceTrader.Trader
 
                         var price = prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
                         var sellPrice =
-                            RulesHelper.GetMaxFittingPrice(price, tradingRules);
+                            RulesHelper.GetMaxFittingPrice(price + price.Percents(_profitRatio), tradingRules);
 
                         var minNotionalQty = RulesHelper.GetMinNotionalQty(price, tradingRules);
                         var maxFittingQty = RulesHelper.GetMaxFittingQty(balance.Free, tradingRules);
