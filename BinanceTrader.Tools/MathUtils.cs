@@ -1,4 +1,9 @@
-﻿namespace BinanceTrader.Tools
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using JetBrains.Annotations;
+
+namespace BinanceTrader.Tools
 {
     public static class MathUtils
     {
@@ -11,6 +16,14 @@
             var profit = (currentAmount - initialAmount) / initialAmount * 100;
 
             return profit;
+        }
+
+        public static decimal StandardDeviation([NotNull] IEnumerable<decimal> input)
+        {
+            var list = input.ToList();
+            var avg = list.Average();
+
+            return (decimal) Math.Sqrt(list.Average(v => Math.Pow((double) (v - avg), 2)));
         }
     }
 }

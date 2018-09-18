@@ -70,8 +70,9 @@ namespace BinanceTrader
             return results;
         }
 
+        [NotNull]
         public async Task<Dictionary<string, IReadOnlyList<Candlestick>>> LoadCandles(
-            IEnumerable<string> assets,
+            [NotNull] IEnumerable<string> assets,
             string baseAsset,
             DateTime start,
             DateTime end,
