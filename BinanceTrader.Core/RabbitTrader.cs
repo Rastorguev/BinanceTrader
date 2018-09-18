@@ -23,7 +23,7 @@ namespace BinanceTrader.Trader
         private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
-        private static readonly TimeSpan ResetOrderUpdatesListeningInterval = TimeSpan.FromMinutes(30);
+        private static readonly TimeSpan MaxStreamEventsInterval = TimeSpan.FromMinutes(10);
 
         private readonly decimal _profitRatio;
         [NotNull] private readonly string _quoteAsset;
@@ -48,6 +48,13 @@ namespace BinanceTrader.Trader
                 TimeSpan.FromSeconds(60)
             })
             .NotNull();
+
+        private long _lastStreamEventTime = DateTime.Now.ToBinary();
+        public DateTime LastStreamEventTime
+        {
+            get => DateTime.FromBinary(_lastStreamEventTime);
+            set => Interlocked.Exchange(ref _lastStreamEventTime, value.ToBinary());
+        }
 
         public RabbitTrader(
             [NotNull] IBinanceClient client,
@@ -76,7 +83,6 @@ namespace BinanceTrader.Trader
                     _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull().ToList();
 
                     StartCheckDataStream();
-                    StartResetOrderUpdatesListening();
                     StartCheckOrders();
                     StartCheckFunds();
                 }).NotNull();
@@ -117,22 +123,7 @@ namespace BinanceTrader.Trader
                 {
                     while (true)
                     {
-                        await Task.WhenAll(KeepDataStreamAlive(), Task.Delay(DataStreamCheckInterval)).NotNull();
-                    }
-                },
-                TaskCreationOptions.LongRunning);
-        }
-
-        private void StartResetOrderUpdatesListening()
-        {
-            Task.Factory.StartNew(async () =>
-                {
-                    await Task.Delay(ResetOrderUpdatesListeningInterval).NotNull();
-
-                    while (true)
-                    {
-                        await Task.WhenAll(ResetOrderUpdatesListening(), Task.Delay(ResetOrderUpdatesListeningInterval))
-                            .NotNull();
+                        await Task.WhenAll(CheckDataStreamState(), Task.Delay(DataStreamCheckInterval)).NotNull();
                     }
                 },
                 TaskCreationOptions.LongRunning);
@@ -172,6 +163,8 @@ namespace BinanceTrader.Trader
         {
             try
             {
+                LastStreamEventTime = DateTime.Now;
+
                 var baseAsset = SymbolUtils.GetBaseAsset(message.Symbol.NotNull(), _quoteAsset);
 
                 if (message.Status != OrderStatus.Filled ||
@@ -208,9 +201,6 @@ namespace BinanceTrader.Trader
 
                     case OrderSide.Unknown:
                         break;
-
-                    default:
-                        break;
                 }
             }
             catch (Exception ex)
@@ -223,6 +213,8 @@ namespace BinanceTrader.Trader
         {
             try
             {
+                LastStreamEventTime = DateTime.Now;
+
                 var funds = message.Balances.NotNull().ToList();
                 Interlocked.Exchange(ref _funds, funds);
             }
@@ -277,6 +269,19 @@ namespace BinanceTrader.Trader
             {
                 await _client.CloseUserStream(_listenKey).NotNull();
                 _listenKey = null;
+            }
+        }
+
+        private async Task CheckDataStreamState()
+        {
+            if (LastStreamEventTime.Add(MaxStreamEventsInterval) < DateTime.Now)
+            {
+                await ResetOrderUpdatesListening();
+                _logger.LogMessage("ResetDataStream", "Reset data stream");
+            }
+            else
+            {
+                await KeepDataStreamAlive();
             }
         }
 
