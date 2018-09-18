@@ -36,9 +36,7 @@ namespace BinanceTrader.WebJob
 
         public void LogOrderCanceled(IOrder order)
         {
-#if DEBUG
             LogOrder("Canceled", order);
-#endif
         }
 
         public void LogOrderRequest(string eventName, OrderRequest orderRequest)
