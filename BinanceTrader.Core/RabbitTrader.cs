@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -413,7 +414,9 @@ namespace BinanceTrader.Trader
 
                 var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
                 var prices = (await _client.GetAllPrices().NotNull()).NotNull().ToList();
-                var orderRequests = _orderDistributor.SplitIntoBuyOrders(freeQuoteBalance, _assets, openOrders, prices);
+                var mostVolatile = await GetMostVolatileAssets();
+                var orderRequests =
+                    _orderDistributor.SplitIntoBuyOrders(freeQuoteBalance, mostVolatile, openOrders, prices);
 
                 var placeTasks = orderRequests.Select(async r =>
                 {
@@ -551,6 +554,57 @@ namespace BinanceTrader.Trader
                 _logger.LogMessage("BuyFeeCurrency",
                     $"Status {status}, Quantity {executedQty}, Price {price}");
             }
+        }
+
+        private async Task<IReadOnlyList<string>> GetMostVolatileAssets()
+        {
+            var assetsVolatility =
+                (await GetAssetsVolatility(_assets, _quoteAsset))
+                .OrderByDescending(a => a.Value).ToList();
+
+            //In case of something went wrong during volatility loading 
+            if (assetsVolatility.Count < _assets.Count - MathUtils.Percents(_assets.Count, 20))
+            {
+                return _assets;
+            }
+
+            var percents20 =
+                (int) MathUtils.Percents(assetsVolatility.Count, 20);
+
+            return assetsVolatility.Take(percents20).Select(x => x.Key).ToList();
+        }
+
+        private async Task<Dictionary<string, decimal>> GetAssetsVolatility(
+            [NotNull] [ItemNotNull] IEnumerable<string> assets,
+            [NotNull] string quoteAsset)
+        {
+            var allCandles = new ConcurrentDictionary<string, decimal>();
+            var tasks = assets.Select(async asset =>
+                {
+                    try
+                    {
+                        var symbol = SymbolUtils.GetCurrencySymbol(asset, quoteAsset);
+                        var candles =
+                            (await _client.GetCandleSticks(symbol, TimeInterval.Minutes_1, limit: 5)
+                                .NotNull())
+                            .ToList();
+
+                        var min = candles.Select(c => c.NotNull().Low).Min();
+                        var max = candles.Select(c => c.NotNull().High).Max();
+                        var gain = MathUtils.Gain(min, max);
+
+                        allCandles.TryAdd(asset, gain);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogException(ex);
+                    }
+                })
+                .ToList();
+
+            await Task.WhenAll(tasks).NotNull();
+
+            return allCandles.ToDictionary(c => c.Key, c => c.Value);
         }
     }
 }
