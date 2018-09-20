@@ -84,7 +84,7 @@ namespace BinanceTrader
             {
                 Console.WriteLine($"{asset} load started");
 
-                var assetCandles = await _candlesProvider.GetCandles(
+                var assetCandles = await _candlesProvider.LoadCandles(
                     asset,
                     baseAsset,
                     start,

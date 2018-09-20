@@ -11,7 +11,17 @@ using JetBrains.Annotations;
 
 namespace BinanceTrader.Trader
 {
-    public class CandlesLoader
+    public interface ICandlesProvider
+    {
+        [NotNull]
+        Task<IReadOnlyList<Candlestick>> LoadCandles(
+            string baseAsset,
+            string quoteAsset,
+            DateTime start,
+            DateTime end,
+            TimeInterval interval);
+    }
+    public class CandlesLoader : ICandlesProvider
     {
         private readonly IBinanceClient _client;
 

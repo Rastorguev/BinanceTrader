@@ -59,6 +59,7 @@
     <Compile Include="Result.cs" />
     <Compile Include="RulesHelper.cs" />
     <Compile Include="SymbolUtils.cs" />
+    <Compile Include="TechAnalyzer.cs" />
     <Compile Include="TradeStarter.cs" />
     <Compile Include="TradingRulesProvider.cs" />
   </ItemGroup>

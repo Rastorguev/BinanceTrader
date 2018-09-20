@@ -16,17 +16,6 @@ using Newtonsoft.Json;
 
 namespace BinanceTrader
 {
-    public interface ICandlesProvider
-    {
-        [NotNull]
-        Task<IReadOnlyList<Candlestick>> GetCandles(
-            string baseAsset,
-            string quoteAsset,
-            DateTime start,
-            DateTime end,
-            TimeInterval interval);
-    }
-
     public class CandlesProvider : ICandlesProvider
     {
         private const string DateFormat = "yyyy-MM-dd_hh-mm";
@@ -46,7 +35,7 @@ namespace BinanceTrader
             _client = client;
         }
 
-        public async Task<IReadOnlyList<Candlestick>> GetCandles(
+        public async Task<IReadOnlyList<Candlestick>> LoadCandles(
             string baseAsset,
             string quoteAsset,
             DateTime start,
