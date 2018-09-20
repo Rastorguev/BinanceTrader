@@ -10,6 +10,7 @@ using Binance.API.Csharp.Client.Models.Enums;
 using Binance.API.Csharp.Client.Models.Extensions;
 using Binance.API.Csharp.Client.Models.Market;
 using BinanceTrader.Tools;
+using BinanceTrader.Trader;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 
@@ -75,7 +76,7 @@ namespace BinanceTrader
                     return cachedOnDisk;
                 }
 
-                var candles = await LoadCandles(baseAsset, quoteAsset, start, end, interval);
+                var candles = await new CandlesLoader(_client).LoadCandles(baseAsset, quoteAsset, start, end, interval);
 
                 PutToInMemoryCache(candles, fileName);
                 PutToDiskCache(candles, fileName);
@@ -143,38 +144,6 @@ namespace BinanceTrader
             candles = JsonConvert.DeserializeObject<List<Candlestick>>(serialized);
 
             return true;
-        }
-
-        [NotNull]
-        [ItemNotNull]
-        private async Task<IReadOnlyList<Candlestick>> LoadCandles(
-            string baseAsset,
-            string quoteAsset,
-            DateTime start,
-            DateTime end,
-            TimeInterval interval)
-        {
-            const int maxRange = 500;
-
-            var tasks = new List<Task<IEnumerable<Candlestick>>>();
-
-            while (start < end)
-            {
-                var intervalMinutes = maxRange * interval.ToMinutes();
-                var rangeEnd = (end - start).TotalMinutes > intervalMinutes
-                    ? start.AddMinutes(intervalMinutes)
-                    : end;
-
-                var symbol = $"{baseAsset}{quoteAsset}";
-
-                tasks.Add(_client.GetCandleSticks(symbol, interval, start, rangeEnd));
-                start = rangeEnd;
-            }
-
-            var candles = (await Task.WhenAll(tasks).NotNull()).SelectMany(c => c).ToList();
-
-            var orderedCandles = candles.OrderBy(c => c.NotNull().OpenTime).ToList();
-            return orderedCandles;
         }
 
         [NotNull]

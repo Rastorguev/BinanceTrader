@@ -48,6 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssetsProvider.cs" />
+    <Compile Include="CandlesLoader.cs" />
     <Compile Include="Exceptions.cs" />
     <Compile Include="FundsStateLogger.cs" />
     <Compile Include="ILogger.cs" />
