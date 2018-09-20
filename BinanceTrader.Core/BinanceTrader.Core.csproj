@@ -62,6 +62,7 @@
     <Compile Include="TechAnalyzer.cs" />
     <Compile Include="TradeStarter.cs" />
     <Compile Include="TradingRulesProvider.cs" />
+    <Compile Include="VolatilityChecker.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BinanceTrader.Tools\BinanceTrader.Tools.csproj">

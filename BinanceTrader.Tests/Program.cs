@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -8,10 +7,8 @@ using System.Net;
 using System.Threading.Tasks;
 using Binance.API.Csharp.Client;
 using Binance.API.Csharp.Client.Models.Enums;
-using Binance.API.Csharp.Client.Models.Extensions;
 using BinanceTrader.Tools;
 using BinanceTrader.Tools.KeyProviders;
-using BinanceTrader.Trader;
 using JetBrains.Annotations;
 
 namespace BinanceTrader
@@ -40,15 +37,6 @@ namespace BinanceTrader
 
             assets = assets.OrderBy(a => a).ToList();
 
-            var volatility = AnalyzeVolatility(
-                candlesProvider, assets,
-                quoteAsset,
-                new DateTime(2018, 09, 19, 0, 0, 0),
-                new DateTime(2018, 09, 20, 0, 0, 0),
-                TimeInterval.Minutes_1);
-
-            Debugger.Break();
-
             var configs = GetConfigs();
             var tests = new StrategiesTests(candlesProvider);
             var watch = Stopwatch.StartNew();
@@ -58,9 +46,6 @@ namespace BinanceTrader
                 quoteAsset,
                 new DateTime(2018, 09, 19, 0, 0, 0),
                 new DateTime(2018, 09, 20, 0, 0, 0),
-
-                //new DateTime(2017, 09, 1, 0, 0, 0),
-                //new DateTime(2018, 1, 1, 0, 0, 0),
                 TimeInterval.Minutes_1).Result;
 
             var results = tests.CompareStrategies(candles, configs);
@@ -123,15 +108,12 @@ namespace BinanceTrader
         [ItemNotNull]
         private static IReadOnlyList<TradeSessionConfig> GetConfigs()
         {
-            TradeSessionConfig CreateConfig(decimal minProfit, TimeSpan idle)
-            {
-                return new TradeSessionConfig(
-                    1m,
-                    0.075m,
-                    0.01m,
-                    minProfit,
-                    idle);
-            }
+            TradeSessionConfig CreateConfig(decimal minProfit, TimeSpan idle) => new TradeSessionConfig(
+                1m,
+                0.075m,
+                0.01m,
+                minProfit,
+                idle);
 
             var configs = new List<TradeSessionConfig>();
 
@@ -167,60 +149,6 @@ namespace BinanceTrader
         private static void PreventAppClose()
         {
             Task.Delay(-1).NotNull().Wait();
-        }
-
-        private static (decimal Average, decimal Median) AnalyzeVolatility(
-            ICandlesProvider candlesProvider,
-            IEnumerable<string> assets,
-            string quoteAsset,
-            DateTime startTime,
-            DateTime endDateTime,
-            TimeInterval interval
-        )
-        {
-            var volatility = GetAssetsVolatility(
-                    candlesProvider,
-                    assets,
-                    quoteAsset,
-                    startTime,
-                    endDateTime,
-                    interval)
-                .Result;
-
-            var average = volatility.Select(v => v.Value).Average();
-            var median = volatility.Select(v => v.Value).Median();
-
-            return (average, median);
-        }
-
-        private static async Task<Dictionary<string, decimal>> GetAssetsVolatility(
-            [NotNull] ICandlesProvider candlesProvider,
-            [NotNull] [ItemNotNull] IEnumerable<string> assets,
-            [NotNull] string quoteAsset,
-            DateTime startTime,
-            DateTime endTime,
-            TimeInterval interval)
-        {
-            var allCandles = new ConcurrentDictionary<string, decimal>();
-            var tasks = assets.Select(async asset =>
-                {
-                    var candles = (await candlesProvider
-                            .LoadCandles(asset, quoteAsset, startTime, endTime, interval)
-                            .NotNull())
-                        .ToList();
-
-                    if (candles.Any())
-                    {
-                        var volatility = TechAnalyzer.CalculateAverageVolatility(candles);
-
-                        allCandles.TryAdd(asset, volatility);
-                    }
-                })
-                .ToList();
-
-            await Task.WhenAll(tasks).NotNull();
-
-            return allCandles.ToDictionary(c => c.Key, c => c.Value);
         }
     }
 }

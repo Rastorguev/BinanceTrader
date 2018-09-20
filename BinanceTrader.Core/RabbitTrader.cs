@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,6 +25,7 @@ namespace BinanceTrader.Trader
         private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan MaxStreamEventsInterval = TimeSpan.FromMinutes(10);
+        private static readonly TimeSpan VolatilityCheckInterval = TimeSpan.FromMinutes(10);
 
         private readonly decimal _profitRatio;
         [NotNull] private readonly string _quoteAsset;
@@ -34,6 +36,7 @@ namespace BinanceTrader.Trader
 
         [NotNull] private readonly IBinanceClient _client;
         [NotNull] private readonly ILogger _logger;
+        [NotNull] private readonly VolatilityChecker _volatilityChecker;
         [NotNull] private readonly TradingRulesProvider _rulesProvider;
 
         [NotNull] [ItemNotNull] private IReadOnlyList<string> _assets = new List<string>();
@@ -59,13 +62,15 @@ namespace BinanceTrader.Trader
         public RabbitTrader(
             [NotNull] IBinanceClient client,
             [NotNull] ILogger logger,
-            [NotNull] TraderConfig config)
+            [NotNull] TraderConfig config,
+            [NotNull] VolatilityChecker volatilityChecker)
         {
             _quoteAsset = config.QuoteAsset;
             _orderExpiration = config.OrderExpiration;
             _profitRatio = config.ProfitRatio;
 
             _logger = logger;
+            _volatilityChecker = volatilityChecker;
             _client = client;
             _rulesProvider = new TradingRulesProvider(client);
             _fundsStateLogger = new FundsStateLogger(_client, _logger, _quoteAsset);
@@ -85,6 +90,7 @@ namespace BinanceTrader.Trader
                     StartCheckDataStream();
                     StartCheckOrders();
                     StartCheckFunds();
+                    StartCheckVolatility();
                 }).NotNull();
             }
             catch (Exception ex)
@@ -112,6 +118,18 @@ namespace BinanceTrader.Trader
                     while (true)
                     {
                         await Task.WhenAll(CheckFunds(), Task.Delay(FundsCheckInterval)).NotNull();
+                    }
+                },
+                TaskCreationOptions.LongRunning);
+        }
+
+        private void StartCheckVolatility()
+        {
+            Task.Factory.StartNew(async () =>
+                {
+                    while (true)
+                    {
+                        await Task.WhenAll(CheckVolatility(), Task.Delay(VolatilityCheckInterval)).NotNull();
                     }
                 },
                 TaskCreationOptions.LongRunning);
@@ -550,6 +568,34 @@ namespace BinanceTrader.Trader
 
                 _logger.LogMessage("BuyFeeCurrency",
                     $"Status {status}, Quantity {executedQty}, Price {price}");
+            }
+        }
+
+        private async Task CheckVolatility()
+        {
+            try
+            {
+                var volatility = (await _volatilityChecker.GetAssetsVolatility(
+                        _assets,
+                        _quoteAsset,
+                        DateTime.Now - VolatilityCheckInterval,
+                        DateTime.Now,
+                        TimeInterval.Minutes_1))
+                    .OrderByDescending(x => x.Value)
+                    .ToList();
+
+                var medium = volatility.Select(v => v.Value).Median();
+                var average = volatility.Select(v => v.Value).Average();
+
+                _logger.LogMessage("Volatility", new Dictionary<string, string>
+                {
+                    {"Median", medium.ToString(CultureInfo.InvariantCulture)},
+                    {"Average", average.ToString(CultureInfo.InvariantCulture)}
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
             }
         }
     }

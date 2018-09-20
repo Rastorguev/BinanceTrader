@@ -33,7 +33,9 @@ namespace BinanceTrader.Trader
                 var apiClient = new ApiClient(keys.Api, keys.Secret);
                 var binanceClient = new BinanceClient(apiClient);
                 var config = new BlobConfigProvider(connectionStringsProvider).GetConfig(traderName);
-                var trader = new RabbitTrader(binanceClient, logger, config);
+                var candlesProvider = new CandlesLoader(binanceClient);
+                var volatilityChecker = new VolatilityChecker(candlesProvider, logger);
+                var trader = new RabbitTrader(binanceClient, logger, config, volatilityChecker);
 
                 logger.LogMessage("StartRequested", new Dictionary<string, string>
                 {
