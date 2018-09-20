@@ -23,5 +23,12 @@ namespace BinanceTrader.Trader
 
             return volatility;
         }
+
+        public static decimal CalculateAverageVolatility([NotNull] IEnumerable<Candlestick> candles)
+        {
+            var list = candles.ToList();
+
+            return list.Any() ? list.Select(c => MathUtils.Gain(c.Low, c.High)).Average() : 0;
+        }
     }
 }

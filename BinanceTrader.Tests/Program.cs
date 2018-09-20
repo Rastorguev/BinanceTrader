@@ -40,6 +40,15 @@ namespace BinanceTrader
 
             assets = assets.OrderBy(a => a).ToList();
 
+            var volatility = AnalyzeVolatility(
+                candlesProvider, assets,
+                quoteAsset,
+                new DateTime(2018, 09, 19, 0, 0, 0),
+                new DateTime(2018, 09, 20, 0, 0, 0),
+                TimeInterval.Minutes_1);
+
+            Debugger.Break();
+
             var configs = GetConfigs();
             var tests = new StrategiesTests(candlesProvider);
             var watch = Stopwatch.StartNew();
@@ -47,8 +56,8 @@ namespace BinanceTrader
             var candles = tests.LoadCandles(
                 assets,
                 quoteAsset,
-                new DateTime(2018, 08, 15, 0, 0, 0),
-                new DateTime(2018, 09, 15, 0, 0, 0),
+                new DateTime(2018, 09, 19, 0, 0, 0),
+                new DateTime(2018, 09, 20, 0, 0, 0),
 
                 //new DateTime(2017, 09, 1, 0, 0, 0),
                 //new DateTime(2018, 1, 1, 0, 0, 0),
@@ -110,22 +119,6 @@ namespace BinanceTrader
             PreventAppClose();
         }
 
-        private static void AnalyzeVolatility(CandlesProvider candlesProvider, List<string> assets, string quoteAsset)
-        {
-            var volatility = GetAssetsVolatility(
-                candlesProvider,
-                assets,
-                quoteAsset,
-                new DateTime(2018, 09, 19, 0, 0, 0),
-                new DateTime(2018, 09, 20, 0, 0, 0),
-                TimeInterval.Minutes_1).Result;
-
-            var medium = volatility.Select(v => v.Value).Average();
-            var median = volatility.Select(v => v.Value).Median();
-
-            Debugger.Break();
-        }
-
         [NotNull]
         [ItemNotNull]
         private static IReadOnlyList<TradeSessionConfig> GetConfigs()
@@ -176,6 +169,30 @@ namespace BinanceTrader
             Task.Delay(-1).NotNull().Wait();
         }
 
+        private static (decimal Average, decimal Median) AnalyzeVolatility(
+            ICandlesProvider candlesProvider,
+            IEnumerable<string> assets,
+            string quoteAsset,
+            DateTime startTime,
+            DateTime endDateTime,
+            TimeInterval interval
+        )
+        {
+            var volatility = GetAssetsVolatility(
+                    candlesProvider,
+                    assets,
+                    quoteAsset,
+                    startTime,
+                    endDateTime,
+                    interval)
+                .Result;
+
+            var average = volatility.Select(v => v.Value).Average();
+            var median = volatility.Select(v => v.Value).Median();
+
+            return (average, median);
+        }
+
         private static async Task<Dictionary<string, decimal>> GetAssetsVolatility(
             [NotNull] ICandlesProvider candlesProvider,
             [NotNull] [ItemNotNull] IEnumerable<string> assets,
@@ -194,7 +211,7 @@ namespace BinanceTrader
 
                     if (candles.Any())
                     {
-                        var volatility = TechAnalyzer.CalculateVolatility(candles);
+                        var volatility = TechAnalyzer.CalculateAverageVolatility(candles);
 
                         allCandles.TryAdd(asset, volatility);
                     }
