@@ -5,6 +5,7 @@ using Binance.API.Csharp.Client.Models.Enums;
 using Binance.API.Csharp.Client.Models.Extensions;
 using Binance.API.Csharp.Client.Models.Market;
 using BinanceTrader.Tools;
+using BinanceTrader.Trader;
 using JetBrains.Annotations;
 
 namespace BinanceTrader
@@ -17,14 +18,12 @@ namespace BinanceTrader
         private DateTime? _lastActionDate;
 
         public TradeSession(
-            [NotNull] TradeSessionConfig config)
-        {
-            _config = config;
-        }
+            [NotNull] TradeSessionConfig config) => _config = config;
 
         [NotNull]
-        public ITradeAccount Run([NotNull] [ItemNotNull] IReadOnlyList<Candlestick> candles)
+        public ITradeAccount Run([NotNull] [ItemNotNull] IReadOnlyList<Candlestick> candlesticks)
         {
+            var candles = candlesticks.ToList();
             var account = new MockTradeAccount(0, _config.InitialQuoteAmount, _config.Fee);
 
             if (!candles.Any())
@@ -42,8 +41,8 @@ namespace BinanceTrader
                                 candle.CloseTime.GetTime() - _lastActionDate.Value >=
                                 _config.MaxIdlePeriod;
 
-                //decimal ProfitRatio() => CalculateProfitRatio(candles, candle, TimeSpan.FromHours((double)_config.MaxIdlePeriod));
-                decimal ProfitRatio()
+                //decimal GetProfitRatio() => CalculateProfitRatio(candles, candle, _config.MaxIdlePeriod);
+                decimal GetProfitRatio()
                 {
                     return _config.ProfitRatio;
                 }
@@ -55,7 +54,7 @@ namespace BinanceTrader
                     if (inRange)
                     {
                         var price = _nextPrice;
-                        var nextPrice = (price + price.Percents(ProfitRatio())).Round();
+                        var nextPrice = (price + price.Percents(GetProfitRatio())).Round();
 
                         Buy(account, price, nextPrice, candle);
                         //Console.WriteLine($"Buy\t {price}\t {candle.OpenTime.GetTime().ToLocalTime()}");
@@ -66,7 +65,7 @@ namespace BinanceTrader
                     else if (isExpired)
                     {
                         var price = candle.High.Round();
-                        var nextPrice = (price - price.Percents(ProfitRatio())).Round();
+                        var nextPrice = (price - price.Percents(GetProfitRatio())).Round();
 
                         Cancel(account, nextPrice, candle);
                     }
@@ -76,7 +75,7 @@ namespace BinanceTrader
                     if (inRange)
                     {
                         var price = _nextPrice;
-                        var nextPrice = (price - price.Percents(ProfitRatio())).Round();
+                        var nextPrice = (price - price.Percents(GetProfitRatio())).Round();
 
                         Sell(account, price, nextPrice, candle);
                         //Console.WriteLine($"Sell\t {price}\t {candle.OpenTime.GetTime().ToLocalTime()}");
@@ -84,7 +83,7 @@ namespace BinanceTrader
                     else if (isExpired)
                     {
                         var price = candle.Low.Round();
-                        var nextPrice = (price + price.Percents(ProfitRatio())).Round();
+                        var nextPrice = (price + price.Percents(GetProfitRatio())).Round();
 
                         Cancel(account, nextPrice, candle);
                     }
@@ -129,33 +128,26 @@ namespace BinanceTrader
             account.IncreaseCanceledCount();
         }
 
-        private decimal CalculateProfitRatio([NotNull] IReadOnlyList<Candlestick> candles,
+        private decimal CalculateProfitRatio([NotNull] List<Candlestick> candles,
             [NotNull] Candlestick current, TimeSpan interval)
         {
-            var list = candles.ToList();
-            var defaultRatio = 1;
-            var start = list.FirstOrDefault(c => c.OpenTime.GetTime() == current.OpenTime.GetTime() - interval);
+           
+            var defaultRatio = _config.ProfitRatio;
+            var n = (int) interval.TotalMinutes;
 
-            if (start == null)
+            var endIndex = candles.IndexOf(current);
+            var startIndex = Math.Max(0, endIndex - n);
+
+            var range = candles.GetRange(startIndex, endIndex - startIndex);
+            if (!range.Any())
             {
                 return defaultRatio;
             }
 
-            var startIndex = list.IndexOf(start);
-            var endIndex = list.IndexOf(current);
-            var range = candles.ToList().GetRange(startIndex, endIndex - startIndex);
+            var volatility = TechAnalyzer.CalculateVolatility(range);
+            var profitRatio = Math.Max(volatility, _config.Fee * 2);
 
-            var min = range.Min(c => c.NotNull().Low);
-            var max = range.Max(c => c.NotNull().High);
-            var gain = MathUtils.Gain(min, max);
-            var adjustedGain = gain / (decimal) interval.TotalHours / 2;
-
-            if (adjustedGain < defaultRatio)
-            {
-                return defaultRatio;
-            }
-
-            return adjustedGain;
+            return profitRatio;
         }
     }
 }
