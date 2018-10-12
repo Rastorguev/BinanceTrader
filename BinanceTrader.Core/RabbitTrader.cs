@@ -334,18 +334,20 @@ namespace BinanceTrader.Trader
                     })
                     .ToList();
 
-                var cancelTasks = expiredOrders.Select(
-                    async order =>
-                    {
-                        try
+                var cancelTasks = expiredOrders
+                    .Where(o => _rulesProvider.GetRulesFor(o.NotNull().Symbol).Status == SymbolStatus.Trading)
+                    .Select(
+                        async order =>
                         {
-                            await CancelOrder(order.NotNull());
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogException(ex);
-                        }
-                    });
+                            try
+                            {
+                                await CancelOrder(order.NotNull());
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogException(ex);
+                            }
+                        });
 
                 await Task.WhenAll(cancelTasks).NotNull();
             }
