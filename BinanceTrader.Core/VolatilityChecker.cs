@@ -40,7 +40,7 @@ namespace BinanceTrader.Trader
 
                     if (candles.Any())
                     {
-                        var volatility = TechAnalyzer.CalculateAverageVolatility(candles);
+                        var volatility = TechAnalyzer.CalculateVolatilityIndex(candles);
 
                         allCandles.TryAdd(asset, volatility);
                     }

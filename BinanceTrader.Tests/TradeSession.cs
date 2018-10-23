@@ -127,27 +127,5 @@ namespace BinanceTrader
             _lastActionDate = candle.OpenTime.GetTime();
             account.IncreaseCanceledCount();
         }
-
-        private decimal CalculateProfitRatio([NotNull] List<Candlestick> candles,
-            [NotNull] Candlestick current, TimeSpan interval)
-        {
-           
-            var defaultRatio = _config.ProfitRatio;
-            var n = (int) interval.TotalMinutes;
-
-            var endIndex = candles.IndexOf(current);
-            var startIndex = Math.Max(0, endIndex - n);
-
-            var range = candles.GetRange(startIndex, endIndex - startIndex);
-            if (!range.Any())
-            {
-                return defaultRatio;
-            }
-
-            var volatility = TechAnalyzer.CalculateVolatility(range);
-            var profitRatio = Math.Max(volatility, _config.Fee * 2);
-
-            return profitRatio;
-        }
     }
 }
