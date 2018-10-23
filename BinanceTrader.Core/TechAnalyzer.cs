@@ -8,27 +8,11 @@ namespace BinanceTrader.Trader
 {
     public static class TechAnalyzer
     {
-        public static decimal CalculateVolatility([NotNull] IEnumerable<Candlestick> candles)
+        public static decimal CalculateVolatilityIndex([NotNull] IEnumerable<Candlestick> candles)
         {
             var list = candles.ToList();
 
-            if (!list.Any())
-            {
-                return 0;
-            }
-
-            var min = list.Select(c => c.NotNull().Low).Min();
-            var max = list.Select(c => c.NotNull().High).Max();
-            var volatility = MathUtils.Gain(min, max);
-
-            return volatility;
-        }
-
-        public static decimal CalculateAverageVolatility([NotNull] IEnumerable<Candlestick> candles)
-        {
-            var list = candles.ToList();
-
-            return list.Any() ? list.Select(c => MathUtils.Gain(c.Low, c.High)).Average() : 0;
+            return list.Any() ? list.Select(c => MathUtils.Gain(c.Low, c.High)).StandardDeviation() : 0;
         }
     }
 }
