@@ -18,12 +18,15 @@ namespace BinanceTrader.Tools
             return profit;
         }
 
-        public static decimal StandardDeviation([NotNull] IEnumerable<decimal> input)
+        public static decimal StandardDeviation([NotNull] this IEnumerable<decimal> input)
         {
             var list = input.ToList();
             var avg = list.Average();
 
-            return (decimal) Math.Sqrt(list.Average(v => Math.Pow((double) (v - avg), 2)));
+            var dispersion = list.Sum(x => Math.Pow((double) (x - avg), 2)) / list.Count;
+            var standardDeviation = (decimal) Math.Sqrt(dispersion);
+
+            return standardDeviation;
         }
     }
 }
