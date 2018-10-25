@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Binance.API.Csharp.Client;
 using BinanceTrader.Tools;
 using BinanceTrader.Tools.KeyProviders;
@@ -14,25 +15,35 @@ namespace BinanceTrader.Trader
             [NotNull] [ItemNotNull] IEnumerable<string> traderNames,
             [NotNull] Func<string, ILogger> loggerResolver)
         {
+            var connectionStringsProvider = new ConnectionStringsProvider();
+            var connectionString = connectionStringsProvider.GetConnectionString("BlobStorage");
+            var keys = new BlobKeyProvider(connectionString).GetKeys();
+            var configs = new BlobConfigProvider(connectionString).GetConfigs();
+
             foreach (var traderName in traderNames)
             {
-                Start(traderName, loggerResolver);
+                var keySet = keys.FirstOrDefault(x => x.NotNull().Name == traderName);
+                var config = configs.FirstOrDefault(x => x.NotNull().Name == traderName);
+
+                if (keySet != null && config != null)
+                {
+                    Start(keySet, config, loggerResolver);
+                }
             }
         }
 
         public static async void Start(
-            [NotNull] string traderName,
+            [NotNull] BinanceKeySet keys,
+            [NotNull] TraderConfig config,
             [NotNull] Func<string, ILogger> loggerResolver)
         {
-            var logger = loggerResolver(traderName).NotNull();
+            var logger = loggerResolver(keys.Name).NotNull();
 
             try
             {
-                var connectionStringsProvider = new ConnectionStringsProvider();
-                var keys = new BlobKeyProvider(connectionStringsProvider).GetKeys(traderName);
                 var apiClient = new ApiClient(keys.Api, keys.Secret);
                 var binanceClient = new BinanceClient(apiClient);
-                var config = new BlobConfigProvider(connectionStringsProvider).GetConfig(traderName);
+
                 var candlesProvider = new CandlesLoader(binanceClient);
                 var volatilityChecker = new VolatilityChecker(candlesProvider, logger);
                 var trader = new RabbitTrader(binanceClient, logger, config, volatilityChecker);

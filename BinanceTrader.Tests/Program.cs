@@ -23,10 +23,11 @@ namespace BinanceTrader
             CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
             var connectionStringsProvider = new ConnectionStringsProvider();
+            var connectionString = connectionStringsProvider.GetConnectionString("BlobStorage");
 
             const string traderName = "Rambler";
-            var keys = new BlobKeyProvider(connectionStringsProvider).GetKeys(traderName);
-            var apiClient = new ApiClient(keys.Api, keys.Secret);
+            var keys = new BlobKeyProvider(connectionString).GetKeys().First(x => x.NotNull().Name == traderName);
+            var apiClient = new ApiClient(keys.NotNull().Api, keys.NotNull().Secret);
             var client = new BinanceClient(apiClient);
             var candlesProvider = new CandlesProvider(client);
             var rules = client.LoadTradingRules().Result.NotNull();
@@ -46,8 +47,8 @@ namespace BinanceTrader
             var candles = tests.LoadCandles(
                     assets,
                     quoteAsset,
-                    new DateTime(2017, 09, 01, 0, 0, 0),
-                    new DateTime(2018, 01, 01, 0, 0, 0),
+                    new DateTime(2018, 10, 10),
+                    new DateTime(2018, 10, 24),
                     TimeInterval.Minutes_1)
                 .Result
                 .NotNull();
