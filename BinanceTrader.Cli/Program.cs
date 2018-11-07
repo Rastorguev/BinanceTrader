@@ -21,7 +21,8 @@ namespace BinanceTrader.Cli
             {
                 var traders = new List<string>
                 {
-                    "Rambler"
+                    "Rambler",
+                    "Google",
                 };
 
                 TradeStarter.Start(traders, traderName => new Logger(traderName));

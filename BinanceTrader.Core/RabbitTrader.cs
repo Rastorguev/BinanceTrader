@@ -29,6 +29,8 @@ namespace BinanceTrader.Trader
 
         private readonly decimal _profitRatio;
         [NotNull] private readonly string _quoteAsset;
+        [NotNull][ItemNotNull]
+        private readonly IReadOnlyList<string> _baseAssets;
         private const string FeeAsset = "BNB";
         private readonly TimeSpan _orderExpiration;
         private string _listenKey;
@@ -39,7 +41,7 @@ namespace BinanceTrader.Trader
         [NotNull] private readonly VolatilityChecker _volatilityChecker;
         [NotNull] private readonly TradingRulesProvider _rulesProvider;
 
-        [NotNull] [ItemNotNull] private IReadOnlyList<string> _assets = new List<string>();
+        [NotNull] [ItemNotNull] private IReadOnlyList<string> _tradingAssets = new List<string>();
         [NotNull] private readonly FundsStateLogger _fundsStateLogger;
         [NotNull] private readonly OrderDistributor _orderDistributor;
         [NotNull] private readonly RetryPolicy _startRetryPolicy = Policy
@@ -53,6 +55,7 @@ namespace BinanceTrader.Trader
             .NotNull();
 
         private long _lastStreamEventTime = DateTime.Now.ToBinary();
+     
         public DateTime LastStreamEventTime
         {
             get => DateTime.FromBinary(_lastStreamEventTime);
@@ -66,6 +69,7 @@ namespace BinanceTrader.Trader
             [NotNull] VolatilityChecker volatilityChecker)
         {
             _quoteAsset = config.QuoteAsset;
+            _baseAssets = config.BaseAssets;
             _orderExpiration = config.OrderExpiration;
             _profitRatio = config.ProfitRatio;
 
@@ -84,7 +88,7 @@ namespace BinanceTrader.Trader
                 await _startRetryPolicy.ExecuteAsync(async () =>
                 {
                     await _rulesProvider.UpdateRulesIfNeeded();
-                    _assets = _rulesProvider.GetBaseAssetsFor(_quoteAsset).Where(r => r != FeeAsset).ToList();
+                    _tradingAssets = GetTradingAssets();
                     _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull().ToList();
 
                     StartCheckDataStream();
@@ -167,9 +171,9 @@ namespace BinanceTrader.Trader
             try
             {
                 await _rulesProvider.UpdateRulesIfNeeded();
-                _assets = _rulesProvider.GetBaseAssetsFor(_quoteAsset).Where(r => r != FeeAsset).ToList();
+                _tradingAssets = GetTradingAssets();
 
-                await _fundsStateLogger.LogFundsState(_funds.NotNull(), _assets);
+                await _fundsStateLogger.LogFundsState(_funds.NotNull(), _tradingAssets);
             }
             catch (Exception ex)
             {
@@ -362,7 +366,7 @@ namespace BinanceTrader.Trader
             try
             {
                 var freeBalances =
-                    _funds.NotNull().Where(b => b.NotNull().Free > 0 && _assets.Contains(b.Asset)).ToList();
+                    _funds.NotNull().Where(b => b.NotNull().Free > 0 && _tradingAssets.Contains(b.Asset)).ToList();
 
                 var prices = (await _client.GetAllPrices().NotNull()).NotNull().ToList();
                 var placeTasks = new List<Task>();
@@ -433,7 +437,7 @@ namespace BinanceTrader.Trader
 
                 var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
                 var prices = (await _client.GetAllPrices().NotNull()).NotNull().ToList();
-                var orderRequests = _orderDistributor.SplitIntoBuyOrders(freeQuoteBalance, _assets, openOrders, prices);
+                var orderRequests = _orderDistributor.SplitIntoBuyOrders(freeQuoteBalance, _tradingAssets, openOrders, prices);
 
                 var placeTasks = orderRequests.Select(async r =>
                 {
@@ -578,7 +582,7 @@ namespace BinanceTrader.Trader
             try
             {
                 var volatility = (await _volatilityChecker.GetAssetsVolatility(
-                        _assets,
+                        _tradingAssets,
                         _quoteAsset,
                         DateTime.Now - VolatilityCheckInterval,
                         DateTime.Now,
@@ -599,6 +603,19 @@ namespace BinanceTrader.Trader
             {
                 _logger.LogException(ex);
             }
+        }
+
+        [NotNull]
+        private List<string> GetTradingAssets()
+        {
+           var assets= _rulesProvider.GetBaseAssetsFor(_quoteAsset).Where(r => r != FeeAsset).ToList();
+
+            if (_baseAssets.Any())
+            {
+                assets = assets.Where(x => _baseAssets.Contains(x)).ToList();
+            }
+            
+            return assets;
         }
     }
 }
