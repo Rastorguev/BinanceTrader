@@ -8,12 +8,12 @@ namespace BinanceTrader.Trader
     {
         public static decimal GetMaxFittingPrice(decimal price, [NotNull] ITradingRules rules)
         {
-            return (int) (price / rules.TickSize) * rules.TickSize;
+            return (int)(price / rules.TickSize) * rules.TickSize;
         }
 
         public static decimal GetMaxFittingQty(decimal qty, [NotNull] ITradingRules rules)
         {
-            return (int) (qty / rules.StepSize) * rules.StepSize;
+            return (int)(qty / rules.StepSize) * rules.StepSize;
         }
 
         public static decimal GetMinNotionalQty(decimal price, [NotNull] ITradingRules rules)
@@ -25,14 +25,14 @@ namespace BinanceTrader.Trader
 
         public static decimal GetFittingBaseAmount(decimal quoteAmount, decimal price, [NotNull] ITradingRules rules)
         {
-            return (int) (quoteAmount / price / rules.StepSize) * rules.StepSize;
+            return (int)(quoteAmount / price / rules.StepSize) * rules.StepSize;
         }
 
         public static bool MeetsTradingRules([NotNull] this OrderRequest order, [NotNull] ITradingRules rules)
         {
             return
-                order.Price >= rules.MinPrice &&
-                order.Price <= rules.MaxPrice &&
+                order.Price >= rules.MinPrice || rules.MinPrice == 0 &&
+                order.Price <= rules.MaxPrice || rules.MaxPrice == 0 &&
                 order.Price * order.Qty >= rules.MinNotional &&
                 (order.Price - rules.MinQty) % rules.TickSize == 0 &&
                 order.Qty >= rules.MinQty &&
