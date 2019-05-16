@@ -25,7 +25,7 @@ namespace BinanceTrader
             var connectionStringsProvider = new ConnectionStringsProvider();
             var connectionString = connectionStringsProvider.GetConnectionString("BlobStorage");
 
-            const string traderName = "Rambler";
+            const string traderName = "Google";
             var keys = new BlobKeyProvider(connectionString).GetKeys().First(x => x.NotNull().Name == traderName);
             var apiClient = new ApiClient(keys.NotNull().Api, keys.NotNull().Secret);
             var client = new BinanceClient(apiClient);
@@ -44,11 +44,12 @@ namespace BinanceTrader
             var tests = new StrategiesTests(candlesProvider);
             var watch = Stopwatch.StartNew();
 
+
             var candles = tests.LoadCandles(
                     assets,
                     quoteAsset,
-                    new DateTime(2018, 10, 10),
-                    new DateTime(2018, 10, 24),
+                    new DateTime(2019, 05, 10),
+                    new DateTime(2019, 05, 16),
                     TimeInterval.Minutes_1)
                 .Result
                 .NotNull();
