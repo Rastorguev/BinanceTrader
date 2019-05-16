@@ -30,7 +30,7 @@ namespace BinanceTrader.Trader
         private readonly decimal _profitRatio;
         [NotNull] private readonly string _quoteAsset;
         [NotNull][ItemNotNull]
-        private readonly IReadOnlyList<string> _baseAssets;
+        //private readonly IReadOnlyList<string> _baseAssets;
         private const string FeeAsset = "BNB";
         private readonly TimeSpan _orderExpiration;
         private string _listenKey;
@@ -69,7 +69,7 @@ namespace BinanceTrader.Trader
             [NotNull] VolatilityChecker volatilityChecker)
         {
             _quoteAsset = config.QuoteAsset;
-            _baseAssets = config.BaseAssets;
+            //_baseAssets = config.BaseAssets;
             _orderExpiration = config.OrderExpiration;
             _profitRatio = config.ProfitRatio;
 
@@ -610,10 +610,10 @@ namespace BinanceTrader.Trader
         {
            var assets= _rulesProvider.GetBaseAssetsFor(_quoteAsset).Where(r => r != FeeAsset).ToList();
 
-            if (_baseAssets.Any())
-            {
-                assets = assets.Where(x => _baseAssets.Contains(x)).ToList();
-            }
+            //if (_baseAssets.Any())
+            //{
+            //    assets = assets.Where(x => _baseAssets.Contains(x)).ToList();
+            //}
             
             return assets;
         }
