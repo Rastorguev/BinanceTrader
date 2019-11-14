@@ -104,7 +104,7 @@ namespace BinanceTrader.Cli
             Console.WriteLine($"Side:\t\t {order.Side}");
             Console.WriteLine($"Status:\t\t {order.Status}");
             Console.WriteLine($"Price:\t\t {order.Price.Round()}");
-            Console.WriteLine($"Qty:\t\t {order.OrigQty.Round()}");
+            Console.WriteLine($"Qty:\t\t {order.OrderQuantity.Round()}");
 
             Console.WriteLine();
         }

@@ -103,8 +103,8 @@ namespace BinanceTrader.WebJob
                 {"Side", order.Side.ToString()},
                 {"Status", order.Status.ToString()},
                 {"Price", order.Price.Round().ToString(CultureInfo.InvariantCulture)},
-                {"Qty", order.OrigQty.Round().ToString(CultureInfo.InvariantCulture)},
-                {"Total", (order.OrigQty * order.Price).Round().ToString(CultureInfo.InvariantCulture)}
+                {"Qty", order.OrderQuantity.Round().ToString(CultureInfo.InvariantCulture)},
+                {"Total", (order.OrderQuantity * order.Price).Round().ToString(CultureInfo.InvariantCulture)}
             }.AddTraderName(_traderName));
 
             _client.Flush();

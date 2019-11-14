@@ -202,7 +202,7 @@ namespace BinanceTrader.Trader
                 switch (message.Side)
                 {
                     case OrderSide.Buy:
-                        var qty = message.OrigQty;
+                        var qty = message.OrderQuantity;
                         var sellRequest = CreateSellOrder(message, qty, tradePrice);
                         if (MeetsTradingRules(sellRequest))
                         {
@@ -212,7 +212,7 @@ namespace BinanceTrader.Trader
                         break;
 
                     case OrderSide.Sell:
-                        var quoteAmount = message.OrigQty * message.Price;
+                        var quoteAmount = message.OrderQuantity * message.Price;
                         var buyRequest = CreateBuyOrder(message, quoteAmount, tradePrice);
                         if (MeetsTradingRules(buyRequest))
                         {

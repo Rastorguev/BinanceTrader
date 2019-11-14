@@ -44,12 +44,11 @@ namespace BinanceTrader
             var tests = new StrategiesTests(candlesProvider);
             var watch = Stopwatch.StartNew();
 
-
             var candles = tests.LoadCandles(
                     assets,
                     quoteAsset,
-                    new DateTime(2019, 05, 10),
-                    new DateTime(2019, 05, 16),
+                    new DateTime(2019, 11, 07, 00, 00, 00),
+                    new DateTime(2019, 11, 10, 23, 00, 00),
                     TimeInterval.Minutes_1)
                 .Result
                 .NotNull();
@@ -68,7 +67,7 @@ namespace BinanceTrader
             var tradeResults = ordered.Select(o => (
                     Profit: o.Key.NotNull().ProfitRatio,
                     Idle: o.Key.NotNull().MaxIdlePeriod,
-                    TradeProfit: o.Value.NotNull().TradeProfit,
+                    o.Value.NotNull().TradeProfit,
                     TradesCount: o.Value.NotNull().CompletedCount))
                 .OrderByDescending(o => o.TradeProfit)
                 .ToList();
@@ -82,24 +81,29 @@ namespace BinanceTrader
         [ItemNotNull]
         private static IReadOnlyList<TradeSessionConfig> GetConfigs()
         {
-            TradeSessionConfig CreateConfig(decimal minProfit, TimeSpan idle) => new TradeSessionConfig(
-                1m,
-                0.075m,
-                0.01m,
-                minProfit,
-                idle);
+            TradeSessionConfig CreateConfig(decimal minProfit, TimeSpan idle)
+            {
+                return new TradeSessionConfig(
+                    1m,
+                    0.075m,
+                    0.01m,
+                    minProfit,
+                    idle);
+            }
 
             var configs = new List<TradeSessionConfig>();
 
-            const decimal startProfit = 1m;
+            var startProfit = 0.5m;
             var startIdle = TimeSpan.FromMinutes(1);
 
-            const decimal maxProfit = 2m;
+            var maxProfit = 4m;
             var maxIdle = TimeSpan.FromMinutes(10);
 
-            const decimal profitStep = 1m;
+            var profitStep = 0.5m;
             var idleStep = TimeSpan.FromMinutes(1);
 
+            configs.Add(CreateConfig(0.5m, TimeSpan.FromDays(365)));
+           
             var profit = startProfit;
             while (profit <= maxProfit)
             {
@@ -112,8 +116,28 @@ namespace BinanceTrader
 
                 profit += profitStep;
             }
-            configs.Add(CreateConfig(1, TimeSpan.FromHours(1)));
-            configs.Add(CreateConfig(2, TimeSpan.FromHours(8)));
+
+            startProfit = 0.5m;
+            startIdle = TimeSpan.FromHours(0.5);
+
+            maxProfit = 4m;
+            maxIdle = TimeSpan.FromHours(12);
+
+            profitStep = 0.5m;
+            idleStep = TimeSpan.FromHours(0.5);
+
+            profit = startProfit;
+            while (profit <= maxProfit)
+            {
+                var idle = startIdle;
+                while (idle <= maxIdle)
+                {
+                    configs.Add(CreateConfig(profit, idle));
+                    idle += idleStep;
+                }
+
+                profit += profitStep;
+            }
 
             return configs;
         }
