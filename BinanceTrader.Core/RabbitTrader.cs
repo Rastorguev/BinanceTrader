@@ -92,7 +92,6 @@ namespace BinanceTrader.Trader
                 {
                     await _rulesProvider.UpdateRulesIfNeeded();
                     _tradingAssets = GetTradingAssets();
-                    await UpdateVolatility();
                     _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull()
                         .ToDictionary(x => x.NotNull().Asset, x => x);
 
@@ -450,9 +449,8 @@ namespace BinanceTrader.Trader
 
                 var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
                 var prices = (await _client.GetAllPrices().NotNull()).NotNull().ToList();
-                var mostVolatile = GetMostVolatileAssets(_orderedVolatility);
                 var orderRequests =
-                    _orderDistributor.SplitIntoBuyOrders(freeQuoteBalance, mostVolatile, openOrders, prices);
+                    _orderDistributor.SplitIntoBuyOrders(freeQuoteBalance, _tradingAssets, openOrders, prices);
 
                 var placeTasks = orderRequests.Select(async r =>
                 {
