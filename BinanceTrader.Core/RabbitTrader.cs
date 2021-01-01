@@ -29,12 +29,14 @@ namespace BinanceTrader.Trader
 
         private readonly decimal _profitRatio;
         [NotNull] private readonly string _quoteAsset;
-        [NotNull][ItemNotNull]
+        [NotNull]
+        [ItemNotNull]
         //private readonly IReadOnlyList<string> _baseAssets;
         private const string FeeAsset = "BNB";
         private readonly TimeSpan _orderExpiration;
         private string _listenKey;
-        private IReadOnlyList<IBalance> _funds;
+        [NotNull]
+        private IReadOnlyDictionary<string, IBalance> _funds;
 
         [NotNull] private readonly IBinanceClient _client;
         [NotNull] private readonly ILogger _logger;
@@ -44,7 +46,8 @@ namespace BinanceTrader.Trader
         [NotNull] [ItemNotNull] private IReadOnlyList<string> _tradingAssets = new List<string>();
         [NotNull] private readonly FundsStateLogger _fundsStateLogger;
         [NotNull] private readonly OrderDistributor _orderDistributor;
-        [NotNull] private readonly RetryPolicy _startRetryPolicy = Policy
+        [NotNull]
+        private readonly RetryPolicy _startRetryPolicy = Policy
             .Handle<Exception>(ex => !(ex is OperationCanceledException))
             .WaitAndRetryAsync(new[]
             {
@@ -55,7 +58,7 @@ namespace BinanceTrader.Trader
             .NotNull();
 
         private long _lastStreamEventTime = DateTime.Now.ToBinary();
-     
+
         public DateTime LastStreamEventTime
         {
             get => DateTime.FromBinary(_lastStreamEventTime);
@@ -89,7 +92,7 @@ namespace BinanceTrader.Trader
                 {
                     await _rulesProvider.UpdateRulesIfNeeded();
                     _tradingAssets = GetTradingAssets();
-                    _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull().ToList();
+                    _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull().ToDictionary(x => x.NotNull().Asset, x => x);
 
                     StartCheckDataStream();
                     StartCheckOrders();
@@ -173,7 +176,7 @@ namespace BinanceTrader.Trader
                 await _rulesProvider.UpdateRulesIfNeeded();
                 _tradingAssets = GetTradingAssets();
 
-                await _fundsStateLogger.LogFundsState(_funds.NotNull(), _tradingAssets);
+                await _fundsStateLogger.LogFundsState(_funds.Values.ToList(), _tradingAssets);
             }
             catch (Exception ex)
             {
@@ -237,8 +240,15 @@ namespace BinanceTrader.Trader
             {
                 LastStreamEventTime = DateTime.Now;
 
-                var funds = message.Balances.NotNull().ToList();
-                Interlocked.Exchange(ref _funds, funds);
+                var updatedFunds = message.Balances.NotNull().ToList();
+                var newFunds = _funds.ToDictionary(x => x.Key, x => x.Value);
+
+                foreach (var f in updatedFunds)
+                {
+                    newFunds[f.Asset.NotNull()] = f;
+                }
+
+                Interlocked.Exchange(ref _funds, newFunds);
             }
             catch (Exception ex)
             {
@@ -263,15 +273,15 @@ namespace BinanceTrader.Trader
             {
                 _logger.LogException(ex);
 
-                await ResetOrderUpdatesListening();
+                ResetOrderUpdatesListening();
             }
         }
 
-        private async Task ResetOrderUpdatesListening()
+        private void ResetOrderUpdatesListening()
         {
             try
             {
-                await StopListenDataStream();
+                //await StopListenDataStream();
                 StartListenDataStream();
             }
             catch (Exception ex)
@@ -298,7 +308,7 @@ namespace BinanceTrader.Trader
         {
             if (LastStreamEventTime.Add(MaxStreamEventsInterval) < DateTime.Now)
             {
-                await ResetOrderUpdatesListening();
+                ResetOrderUpdatesListening();
                 _logger.LogMessage("ResetDataStream", "Reset data stream");
             }
             else
@@ -366,7 +376,7 @@ namespace BinanceTrader.Trader
             try
             {
                 var freeBalances =
-                    _funds.NotNull().Where(b => b.NotNull().Free > 0 && _tradingAssets.Contains(b.Asset)).ToList();
+                    _funds.Values.ToList().NotNull().Where(b => b.NotNull().Free > 0 && _tradingAssets.Contains(b.Asset)).ToList();
 
                 var prices = (await _client.GetAllPrices().NotNull()).NotNull().ToList();
                 var placeTasks = new List<Task>();
@@ -432,7 +442,7 @@ namespace BinanceTrader.Trader
         {
             try
             {
-                var freeQuoteBalance = _funds.NotNull()
+                var freeQuoteBalance = _funds.Values
                     .First(b => b.NotNull().Asset == _quoteAsset).NotNull().Free;
 
                 var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
@@ -552,7 +562,7 @@ namespace BinanceTrader.Trader
 
         private bool NeedToBuyFeeCurrency()
         {
-            var feeAmount = _funds.NotNull().First(b => b.NotNull().Asset == FeeAsset).NotNull().Free;
+            var feeAmount = _funds[FeeAsset].NotNull().Free;
 
             return feeAmount < 1;
         }
@@ -608,13 +618,13 @@ namespace BinanceTrader.Trader
         [NotNull]
         private List<string> GetTradingAssets()
         {
-           var assets= _rulesProvider.GetBaseAssetsFor(_quoteAsset).Where(r => r != FeeAsset).ToList();
+            var assets = _rulesProvider.GetBaseAssetsFor(_quoteAsset).Where(r => r != FeeAsset).ToList();
 
             //if (_baseAssets.Any())
             //{
             //    assets = assets.Where(x => _baseAssets.Contains(x)).ToList();
             //}
-            
+
             return assets;
         }
     }
