@@ -21,31 +21,25 @@ namespace BinanceTrader.Trader
 {
     public class RabbitTrader
     {
+        [NotNull]
+        [ItemNotNull]
+        //private readonly IReadOnlyList<string> _baseAssets;
+        private const string FeeAsset = "BNB";
         private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan MaxStreamEventsInterval = TimeSpan.FromMinutes(10);
         private static readonly TimeSpan VolatilityCheckInterval = TimeSpan.FromMinutes(10);
 
+        [NotNull] private readonly IBinanceClient _client;
+        [NotNull] private readonly FundsStateLogger _fundsStateLogger;
+        [NotNull] private readonly ILogger _logger;
+        [NotNull] private readonly OrderDistributor _orderDistributor;
+        private readonly TimeSpan _orderExpiration;
+
         private readonly decimal _profitRatio;
         [NotNull] private readonly string _quoteAsset;
-        [NotNull]
-        [ItemNotNull]
-        //private readonly IReadOnlyList<string> _baseAssets;
-        private const string FeeAsset = "BNB";
-        private readonly TimeSpan _orderExpiration;
-        private string _listenKey;
-        [NotNull]
-        private IReadOnlyDictionary<string, IBalance> _funds;
-
-        [NotNull] private readonly IBinanceClient _client;
-        [NotNull] private readonly ILogger _logger;
-        [NotNull] private readonly VolatilityChecker _volatilityChecker;
         [NotNull] private readonly TradingRulesProvider _rulesProvider;
-
-        [NotNull] [ItemNotNull] private IReadOnlyList<string> _tradingAssets = new List<string>();
-        [NotNull] private readonly FundsStateLogger _fundsStateLogger;
-        [NotNull] private readonly OrderDistributor _orderDistributor;
         [NotNull]
         private readonly RetryPolicy _startRetryPolicy = Policy
             .Handle<Exception>(ex => !(ex is OperationCanceledException))
@@ -56,14 +50,14 @@ namespace BinanceTrader.Trader
                 TimeSpan.FromSeconds(60)
             })
             .NotNull();
+        [NotNull] private readonly VolatilityChecker _volatilityChecker;
+        [NotNull] private IReadOnlyDictionary<string, IBalance> _funds = new Dictionary<string, IBalance>();
 
         private long _lastStreamEventTime = DateTime.Now.ToBinary();
+        private string _listenKey;
+        [NotNull] private IReadOnlyDictionary<string, decimal> _orderedVolatility = new Dictionary<string, decimal>();
 
-        public DateTime LastStreamEventTime
-        {
-            get => DateTime.FromBinary(_lastStreamEventTime);
-            set => Interlocked.Exchange(ref _lastStreamEventTime, value.ToBinary());
-        }
+        [NotNull] [ItemNotNull] private IReadOnlyList<string> _tradingAssets = new List<string>();
 
         public RabbitTrader(
             [NotNull] IBinanceClient client,
@@ -84,6 +78,12 @@ namespace BinanceTrader.Trader
             _orderDistributor = new OrderDistributor(_quoteAsset, _profitRatio, _rulesProvider, logger);
         }
 
+        public DateTime LastStreamEventTime
+        {
+            get => DateTime.FromBinary(_lastStreamEventTime);
+            set => Interlocked.Exchange(ref _lastStreamEventTime, value.ToBinary());
+        }
+
         public async Task Start()
         {
             try
@@ -92,7 +92,9 @@ namespace BinanceTrader.Trader
                 {
                     await _rulesProvider.UpdateRulesIfNeeded();
                     _tradingAssets = GetTradingAssets();
-                    _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull().ToDictionary(x => x.NotNull().Asset, x => x);
+                    await UpdateVolatility();
+                    _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull()
+                        .ToDictionary(x => x.NotNull().Asset, x => x);
 
                     StartCheckDataStream();
                     StartCheckOrders();
@@ -376,7 +378,8 @@ namespace BinanceTrader.Trader
             try
             {
                 var freeBalances =
-                    _funds.Values.ToList().NotNull().Where(b => b.NotNull().Free > 0 && _tradingAssets.Contains(b.Asset)).ToList();
+                    _funds.Values.ToList().NotNull()
+                        .Where(b => b.NotNull().Free > 0 && _tradingAssets.Contains(b.Asset)).ToList();
 
                 var prices = (await _client.GetAllPrices().NotNull()).NotNull().ToList();
                 var placeTasks = new List<Task>();
@@ -447,7 +450,9 @@ namespace BinanceTrader.Trader
 
                 var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
                 var prices = (await _client.GetAllPrices().NotNull()).NotNull().ToList();
-                var orderRequests = _orderDistributor.SplitIntoBuyOrders(freeQuoteBalance, _tradingAssets, openOrders, prices);
+                var mostVolatile = GetMostVolatileAssets(_orderedVolatility);
+                var orderRequests =
+                    _orderDistributor.SplitIntoBuyOrders(freeQuoteBalance, mostVolatile, openOrders, prices);
 
                 var placeTasks = orderRequests.Select(async r =>
                 {
@@ -591,28 +596,53 @@ namespace BinanceTrader.Trader
         {
             try
             {
-                var volatility = (await _volatilityChecker.GetAssetsVolatility(
+                await UpdateVolatility();
+                LogVolatility(_orderedVolatility.NotNull());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
+        }
+
+        private async Task UpdateVolatility()
+        {
+            IReadOnlyDictionary<string, decimal> orderedVolatility = new Dictionary<string, decimal>();
+            try
+            {
+                orderedVolatility = (await _volatilityChecker.GetAssetsVolatility(
                         _tradingAssets,
                         _quoteAsset,
                         DateTime.Now - VolatilityCheckInterval,
                         DateTime.Now,
                         TimeInterval.Minutes_1))
                     .OrderByDescending(x => x.Value)
-                    .ToList();
-
-                var medium = volatility.Select(v => v.Value).Median();
-                var average = volatility.Select(v => v.Value).Average();
-
-                _logger.LogMessage("Volatility", new Dictionary<string, string>
-                {
-                    {"Median", medium.ToString(CultureInfo.InvariantCulture)},
-                    {"Average", average.ToString(CultureInfo.InvariantCulture)}
-                });
+                    .ToList()
+                    .ToDictionary(x => x.Key, x => x.Value);
             }
             catch (Exception ex)
             {
                 _logger.LogException(ex);
             }
+            finally
+            {
+                if (orderedVolatility.Any())
+                {
+                    Interlocked.Exchange(ref _orderedVolatility, orderedVolatility);
+                }
+            }
+        }
+
+        private void LogVolatility([NotNull] IReadOnlyDictionary<string, decimal> volatility)
+        {
+            var medium = volatility.Select(v => v.Value).Median();
+            var average = volatility.Select(v => v.Value).Average();
+
+            _logger.LogMessage("Volatility", new Dictionary<string, string>
+            {
+                {"Median", medium.ToString(CultureInfo.InvariantCulture)},
+                {"Average", average.ToString(CultureInfo.InvariantCulture)}
+            });
         }
 
         [NotNull]
@@ -626,6 +656,23 @@ namespace BinanceTrader.Trader
             //}
 
             return assets;
+        }
+
+        [NotNull]
+        private IReadOnlyList<string> GetMostVolatileAssets(
+            [NotNull] IReadOnlyDictionary<string, decimal> orderedVolatility)
+        {
+            const int mostVolatileAssetsPercent = 20;
+
+            //In case of something went wrong during volatility loading 
+            if (!orderedVolatility.Any())
+            {
+                return _tradingAssets;
+            }
+
+            var topVolatileToUse = (int)MathUtils.Percents(orderedVolatility.Count, mostVolatileAssetsPercent);
+
+            return orderedVolatility.Take(topVolatileToUse).Select(x => x.Key).ToList();
         }
     }
 }
