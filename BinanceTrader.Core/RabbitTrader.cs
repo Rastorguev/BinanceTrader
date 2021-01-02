@@ -26,7 +26,7 @@ namespace BinanceTrader.Trader
         //private readonly IReadOnlyList<string> _baseAssets;
         private const string FeeAsset = "BNB";
         private const string MaxStepExecutionTimeExceededError = "MaxStepExecutionTimeExceeded";
-        private static readonly TimeSpan FundsAndTradingRulesCheckInterval = TimeSpan.FromMinutes(10);
+        private static readonly TimeSpan FundsAndTradingRulesCheckInterval = TimeSpan.FromMinutes(5);
         private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan MaxStreamEventsInterval = TimeSpan.FromMinutes(10);
@@ -108,32 +108,32 @@ namespace BinanceTrader.Trader
 
         private void StartCheckOrders()
         {
-            StartRepeatableStep("CheckOrders", CheckOrders(), OrdersCheckInterval);
+            StartRepeatableStep("CheckOrders", CheckOrders, OrdersCheckInterval);
         }
 
         private void StartUpdateFundsAndTradingRules()
         {
-            StartRepeatableStep("UpdateFundsAndTradingRules", UpdateFundsAndTradingRules(), FundsAndTradingRulesCheckInterval);
+            StartRepeatableStep("UpdateFundsAndTradingRules", UpdateFundsAndTradingRules, FundsAndTradingRulesCheckInterval);
         }
 
         private void StartCheckVolatility()
         {
-            StartRepeatableStep("CheckVolatility", CheckVolatility(), VolatilityCheckInterval);
+            StartRepeatableStep("CheckVolatility", CheckVolatility, VolatilityCheckInterval);
         }
 
         private void StartCheckDataStream()
         {
-            StartRepeatableStep("CheckDataStream", CheckDataStream(), DataStreamCheckInterval);
+            StartRepeatableStep("CheckDataStream", CheckDataStream, DataStreamCheckInterval);
         }
 
-        private void StartRepeatableStep([NotNull] string name, [NotNull] Task task, TimeSpan interval)
+        private void StartRepeatableStep([NotNull] string name, [NotNull] Func<Task> stepProvider, TimeSpan interval)
         {
             Task.Factory.StartNew(async () =>
                 {
                     while (true)
                     {
                         var delayTask = Task.Delay(MaxStepExecutionTime);
-                        var stepTask = Task.WhenAny(task, delayTask);
+                        var stepTask = Task.WhenAny(stepProvider().NotNull(), delayTask);
                         if (delayTask.IsCompleted)
                         {
                             _logger.LogMessage(MaxStepExecutionTimeExceededError,
