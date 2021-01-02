@@ -26,7 +26,7 @@ namespace BinanceTrader.Trader
         //private readonly IReadOnlyList<string> _baseAssets;
         private const string FeeAsset = "BNB";
         private const string MaxStepExecutionTimeExceededError = "MaxStepExecutionTimeExceeded";
-        private static readonly TimeSpan FundsAndTradingRulesCheckInterval = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan FundsAndTradingRulesCheckInterval = TimeSpan.FromMinutes(10);
         private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan MaxStreamEventsInterval = TimeSpan.FromMinutes(10);
