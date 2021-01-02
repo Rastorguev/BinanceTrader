@@ -25,11 +25,13 @@ namespace BinanceTrader.Trader
         [ItemNotNull]
         //private readonly IReadOnlyList<string> _baseAssets;
         private const string FeeAsset = "BNB";
-        private static readonly TimeSpan FundsCheckInterval = TimeSpan.FromMinutes(1);
+        private const string MaxStepExecutionTimeExceededError = "MaxStepExecutionTimeExceeded";
+        private static readonly TimeSpan FundsAndTradingRulesCheckInterval = TimeSpan.FromMinutes(5);
         private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan MaxStreamEventsInterval = TimeSpan.FromMinutes(10);
         private static readonly TimeSpan VolatilityCheckInterval = TimeSpan.FromMinutes(10);
+        private static readonly TimeSpan MaxStepExecutionTime = TimeSpan.FromMinutes(5);
 
         [NotNull] private readonly IBinanceClient _client;
         [NotNull] private readonly FundsStateLogger _fundsStateLogger;
@@ -90,14 +92,11 @@ namespace BinanceTrader.Trader
             {
                 await _startRetryPolicy.ExecuteAsync(async () =>
                 {
-                    await _rulesProvider.UpdateRulesIfNeeded();
-                    _tradingAssets = GetTradingAssets();
-                    _funds = (await _client.GetAccountInfo().NotNull().NotNull()).Balances.NotNull()
-                        .ToDictionary(x => x.NotNull().Asset, x => x);
+                    await UpdateFundsAndTradingRules();
 
                     StartCheckDataStream();
                     StartCheckOrders();
-                    StartCheckFunds();
+                    StartUpdateFundsAndTradingRules();
                     StartCheckVolatility();
                 }).NotNull();
             }
@@ -109,47 +108,39 @@ namespace BinanceTrader.Trader
 
         private void StartCheckOrders()
         {
-            Task.Factory.StartNew(async () =>
-                {
-                    while (true)
-                    {
-                        await Task.WhenAll(CheckOrders(), Task.Delay(OrdersCheckInterval)).NotNull();
-                    }
-                },
-                TaskCreationOptions.LongRunning);
+            StartRepeatableStep("CheckOrders", CheckOrders(), OrdersCheckInterval);
         }
 
-        private void StartCheckFunds()
+        private void StartUpdateFundsAndTradingRules()
         {
-            Task.Factory.StartNew(async () =>
-                {
-                    while (true)
-                    {
-                        await Task.WhenAll(CheckFunds(), Task.Delay(FundsCheckInterval)).NotNull();
-                    }
-                },
-                TaskCreationOptions.LongRunning);
+            StartRepeatableStep("UpdateFundsAndTradingRules", UpdateFundsAndTradingRules(), FundsAndTradingRulesCheckInterval);
         }
 
         private void StartCheckVolatility()
         {
-            Task.Factory.StartNew(async () =>
-                {
-                    while (true)
-                    {
-                        await Task.WhenAll(CheckVolatility(), Task.Delay(VolatilityCheckInterval)).NotNull();
-                    }
-                },
-                TaskCreationOptions.LongRunning);
+            StartRepeatableStep("CheckVolatility", CheckVolatility(), VolatilityCheckInterval);
         }
 
         private void StartCheckDataStream()
+        {
+            StartRepeatableStep("CheckDataStream", CheckDataStream(), DataStreamCheckInterval);
+        }
+
+        private void StartRepeatableStep([NotNull] string name, [NotNull] Task task, TimeSpan interval)
         {
             Task.Factory.StartNew(async () =>
                 {
                     while (true)
                     {
-                        await Task.WhenAll(CheckDataStreamState(), Task.Delay(DataStreamCheckInterval)).NotNull();
+                        var delayTask = Task.Delay(MaxStepExecutionTime);
+                        var stepTask = Task.WhenAny(task, delayTask);
+                        if (delayTask.IsCompleted)
+                        {
+                            _logger.LogMessage(MaxStepExecutionTimeExceededError,
+                                $"{name} takes more than {MaxStepExecutionTime}");
+                        }
+
+                        await Task.WhenAll(stepTask, Task.Delay(interval)).NotNull();
                     }
                 },
                 TaskCreationOptions.LongRunning);
@@ -170,12 +161,17 @@ namespace BinanceTrader.Trader
             }
         }
 
-        private async Task CheckFunds()
+        private async Task UpdateFundsAndTradingRules()
         {
             try
             {
                 await _rulesProvider.UpdateRulesIfNeeded();
                 _tradingAssets = GetTradingAssets();
+                var newFunds = (await _client.GetAccountInfo().NotNull().NotNull())
+                    .Balances.NotNull()
+                    .ToDictionary(x => x.NotNull().Asset, x => x);
+
+                Interlocked.Exchange(ref _funds, newFunds);
 
                 await _fundsStateLogger.LogFundsState(_funds.Values.ToList(), _tradingAssets);
             }
@@ -305,7 +301,7 @@ namespace BinanceTrader.Trader
             }
         }
 
-        private async Task CheckDataStreamState()
+        private async Task CheckDataStream()
         {
             if (LastStreamEventTime.Add(MaxStreamEventsInterval) < DateTime.Now)
             {
