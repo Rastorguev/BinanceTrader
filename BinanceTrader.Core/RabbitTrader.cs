@@ -274,11 +274,11 @@ namespace BinanceTrader.Trader
             }
         }
 
-        private void ResetOrderUpdatesListening()
+        private async void ResetOrderUpdatesListening()
         {
             try
             {
-                //await StopListenDataStream();
+                await StopListenDataStream();
                 StartListenDataStream();
             }
             catch (Exception ex)
