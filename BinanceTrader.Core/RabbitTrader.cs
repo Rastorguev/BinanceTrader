@@ -26,6 +26,8 @@ namespace BinanceTrader.Trader
         //private readonly IReadOnlyList<string> _baseAssets;
         private const string FeeAsset = "BNB";
         private const string MaxStepExecutionTimeExceededError = "MaxStepExecutionTimeExceeded";
+        private const decimal MinFeeAmount = 0.25m;
+
         private static readonly TimeSpan FundsAndTradingRulesCheckInterval = TimeSpan.FromMinutes(5);
         private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
@@ -563,17 +565,15 @@ namespace BinanceTrader.Trader
         {
             var feeAmount = _funds[FeeAsset].NotNull().Free;
 
-            return feeAmount < 1;
+            return feeAmount < MinFeeAmount;
         }
 
         private async Task BuyFeeCurrency()
         {
-            const int qty = 1;
-
             var feeSymbol = SymbolUtils.GetCurrencySymbol(FeeAsset, _quoteAsset);
             var price = await GetActualPrice(feeSymbol, OrderSide.Buy);
 
-            var orderRequest = new OrderRequest(feeSymbol, OrderSide.Buy, qty, price);
+            var orderRequest = new OrderRequest(feeSymbol, OrderSide.Buy, MinFeeAmount, price);
 
             if (MeetsTradingRules(orderRequest))
             {
