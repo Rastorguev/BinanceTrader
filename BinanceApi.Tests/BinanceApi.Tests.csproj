@@ -17,8 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Api\Binance.API.Csharp.Client.Domain\Binance.API.Csharp.Client.Domain.csproj" />
-    <ProjectReference Include="..\Api\Binance.API.Csharp.Client\Binance.API.Csharp.Client.csproj" />
+    <ProjectReference Include="..\BinanceApi.Client\BinanceApi.Client.csproj" />
   </ItemGroup>
 
 </Project>
