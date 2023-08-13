@@ -9,7 +9,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>BinanceTrader</RootNamespace>
     <AssemblyName>BinanceTrader</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <NuGetPackageImportStamp>
@@ -39,9 +39,8 @@
     <Reference Include="JetBrains.Annotations, Version=11.1.0.0, Culture=neutral, PublicKeyToken=1010a0d8d6380325, processorArchitecture=MSIL">
       <HintPath>..\packages\JetBrains.Annotations.11.1.0\lib\net20\JetBrains.Annotations.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\packages\Newtonsoft.Json.11.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
@@ -90,18 +89,6 @@
     <ProjectReference Include="..\BinanceTrader.Tools\BinanceTrader.Tools.csproj">
       <Project>{05921e52-1c36-4126-941b-f158be62c28a}</Project>
       <Name>BinanceTrader.Tools</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Submodules\BinanceApi\Binance.API.Csharp.Client.Domain\Binance.API.Csharp.Client.Domain.csproj">
-      <Project>{E255F763-A2FE-43A8-9331-019796C935C7}</Project>
-      <Name>Binance.API.Csharp.Client.Domain</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Submodules\BinanceApi\Binance.API.Csharp.Client.Models\Binance.API.Csharp.Client.Models.csproj">
-      <Project>{7CF40EB8-D81D-40B5-B849-17E5662175D6}</Project>
-      <Name>Binance.API.Csharp.Client.Models</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Submodules\BinanceApi\Binance.API.Csharp.Client\Binance.API.Csharp.Client.csproj">
-      <Project>{ec2a020e-338a-46ee-9d08-c158cbd49c92}</Project>
-      <Name>Binance.API.Csharp.Client</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
