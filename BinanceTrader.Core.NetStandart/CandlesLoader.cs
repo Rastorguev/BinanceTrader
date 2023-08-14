@@ -1,65 +1,61 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Binance.API.Csharp.Client.Domain.Interfaces;
+﻿using Binance.API.Csharp.Client.Domain.Interfaces;
 using Binance.API.Csharp.Client.Models.Enums;
 using Binance.API.Csharp.Client.Models.Extensions;
 using Binance.API.Csharp.Client.Models.Market;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader.Trader
+namespace BinanceTrader.Trader;
+
+public interface ICandlesProvider
 {
-    public interface ICandlesProvider
+    [NotNull]
+    Task<IReadOnlyList<Candlestick>> LoadCandles(
+        string baseAsset,
+        string quoteAsset,
+        DateTime start,
+        DateTime end,
+        TimeInterval interval);
+}
+
+public class CandlesLoader : ICandlesProvider
+{
+    private readonly IBinanceClient _client;
+
+    public CandlesLoader([NotNull] IBinanceClient client)
     {
-        [NotNull]
-        Task<IReadOnlyList<Candlestick>> LoadCandles(
-            string baseAsset,
-            string quoteAsset,
-            DateTime start,
-            DateTime end,
-            TimeInterval interval);
+        _client = client;
     }
-    public class CandlesLoader : ICandlesProvider
+
+    [NotNull]
+    [ItemNotNull]
+    public async Task<IReadOnlyList<Candlestick>> LoadCandles(
+        string baseAsset,
+        string quoteAsset,
+        DateTime start,
+        DateTime end,
+        TimeInterval interval)
     {
-        private readonly IBinanceClient _client;
+        const int maxRange = 500;
 
-        public CandlesLoader([NotNull] IBinanceClient client)
+        var tasks = new List<Task<IEnumerable<Candlestick>>>();
+
+        while (start < end)
         {
-            _client = client;
+            var intervalMinutes = maxRange * interval.ToMinutes();
+            var rangeEnd = (end - start).TotalMinutes > intervalMinutes
+                ? start.AddMinutes(intervalMinutes)
+                : end;
+
+            var symbol = $"{baseAsset}{quoteAsset}";
+
+            tasks.Add(_client.GetCandleSticks(symbol, interval, start, rangeEnd));
+            start = rangeEnd;
         }
 
-        [NotNull]
-        [ItemNotNull]
-        public async Task<IReadOnlyList<Candlestick>> LoadCandles(
-            string baseAsset,
-            string quoteAsset,
-            DateTime start,
-            DateTime end,
-            TimeInterval interval)
-        {
-            const int maxRange = 500;
+        var candles = (await Task.WhenAll(tasks).NotNull()).SelectMany(c => c).ToList();
 
-            var tasks = new List<Task<IEnumerable<Candlestick>>>();
-
-            while (start < end)
-            {
-                var intervalMinutes = maxRange * interval.ToMinutes();
-                var rangeEnd = (end - start).TotalMinutes > intervalMinutes
-                    ? start.AddMinutes(intervalMinutes)
-                    : end;
-
-                var symbol = $"{baseAsset}{quoteAsset}";
-
-                tasks.Add(_client.GetCandleSticks(symbol, interval, start, rangeEnd));
-                start = rangeEnd;
-            }
-
-            var candles = (await Task.WhenAll(tasks).NotNull()).SelectMany(c => c).ToList();
-
-            var orderedCandles = candles.OrderBy(c => c.NotNull().OpenTime).ToList();
-            return orderedCandles;
-        }
+        var orderedCandles = candles.OrderBy(c => c.NotNull().OpenTime).ToList();
+        return orderedCandles;
     }
 }

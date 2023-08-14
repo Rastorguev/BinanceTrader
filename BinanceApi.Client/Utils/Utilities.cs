@@ -6,12 +6,12 @@ using System.Text;
 namespace Binance.API.Csharp.Client.Utils
 {
     /// <summary>
-    /// Utility class for common processes. 
+    ///     Utility class for common processes.
     /// </summary>
     public static class Utilities
     {
         /// <summary>
-        /// Gets a HMACSHA256 signature based on the API Secret.
+        ///     Gets a HMACSHA256 signature based on the API Secret.
         /// </summary>
         /// <param name="apiSecret">Api secret used to generate the signature.</param>
         /// <param name="message">Message to encode.</param>
@@ -30,7 +30,7 @@ namespace Binance.API.Csharp.Client.Utils
         }
 
         /// <summary>
-        /// Gets a timestamp in milliseconds.
+        ///     Gets a timestamp in milliseconds.
         /// </summary>
         /// <returns>Timestamp in milliseconds.</returns>
         public static string GenerateTimeStamp(DateTime baseDateTime)
@@ -40,7 +40,7 @@ namespace Binance.API.Csharp.Client.Utils
         }
 
         /// <summary>
-        /// Gets an HttpMethod object based on a string.
+        ///     Gets an HttpMethod object based on a string.
         /// </summary>
         /// <param name="method">Name of the HttpMethod to create.</param>
         /// <returns>HttpMethod object.</returns>

@@ -1,112 +1,111 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Collections.Concurrent;
 using Binance.API.Csharp.Client.Models.Enums;
 using Binance.API.Csharp.Client.Models.Market;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader
+namespace BinanceTrader;
+
+public class StrategiesTests
 {
-    public class StrategiesTests
+    [NotNull]
+    private readonly CandlesProvider _candlesProvider;
+
+    public StrategiesTests([NotNull] CandlesProvider candlesProvider)
     {
-        [NotNull] private readonly CandlesProvider _candlesProvider;
+        _candlesProvider = candlesProvider;
+    }
 
-        public StrategiesTests([NotNull] CandlesProvider candlesProvider) => _candlesProvider = candlesProvider;
+    [NotNull]
+    public ConcurrentDictionary<TradeSessionConfig, TradeResult> CompareStrategies(
+        [NotNull] Dictionary<string, IReadOnlyList<Candlestick>> candlesDict,
+        [NotNull] IReadOnlyList<TradeSessionConfig> configs)
+    {
+        var results = new ConcurrentDictionary<TradeSessionConfig, TradeResult>();
 
-        [NotNull]
-        public ConcurrentDictionary<TradeSessionConfig, TradeResult> CompareStrategies(
-            [NotNull] Dictionary<string, IReadOnlyList<Candlestick>> candlesDict,
-            [NotNull] IReadOnlyList<TradeSessionConfig> configs)
-        {
-            var results = new ConcurrentDictionary<TradeSessionConfig, TradeResult>();
+        Parallel.ForEach(
+            configs,
+            //new ParallelOptions { MaxDegreeOfParallelism = 1 },
+            config =>
+            {
+                Console.WriteLine($"Start: {config.NotNull().ProfitRatio} / {config.MaxIdlePeriod}");
 
-            Parallel.ForEach(
-                configs,
-                //new ParallelOptions { MaxDegreeOfParallelism = 1 },
-                config =>
+                var tradeResults = new List<TradeResult>();
+
+                foreach (var value in candlesDict)
                 {
-                    Console.WriteLine($"Start: {config.NotNull().ProfitRatio} / {config.MaxIdlePeriod}");
+                    var candles = value.Value ?? new List<Candlestick>();
 
-                    var tradeResults = new List<TradeResult>();
-
-                    foreach (var value in candlesDict)
+                    if (!candles.Any())
                     {
-                        var candles = value.Value ?? new List<Candlestick>();
-
-                        if (!candles.Any())
-                        {
-                            continue;
-                        }
-
-                        var account = Trade(candles, config.NotNull());
-                        var firstPrice = candles.First().NotNull().Close;
-                        var lastPrice = candles.Last().NotNull().Close;
-
-                        var tradeResult = new TradeResult(
-                            config.InitialQuoteAmount,
-                            account.CurrentBaseAmount * lastPrice + account.CurrentQuoteAmount,
-                            account.InitialQuoteAmount / firstPrice * lastPrice + account.InitialBaseAmount,
-                            account.CompletedCount,
-                            account.CanceledCount);
-
-                        tradeResults.Add(tradeResult);
+                        continue;
                     }
 
-                    var tradesResult = new TradeResult(
-                        tradeResults.Sum(r => r.NotNull().InitialAmount),
-                        tradeResults.Sum(r => r.NotNull().TradeAmount),
-                        tradeResults.Sum(r => r.NotNull().HoldAmount),
-                        tradeResults.Sum(r => r.NotNull().CompletedCount),
-                        tradeResults.Sum(r => r.NotNull().CanceledCount));
+                    var account = Trade(candles, config.NotNull());
+                    var firstPrice = candles.First().NotNull().Close;
+                    var lastPrice = candles.Last().NotNull().Close;
 
-                    results[config.NotNull()] = tradesResult;
+                    var tradeResult = new TradeResult(
+                        config.InitialQuoteAmount,
+                        account.CurrentBaseAmount * lastPrice + account.CurrentQuoteAmount,
+                        account.InitialQuoteAmount / firstPrice * lastPrice + account.InitialBaseAmount,
+                        account.CompletedCount,
+                        account.CanceledCount);
 
-                    Console.WriteLine($"End: {config.ProfitRatio} / {config.MaxIdlePeriod}");
-                });
+                    tradeResults.Add(tradeResult);
+                }
 
-            return results;
-        }
+                var tradesResult = new TradeResult(
+                    tradeResults.Sum(r => r.NotNull().InitialAmount),
+                    tradeResults.Sum(r => r.NotNull().TradeAmount),
+                    tradeResults.Sum(r => r.NotNull().HoldAmount),
+                    tradeResults.Sum(r => r.NotNull().CompletedCount),
+                    tradeResults.Sum(r => r.NotNull().CanceledCount));
 
-        [NotNull]
-        public async Task<Dictionary<string, IReadOnlyList<Candlestick>>> LoadCandles(
-            [NotNull] IEnumerable<string> assets,
-            string baseAsset,
-            DateTime start,
-            DateTime end,
-            TimeInterval interval)
+                results[config.NotNull()] = tradesResult;
+
+                Console.WriteLine($"End: {config.ProfitRatio} / {config.MaxIdlePeriod}");
+            });
+
+        return results;
+    }
+
+    [NotNull]
+    public async Task<Dictionary<string, IReadOnlyList<Candlestick>>> LoadCandles(
+        [NotNull] IEnumerable<string> assets,
+        string baseAsset,
+        DateTime start,
+        DateTime end,
+        TimeInterval interval)
+    {
+        var candlesDict = new Dictionary<string, IReadOnlyList<Candlestick>>();
+
+        foreach (var asset in assets)
         {
-            var candlesDict = new Dictionary<string, IReadOnlyList<Candlestick>>();
+            Console.WriteLine($"{asset} load started");
 
-            foreach (var asset in assets)
-            {
-                Console.WriteLine($"{asset} load started");
+            var assetCandles = await _candlesProvider.LoadCandles(
+                asset,
+                baseAsset,
+                start,
+                end,
+                interval);
 
-                var assetCandles = await _candlesProvider.LoadCandles(
-                    asset,
-                    baseAsset,
-                    start,
-                    end,
-                    interval);
+            candlesDict.Add(asset.NotNull(), assetCandles);
 
-                candlesDict.Add(asset.NotNull(), assetCandles);
-
-                Console.WriteLine($"{asset} load completed");
-            }
-
-            return candlesDict;
+            Console.WriteLine($"{asset} load completed");
         }
 
-        [NotNull]
-        private static ITradeAccount Trade([NotNull] IReadOnlyList<Candlestick> candles,
-            [NotNull] TradeSessionConfig config)
-        {
-            var tradeSession = new TradeSession(config);
-            var result = tradeSession.Run(candles);
+        return candlesDict;
+    }
 
-            return result;
-        }
+    [NotNull]
+    private static ITradeAccount Trade([NotNull] IReadOnlyList<Candlestick> candles,
+        [NotNull] TradeSessionConfig config)
+    {
+        var tradeSession = new TradeSession(config);
+        var result = tradeSession.Run(candles);
+
+        return result;
     }
 }

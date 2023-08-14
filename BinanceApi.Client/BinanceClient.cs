@@ -18,7 +18,7 @@ namespace Binance.API.Csharp.Client
     public class BinanceClient : BinanceClientAbstract, IBinanceClient
     {
         /// <summary>
-        /// ctor.
+        ///     ctor.
         /// </summary>
         /// <param name="apiClient">API client to be used for API calls.</param>
         /// <param name="loadTradingRules">Optional parameter to skip loading trading rules.</param>
@@ -33,7 +33,7 @@ namespace Binance.API.Csharp.Client
         #region Private Methods
 
         /// <summary>
-        /// Validates that a new order is valid before posting it.
+        ///     Validates that a new order is valid before posting it.
         /// </summary>
         /// <param name="orderType">Order type (LIMIT-MARKET).</param>
         /// <param name="symbolInfo">Object with the information of the ticker.</param>
@@ -82,7 +82,7 @@ namespace Binance.API.Csharp.Client
 
                 if (icebergQty > 0m && !rules.IcebergAllowed)
                 {
-                    throw new Exception($"Iceberg orders not allowed for this symbol.");
+                    throw new Exception("Iceberg orders not allowed for this symbol.");
                 }
 
                 if (orderType == OrderType.Limit)
@@ -106,18 +106,18 @@ namespace Binance.API.Csharp.Client
         /// <returns></returns>
         public async Task<dynamic> TestConnectivity()
         {
-            var result = await _apiClient.CallAsync<dynamic>(ApiMethod.GET, EndPoints.TestConnectivity, false);
+            var result = await _apiClient.CallAsync<dynamic>(ApiMethod.GET, EndPoints.TestConnectivity);
 
             return result;
         }
 
         /// <summary>
-        /// Test connectivity to the Rest API and get the current server time.
+        ///     Test connectivity to the Rest API and get the current server time.
         /// </summary>
         /// <returns></returns>
         public async Task<ServerInfo> GetServerTime()
         {
-            var result = await _apiClient.CallAsync<ServerInfo>(ApiMethod.GET, EndPoints.CheckServerTime, false);
+            var result = await _apiClient.CallAsync<ServerInfo>(ApiMethod.GET, EndPoints.CheckServerTime);
 
             return result;
         }
@@ -134,7 +134,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Get order book for a particular symbol.
+        ///     Get order book for a particular symbol.
         /// </summary>
         /// <param name="symbol">Ticker symbol.</param>
         /// <param name="limit">Limit of records to retrieve.</param>
@@ -156,7 +156,8 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Get compressed, aggregate trades. Trades that fill at the time, from the same order, with the same price will have the quantity aggregated.
+        ///     Get compressed, aggregate trades. Trades that fill at the time, from the same order, with the same price will have
+        ///     the quantity aggregated.
         /// </summary>
         /// <param name="symbol">Ticker symbol.</param>
         /// <param name="limit">Limit of records to retrieve.</param>
@@ -175,7 +176,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Kline/candlestick bars for a symbol. Klines are uniquely identified by their open time.
+        ///     Kline/candlestick bars for a symbol. Klines are uniquely identified by their open time.
         /// </summary>
         /// <param name="symbol">Ticker symbol.</param>
         /// <param name="interval">Time interval to retreive.</param>
@@ -203,7 +204,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// 24 hour price change statistics.
+        ///     24 hour price change statistics.
         /// </summary>
         /// <param name="symbol">Ticker symbol.</param>
         /// <returns></returns>
@@ -229,13 +230,13 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Latest price for all symbols.
+        ///     Latest price for all symbols.
         /// </summary>
         /// <returns></returns>
         public async Task<IEnumerable<SymbolPrice>> GetAllPrices()
         {
             var result =
-                await _apiClient.CallAsync<IEnumerable<SymbolPrice>>(ApiMethod.GET, EndPoints.Price, false);
+                await _apiClient.CallAsync<IEnumerable<SymbolPrice>>(ApiMethod.GET, EndPoints.Price);
 
             return result;
         }
@@ -250,14 +251,13 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Best price/qty on the order book for all symbols.
+        ///     Best price/qty on the order book for all symbols.
         /// </summary>
         /// <returns></returns>
         public async Task<IEnumerable<OrderBookTicker>> GetOrderBookTicker()
         {
             var result =
-                await _apiClient.CallAsync<IEnumerable<OrderBookTicker>>(ApiMethod.GET, EndPoints.OrderBookTicker,
-                    false);
+                await _apiClient.CallAsync<IEnumerable<OrderBookTicker>>(ApiMethod.GET, EndPoints.OrderBookTicker);
 
             return result;
         }
@@ -267,7 +267,7 @@ namespace Binance.API.Csharp.Client
         #region Account Information
 
         /// <summary>
-        /// Send in a new order.
+        ///     Send in a new order.
         /// </summary>
         /// <param name="symbol">Ticker symbol.</param>
         /// <param name="quantity">Quantity to transaction.</param>
@@ -296,7 +296,8 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Test new order creation and signature/recvWindow long. Creates and validates a new order but does not send it into the matching engine.
+        ///     Test new order creation and signature/recvWindow long. Creates and validates a new order but does not send it into
+        ///     the matching engine.
         /// </summary>
         /// <param name="symbol">Ticker symbol.</param>
         /// <param name="quantity">Quantity to transaction.</param>
@@ -325,7 +326,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Check an order's status.
+        ///     Check an order's status.
         /// </summary>
         /// <param name="symbol">Ticker symbol.</param>
         /// <param name="orderId">Id of the order to retrieve.</param>
@@ -361,7 +362,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Cancel an active order.
+        ///     Cancel an active order.
         /// </summary>
         /// <param name="symbol">Ticker symbol.</param>
         /// <param name="orderId">Id of the order to cancel.</param>
@@ -397,7 +398,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Get all open orders on a symbol.
+        ///     Get all open orders on a symbol.
         /// </summary>
         /// <param name="symbol">Ticker symbol.</param>
         /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
@@ -418,7 +419,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Get all account orders; active, canceled, or filled.
+        ///     Get all account orders; active, canceled, or filled.
         /// </summary>
         /// <param name="symbol">Ticker symbol.</param>
         /// <param name="orderId">If is set, it will get orders >= that orderId. Otherwise most recent orders are returned.</param>
@@ -441,7 +442,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Get current account information.
+        ///     Get current account information.
         /// </summary>
         /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
         /// <returns></returns>
@@ -454,7 +455,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Get trades for a specific account and symbol.
+        ///     Get trades for a specific account and symbol.
         /// </summary>
         /// <param name="symbol">Ticker symbol.</param>
         /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
@@ -473,7 +474,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Submit a withdraw request.
+        ///     Submit a withdraw request.
         /// </summary>
         /// <param name="asset">Asset to withdraw.</param>
         /// <param name="amount">Amount to withdraw.</param>
@@ -509,7 +510,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Fetch deposit history.
+        ///     Fetch deposit history.
         /// </summary>
         /// <param name="asset">Asset you want to see the information for.</param>
         /// <param name="status">Deposit status.</param>
@@ -526,7 +527,7 @@ namespace Binance.API.Csharp.Client
             }
 
             var args = $"asset={asset.ToUpper()}"
-                       + (status.HasValue ? $"&status={(int) status}" : "")
+                       + (status.HasValue ? $"&status={(int)status}" : "")
                        + (startTime.HasValue ? $"&startTime={startTime.Value.GetUnixTimeStamp()}" : "")
                        + (endTime.HasValue ? $"&endTime={endTime.Value.GetUnixTimeStamp()}" : "")
                        + $"&recvWindow={recvWindow}";
@@ -538,7 +539,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Fetch withdraw history.
+        ///     Fetch withdraw history.
         /// </summary>
         /// <param name="asset">Asset you want to see the information for.</param>
         /// <param name="status">Withdraw status.</param>
@@ -555,7 +556,7 @@ namespace Binance.API.Csharp.Client
             }
 
             var args = $"asset={asset.ToUpper()}"
-                       + (status.HasValue ? $"&status={(int) status}" : "")
+                       + (status.HasValue ? $"&status={(int)status}" : "")
                        + (startTime.HasValue ? $"&startTime={Utilities.GenerateTimeStamp(startTime.Value)}" : "")
                        + (endTime.HasValue ? $"&endTime={Utilities.GenerateTimeStamp(endTime.Value)}" : "")
                        + $"&recvWindow={recvWindow}";
@@ -571,18 +572,18 @@ namespace Binance.API.Csharp.Client
         #region User Stream
 
         /// <summary>
-        /// Start a new user data stream.
+        ///     Start a new user data stream.
         /// </summary>
         /// <returns></returns>
         public async Task<UserStreamInfo> StartUserStream()
         {
-            var result = await _apiClient.CallAsync<UserStreamInfo>(ApiMethod.POST, EndPoints.StartUserStream, false);
+            var result = await _apiClient.CallAsync<UserStreamInfo>(ApiMethod.POST, EndPoints.StartUserStream);
 
             return result;
         }
 
         /// <summary>
-        /// PING a user data stream to prevent a time out.
+        ///     PING a user data stream to prevent a time out.
         /// </summary>
         /// <param name="listenKey">Listenkey of the user stream to keep alive.</param>
         /// <returns></returns>
@@ -600,7 +601,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Close out a user data stream.
+        ///     Close out a user data stream.
         /// </summary>
         /// <param name="listenKey">Listenkey of the user stream to close.</param>
         /// <returns></returns>
@@ -622,7 +623,7 @@ namespace Binance.API.Csharp.Client
         #region Web Socket Client
 
         /// <summary>
-        /// Listen to the Depth endpoint.
+        ///     Listen to the Depth endpoint.
         /// </summary>
         /// <param name="symbol">Ticker symbol.</param>
         /// <param name="depthHandler">Handler to be used when a message is received.</param>
@@ -638,7 +639,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Listen to the Kline endpoint.
+        ///     Listen to the Kline endpoint.
         /// </summary>
         /// <param name="symbol">Ticker symbol.</param>
         /// <param name="interval">Time interval to retreive.</param>
@@ -656,7 +657,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Listen to the Trades endpoint.
+        ///     Listen to the Trades endpoint.
         /// </summary>
         /// <param name="symbol">Ticker symbol.</param>
         /// <param name="tradeHandler">Handler to be used when a message is received.</param>
@@ -673,7 +674,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Listen to the User Data endpoint.
+        ///     Listen to the User Data endpoint.
         /// </summary>
         /// <param name="accountInfoHandler">Handler to be used when a account message is received.</param>
         /// <param name="tradesHandler">Handler to be used when a trade message is received.</param>

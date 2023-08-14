@@ -1,11 +1,9 @@
-﻿using System.Collections.Generic;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 
-namespace BinanceTrader.Tools.KeyProviders
+namespace BinanceTrader.Tools.KeyProviders;
+
+public interface ITraderConfigProvider
 {
-    public interface ITraderConfigProvider
-    {
-        [NotNull]
-        Task<IReadOnlyList<TraderConfig>> GetConfigsAsync();
-    }
+    [NotNull]
+    Task<IReadOnlyList<TraderConfig>> GetConfigsAsync();
 }

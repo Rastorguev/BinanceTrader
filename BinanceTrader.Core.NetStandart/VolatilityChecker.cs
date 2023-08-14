@@ -1,35 +1,34 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Binance.API.Csharp.Client.Models.Enums;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader.Trader
+namespace BinanceTrader.Trader;
+
+public class VolatilityChecker
 {
-    public class VolatilityChecker
+    [NotNull]
+    private readonly ICandlesProvider _candlesProvider;
+
+    [NotNull]
+    private readonly ILogger _logger;
+
+    public VolatilityChecker([NotNull] ICandlesProvider candlesProvider, [NotNull] ILogger logger)
     {
-        [NotNull] private readonly ICandlesProvider _candlesProvider;
-        [NotNull] private readonly ILogger _logger;
+        _candlesProvider = candlesProvider;
+        _logger = logger;
+    }
 
-        public VolatilityChecker([NotNull] ICandlesProvider candlesProvider, [NotNull] ILogger logger)
-        {
-            _candlesProvider = candlesProvider;
-            _logger = logger;
-        }
-
-        [NotNull]
-        public async Task<Dictionary<string, decimal>> GetAssetsVolatility(
-            [NotNull] [ItemNotNull] IEnumerable<string> assets,
-            [NotNull] string quoteAsset,
-            DateTime startTime,
-            DateTime endTime,
-            TimeInterval interval)
-        {
-            var allCandles = new ConcurrentDictionary<string, decimal>();
-            var tasks = assets.Select(async asset =>
+    [NotNull]
+    public async Task<Dictionary<string, decimal>> GetAssetsVolatility(
+        [NotNull] [ItemNotNull] IEnumerable<string> assets,
+        [NotNull] string quoteAsset,
+        DateTime startTime,
+        DateTime endTime,
+        TimeInterval interval)
+    {
+        var allCandles = new ConcurrentDictionary<string, decimal>();
+        var tasks = assets.Select(async asset =>
             {
                 try
                 {
@@ -50,11 +49,10 @@ namespace BinanceTrader.Trader
                     _logger.LogException(ex);
                 }
             })
-                .ToList();
+            .ToList();
 
-            await Task.WhenAll(tasks).NotNull();
+        await Task.WhenAll(tasks).NotNull();
 
-            return allCandles.ToDictionary(c => c.Key, c => c.Value);
-        }
+        return allCandles.ToDictionary(c => c.Key, c => c.Value);
     }
 }

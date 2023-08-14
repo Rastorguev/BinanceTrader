@@ -4,9 +4,8 @@ using Newtonsoft.Json;
 namespace Binance.API.Csharp.Client.Models.Enums
 {
     /// <summary>
-    /// Time interval for the candlestick.
+    ///     Time interval for the candlestick.
     /// </summary>
-
     [JsonConverter(typeof(DefaultValueEnumConverter))]
     [DefaultValue(Unknown)]
     public enum TimeInterval
@@ -27,6 +26,7 @@ namespace Binance.API.Csharp.Client.Models.Enums
 
         [Description("30m")]
         Minutes_30,
+
         [Description("1h")]
         Hours_1,
 

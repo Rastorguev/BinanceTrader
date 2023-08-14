@@ -10,13 +10,15 @@ namespace Binance.API.Csharp.Client.Models.Enums
     {
         Unknown = -1000,
         New,
+
         [EnumMember(Value = "PARTIALLY_FILLED")]
         PartiallyFilled,
         Filled,
         Canceled,
+
         [EnumMember(Value = "PENDING_CANCEL")]
         PendingCancel,
         Rejected,
-        Expired,
+        Expired
     }
 }

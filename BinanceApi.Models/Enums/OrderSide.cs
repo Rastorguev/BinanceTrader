@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 namespace Binance.API.Csharp.Client.Models.Enums
 {
     /// <summary>
-    /// Different sides of an order.
+    ///     Different sides of an order.
     /// </summary>
     [JsonConverter(typeof(DefaultValueEnumConverter))]
     [DefaultValue(Unknown)]

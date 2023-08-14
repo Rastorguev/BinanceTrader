@@ -1,8 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Runtime.Serialization;
-using Binance.API.Csharp.Client.Models.Enums;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 
 namespace Binance.API.Csharp.Client.Models.Market.TradingRules
 {
@@ -46,13 +44,13 @@ namespace Binance.API.Csharp.Client.Models.Market.TradingRules
 
         [JsonProperty("limit")]
         public int Limit { get; set; }
-        
+
         [JsonProperty("maxNumOrders")]
         public int MaxNumOrders { get; set; }
 
         [JsonProperty("maxNumAlgoOrders")]
         public int MaxNumAlgoOrders { get; set; }
-        
+
         [JsonProperty("maxNumIcebergOrders")]
         public int MaxNumIcebergOrders { get; set; }
 
@@ -88,11 +86,11 @@ namespace Binance.API.Csharp.Client.Models.Market.TradingRules
         MaxNumOrders,
 
         [EnumMember(Value = "MAX_NUM_ALGO_ORDERS")]
-        MaxNumAlgoOrders, 
-        
+        MaxNumAlgoOrders,
+
         [EnumMember(Value = "MAX_NUM_ICEBERG_ORDERS")]
-        MaxNumIcebergOrders, 
-        
+        MaxNumIcebergOrders,
+
         [EnumMember(Value = "MAX_POSITION")]
         MaxPosition,
 

@@ -1,18 +1,16 @@
-﻿using System.Collections.Generic;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 
-namespace BinanceTrader.Tools.KeyProviders
+namespace BinanceTrader.Tools.KeyProviders;
+
+public interface IKeyProvider
 {
-    public interface IKeyProvider
-    {
-        [NotNull]
-        Task<IReadOnlyList<BinanceKeySet>> GetKeysAsync();
-    }
+    [NotNull]
+    Task<IReadOnlyList<BinanceKeySet>> GetKeysAsync();
+}
 
-    public class BinanceKeySet
-    {
-        public string Name { get; set; }
-        public string Api { get; set; }
-        public string Secret { get; set; }
-    }
+public class BinanceKeySet
+{
+    public string Name { get; set; }
+    public string Api { get; set; }
+    public string Secret { get; set; }
 }

@@ -1,156 +1,151 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Collections.Concurrent;
 using Binance.API.Csharp.Client;
 using Binance.API.Csharp.Client.Models.Enums;
-using Binance.API.Csharp.Client.Models.Extensions;
 using Binance.API.Csharp.Client.Models.Market;
 using BinanceTrader.Tools;
 using BinanceTrader.Trader;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 
-namespace BinanceTrader
+namespace BinanceTrader;
+
+public class CandlesProvider : ICandlesProvider
 {
-    public class CandlesProvider : ICandlesProvider
+    private const string DateFormat = "yyyy-MM-dd_hh-mm";
+    private const string DirName = "Candles";
+
+    [NotNull]
+    private readonly string _dirPath = $@"C:\{DirName}";
+
+    [NotNull]
+    private readonly ConcurrentDictionary<string, IReadOnlyList<Candlestick>> _inMimoryCache = new();
+
+    [NotNull]
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _semaphores = new();
+
+    [NotNull]
+    private readonly BinanceClient _client;
+
+    public CandlesProvider([NotNull] BinanceClient client)
     {
-        private const string DateFormat = "yyyy-MM-dd_hh-mm";
-        private const string DirName = "Candles";
-        [NotNull] private readonly string _dirPath = $@"C:\{DirName}";
+        _client = client;
+    }
 
-        [NotNull] private readonly ConcurrentDictionary<string, IReadOnlyList<Candlestick>> _inMimoryCache =
-            new ConcurrentDictionary<string, IReadOnlyList<Candlestick>>();
+    public async Task<IReadOnlyList<Candlestick>> LoadCandles(
+        string baseAsset,
+        string quoteAsset,
+        DateTime start,
+        DateTime end,
+        TimeInterval interval)
+    {
+        var fileName = GenerateFileName(baseAsset, quoteAsset, start, end, interval);
 
-        [NotNull] private readonly ConcurrentDictionary<string, SemaphoreSlim> _semaphores =
-            new ConcurrentDictionary<string, SemaphoreSlim>();
-
-        [NotNull] private readonly BinanceClient _client;
-
-        public CandlesProvider([NotNull] BinanceClient client)
+        if (TryGetFromInMemoryCache(fileName, out var cachedInMemory))
         {
-            _client = client;
+            return cachedInMemory;
         }
 
-        public async Task<IReadOnlyList<Candlestick>> LoadCandles(
-            string baseAsset,
-            string quoteAsset,
-            DateTime start,
-            DateTime end,
-            TimeInterval interval)
+        var semaphore = _semaphores.GetOrAdd(fileName, new SemaphoreSlim(1, 1)).NotNull();
+        await semaphore.WaitAsync().NotNull();
+        try
         {
-            var fileName = GenerateFileName(baseAsset, quoteAsset, start, end, interval);
-
-            if (TryGetFromInMemoryCache(fileName, out var cachedInMemory))
+            if (TryGetFromInMemoryCache(fileName, out cachedInMemory))
             {
                 return cachedInMemory;
             }
 
-            var semaphore = _semaphores.GetOrAdd(fileName, new SemaphoreSlim(1, 1)).NotNull();
-            await semaphore.WaitAsync().NotNull();
-            try
+            if (TryGetFromDiskCache(fileName, out var cachedOnDisk))
             {
-                if (TryGetFromInMemoryCache(fileName, out cachedInMemory))
-                {
-                    return cachedInMemory;
-                }
+                PutToInMemoryCache(cachedOnDisk, fileName);
 
-                if (TryGetFromDiskCache(fileName, out var cachedOnDisk))
-                {
-                    PutToInMemoryCache(cachedOnDisk, fileName);
-
-                    return cachedOnDisk;
-                }
-
-                var candles = await new CandlesLoader(_client).LoadCandles(baseAsset, quoteAsset, start, end, interval);
-
-                PutToInMemoryCache(candles, fileName);
-                PutToDiskCache(candles, fileName);
-
-                return candles;
+                return cachedOnDisk;
             }
-            finally
-            {
-                semaphore.Release();
-            }
+
+            var candles = await new CandlesLoader(_client).LoadCandles(baseAsset, quoteAsset, start, end, interval);
+
+            PutToInMemoryCache(candles, fileName);
+            PutToDiskCache(candles, fileName);
+
+            return candles;
         }
-
-        private void PutToInMemoryCache([NotNull] IReadOnlyList<Candlestick> candles,
-            [NotNull] string key)
+        finally
         {
-            _inMimoryCache.TryAdd(key, candles);
+            semaphore.Release();
         }
+    }
 
-        private bool TryGetFromInMemoryCache([NotNull] string key, out IReadOnlyList<Candlestick> candles)
+    private void PutToInMemoryCache([NotNull] IReadOnlyList<Candlestick> candles,
+        [NotNull] string key)
+    {
+        _inMimoryCache.TryAdd(key, candles);
+    }
+
+    private bool TryGetFromInMemoryCache([NotNull] string key, out IReadOnlyList<Candlestick> candles)
+    {
+        return _inMimoryCache.TryGetValue(key, out candles);
+    }
+
+    private void PutToDiskCache(
+        [NotNull] IReadOnlyList<Candlestick> candles,
+        [NotNull] string fileName)
+    {
+        var serialized = JsonConvert.SerializeObject(candles);
+
+        if (!Directory.Exists(_dirPath))
         {
-            return _inMimoryCache.TryGetValue(key, out candles);
+            Directory.CreateDirectory(_dirPath);
         }
 
-        private void PutToDiskCache(
-            [NotNull] IReadOnlyList<Candlestick> candles,
-            [NotNull] string fileName)
+        var path = Path.Combine(_dirPath, fileName);
+
+        if (!File.Exists(path))
         {
-            var serialized = JsonConvert.SerializeObject(candles);
-
-            if (!Directory.Exists(_dirPath))
+            using (var sw = File.CreateText(path))
             {
-                Directory.CreateDirectory(_dirPath);
-            }
-
-            var path = Path.Combine(_dirPath, fileName);
-
-            if (!File.Exists(path))
-            {
-                using (var sw = File.CreateText(path))
-                {
-                    sw.Write(serialized);
-                }
+                sw.Write(serialized);
             }
         }
+    }
 
-        private bool TryGetFromDiskCache(
-            [NotNull] string fileName,
-            out IReadOnlyList<Candlestick> candles
-        )
+    private bool TryGetFromDiskCache(
+        [NotNull] string fileName,
+        out IReadOnlyList<Candlestick> candles
+    )
+    {
+        candles = new List<Candlestick>();
+        var path = Path.Combine(_dirPath, fileName);
+
+        if (!File.Exists(path))
         {
-            candles = new List<Candlestick>();
-            var path = Path.Combine(_dirPath, fileName);
-
-            if (!File.Exists(path))
-            {
-                return false;
-            }
-
-            string serialized;
-            using (var sr = File.OpenText(path))
-            {
-                serialized = sr.ReadToEnd();
-            }
-
-            candles = JsonConvert.DeserializeObject<List<Candlestick>>(serialized);
-
-            return true;
+            return false;
         }
 
-        [NotNull]
-        private string GenerateFileName(
-            string baseAsset,
-            string quoteAsset,
-            DateTime startTime,
-            DateTime endTime,
-            TimeInterval interval)
+        string serialized;
+        using (var sr = File.OpenText(path))
         {
-            var name = string.Join("__",
-                baseAsset,
-                quoteAsset,
-                startTime.ToString(DateFormat),
-                endTime.ToString(DateFormat),
-                interval.ToString());
-
-            return $"{name}.json";
+            serialized = sr.ReadToEnd();
         }
+
+        candles = JsonConvert.DeserializeObject<List<Candlestick>>(serialized);
+
+        return true;
+    }
+
+    [NotNull]
+    private string GenerateFileName(
+        string baseAsset,
+        string quoteAsset,
+        DateTime startTime,
+        DateTime endTime,
+        TimeInterval interval)
+    {
+        var name = string.Join("__",
+            baseAsset,
+            quoteAsset,
+            startTime.ToString(DateFormat),
+            endTime.ToString(DateFormat),
+            interval.ToString());
+
+        return $"{name}.json";
     }
 }

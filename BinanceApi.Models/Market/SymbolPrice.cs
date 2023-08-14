@@ -6,6 +6,7 @@ namespace Binance.API.Csharp.Client.Models.Market
     {
         [JsonProperty("symbol")]
         public string Symbol { get; set; }
+
         [JsonProperty("price")]
         public decimal Price { get; set; }
     }

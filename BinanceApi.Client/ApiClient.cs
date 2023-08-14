@@ -16,10 +16,17 @@ namespace Binance.API.Csharp.Client
 {
     public class ApiClient : ApiClientAbstract, IApiClient
     {
-        private TimeSpan ClientServerTimeDiff { get; set; } = TimeSpan.Zero;
+        private class BinanceErrorPayload
+        {
+            [JsonProperty("code")]
+            public int ErrorCode { get; set; }
+
+            [JsonProperty("msg")]
+            public string Message { get; set; }
+        }
 
         /// <summary>
-        /// ctor.
+        ///     ctor.
         /// </summary>
         /// <param name="apiKey">Key used to authenticate within the API.</param>
         /// <param name="apiSecret">API secret used to signed API calls.</param>
@@ -30,8 +37,10 @@ namespace Binance.API.Csharp.Client
         {
         }
 
+        private TimeSpan ClientServerTimeDiff { get; set; } = TimeSpan.Zero;
+
         /// <summary>
-        /// Calls API Methods.
+        ///     Calls API Methods.
         /// </summary>
         /// <typeparam name="T">Type to which the response content will be converted.</typeparam>
         /// <param name="method">HTTPMethod (POST-GET-PUT-DELETE)</param>
@@ -92,46 +101,8 @@ namespace Binance.API.Csharp.Client
                 .AddResponseDetails(content);
         }
 
-        private async Task HandleApiException<T>(BinanceErrorPayload errorPayload, string finalEndpoint, string content)
-        {
-            var errorCode = errorPayload.ErrorCode;
-            Exception ex = null;
-            switch (errorCode)
-            {
-                case -1021:
-                    await HandleInvalidTimestamp();
-                    break;
-                case -2010:
-                    ex = new InsufficientBalanceException(errorCode, errorPayload.Message);
-                    break;
-                case -2011:
-                    ex = new UnknownOrderException(errorCode, errorPayload.Message);
-                    break;
-                default:
-                    ex = new InvalidRequestException(errorCode, errorPayload.Message);
-                    break;
-            }
-
-            if (ex != null)
-            {
-                ex.AddRequestStringDetails(finalEndpoint)
-                    .AddResponseDetails(content);
-
-                throw ex;
-            }
-        }
-
-        private async Task HandleInvalidTimestamp()
-        {
-            var utcNow = DateTime.Now.ToUniversalTime();
-            var serverUnixTime = (await CallAsync<ServerInfo>(ApiMethod.GET, EndPoints.CheckServerTime)).ServerTime;
-            var serverUtcTime = DateTimeOffset.FromUnixTimeMilliseconds(serverUnixTime).ToUniversalTime();
-
-            ClientServerTimeDiff = serverUtcTime - utcNow;
-        }
-
         /// <summary>
-        /// Connects to a Websocket endpoint.
+        ///     Connects to a Websocket endpoint.
         /// </summary>
         /// <typeparam name="T">Type used to parsed the response message.</typeparam>
         /// <param name="parameters">Paremeters to send to the Websocket.</param>
@@ -170,7 +141,7 @@ namespace Binance.API.Csharp.Client
         }
 
         /// <summary>
-        /// Connects to a UserData Websocket endpoint.
+        ///     Connects to a UserData Websocket endpoint.
         /// </summary>
         /// <param name="parameters">Paremeters to send to the Websocket.</param>
         /// <param name="accountHandler">Deletage to callback after receive a account info message.</param>
@@ -221,13 +192,42 @@ namespace Binance.API.Csharp.Client
             _openSockets.Add(ws);
         }
 
-        private class BinanceErrorPayload
+        private async Task HandleApiException<T>(BinanceErrorPayload errorPayload, string finalEndpoint, string content)
         {
-            [JsonProperty("code")]
-            public int ErrorCode { get; set; }
+            var errorCode = errorPayload.ErrorCode;
+            Exception ex = null;
+            switch (errorCode)
+            {
+                case -1021:
+                    await HandleInvalidTimestamp();
+                    break;
+                case -2010:
+                    ex = new InsufficientBalanceException(errorCode, errorPayload.Message);
+                    break;
+                case -2011:
+                    ex = new UnknownOrderException(errorCode, errorPayload.Message);
+                    break;
+                default:
+                    ex = new InvalidRequestException(errorCode, errorPayload.Message);
+                    break;
+            }
 
-            [JsonProperty("msg")]
-            public string Message { get; set; }
+            if (ex != null)
+            {
+                ex.AddRequestStringDetails(finalEndpoint)
+                    .AddResponseDetails(content);
+
+                throw ex;
+            }
+        }
+
+        private async Task HandleInvalidTimestamp()
+        {
+            var utcNow = DateTime.Now.ToUniversalTime();
+            var serverUnixTime = (await CallAsync<ServerInfo>(ApiMethod.GET, EndPoints.CheckServerTime)).ServerTime;
+            var serverUtcTime = DateTimeOffset.FromUnixTimeMilliseconds(serverUnixTime).ToUniversalTime();
+
+            ClientServerTimeDiff = serverUtcTime - utcNow;
         }
     }
 

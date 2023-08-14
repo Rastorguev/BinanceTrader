@@ -6,20 +6,21 @@ namespace Binance.API.Csharp.Client.Domain.Abstract
     public abstract class BinanceClientAbstract
     {
         /// <summary>
-        /// Secret used to authenticate within the API.
-        /// </summary>
-        public TradingRulesContainer RulesContainer;
-
-        /// <summary>
-        /// Client to be used to call the API.
+        ///     Client to be used to call the API.
         /// </summary>
         public readonly IApiClient _apiClient;
 
         /// <summary>
-        /// Defines the constructor of the Binance client.
+        ///     Secret used to authenticate within the API.
+        /// </summary>
+        public TradingRulesContainer RulesContainer;
+
+        /// <summary>
+        ///     Defines the constructor of the Binance client.
         /// </summary>
         /// <param name="apiClient">API client to be used for API calls.</param>
-        public BinanceClientAbstract(IApiClient apiClient) {
+        public BinanceClientAbstract(IApiClient apiClient)
+        {
             _apiClient = apiClient;
         }
     }

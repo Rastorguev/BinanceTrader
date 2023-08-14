@@ -1,19 +1,21 @@
-﻿using System;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 
-namespace BinanceTrader.Trader
+namespace BinanceTrader.Trader;
+
+public static class SymbolUtils
 {
-    public static class SymbolUtils
+    public static string GetCurrencySymbol([NotNull] string baseAsset, [NotNull] string quoteAsset)
     {
-        public static string GetCurrencySymbol([NotNull]string baseAsset, [NotNull]string quoteAsset) => string.Format($"{baseAsset}{quoteAsset}");
-        public static string GetBaseAsset([NotNull]string symbol, [NotNull]string quoteAsset)
-        {
-            if (!symbol.Contains(quoteAsset))
-            {
-                throw new ArgumentException("Symbol doesn't contain QuoteAsset");
-            }
+        return string.Format($"{baseAsset}{quoteAsset}");
+    }
 
-            return symbol.Replace(quoteAsset, string.Empty);
+    public static string GetBaseAsset([NotNull] string symbol, [NotNull] string quoteAsset)
+    {
+        if (!symbol.Contains(quoteAsset))
+        {
+            throw new ArgumentException("Symbol doesn't contain QuoteAsset");
         }
+
+        return symbol.Replace(quoteAsset, string.Empty);
     }
 }

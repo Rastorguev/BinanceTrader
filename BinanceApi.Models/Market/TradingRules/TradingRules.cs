@@ -25,6 +25,9 @@ namespace Binance.API.Csharp.Client.Models.Market.TradingRules
 
     public class TradingRules : ITradingRules
     {
+        [JsonProperty("filters")]
+        public IEnumerable<Filter> Filters { get; set; }
+
         [JsonProperty("symbol")]
         public string Symbol { get; set; }
 
@@ -48,9 +51,6 @@ namespace Binance.API.Csharp.Client.Models.Market.TradingRules
 
         [JsonProperty("icebergAllowed")]
         public bool IcebergAllowed { get; set; }
-
-        [JsonProperty("filters")]
-        public IEnumerable<Filter> Filters { get; set; }
 
         public decimal MinPrice => Filters.First(f => f.FilterType == ExchangeFilterType.PriceFilter).MinPrice;
         public decimal MaxPrice => Filters.First(f => f.FilterType == ExchangeFilterType.PriceFilter).MaxPrice;

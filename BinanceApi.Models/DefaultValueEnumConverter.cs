@@ -20,7 +20,7 @@ namespace Binance.API.Csharp.Client.Models
             catch (JsonSerializationException)
             {
                 if (!(Attribute.GetCustomAttribute(objectType, typeof(DefaultValueAttribute)) is DefaultValueAttribute
-                    defaultValueAttribute))
+                        defaultValueAttribute))
                 {
                     throw;
                 }

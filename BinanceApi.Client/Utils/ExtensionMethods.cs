@@ -1,19 +1,19 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Binance.API.Csharp.Client.Utils
 {
     /// <summary>
-    /// Class to define extension methods.
+    ///     Class to define extension methods.
     /// </summary>
     public static class ExtensionMethods
     {
         /// <summary>
-        /// Extension method to get a enum description.
+        ///     Extension method to get a enum description.
         /// </summary>
         /// <param name="value">Enum to get the description from.</param>
         /// <returns></returns>
@@ -26,7 +26,7 @@ namespace Binance.API.Csharp.Client.Utils
         }
 
         /// <summary>
-        /// Gets a timestamp in milliseconds.
+        ///     Gets a timestamp in milliseconds.
         /// </summary>
         /// <returns>Timestamp in milliseconds.</returns>
         public static string GetUnixTimeStamp(this DateTime baseDateTime)
@@ -36,7 +36,7 @@ namespace Binance.API.Csharp.Client.Utils
         }
 
         /// <summary>
-        /// Validates if string is a valid JSON
+        ///     Validates if string is a valid JSON
         /// </summary>
         /// <param name="stringValue">String to validate</param>
         /// <returns></returns>

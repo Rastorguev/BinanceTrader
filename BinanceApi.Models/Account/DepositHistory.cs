@@ -1,5 +1,5 @@
-﻿using Newtonsoft.Json;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Binance.API.Csharp.Client.Models.Account
 {
@@ -7,10 +7,13 @@ namespace Binance.API.Csharp.Client.Models.Account
     {
         [JsonProperty("insertTime")]
         public long InsertTime { get; set; }
+
         [JsonProperty("amount")]
         public decimal Amount { get; set; }
+
         [JsonProperty("asset")]
         public string Asset { get; set; }
+
         [JsonProperty("status")]
         public int Status { get; set; }
     }
@@ -19,8 +22,8 @@ namespace Binance.API.Csharp.Client.Models.Account
     {
         [JsonProperty("depositList")]
         public IEnumerable<Deposit> DepositList { get; set; }
+
         [JsonProperty("success")]
         public bool Success { get; set; }
     }
-
 }

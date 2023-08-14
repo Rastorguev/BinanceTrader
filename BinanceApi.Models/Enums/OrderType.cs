@@ -4,9 +4,8 @@ using Newtonsoft.Json;
 namespace Binance.API.Csharp.Client.Models.Enums
 {
     /// <summary>
-    /// Different types of an order.
+    ///     Different types of an order.
     /// </summary>
-
     [JsonConverter(typeof(DefaultValueEnumConverter))]
     [DefaultValue(Unknown)]
     public enum OrderType
@@ -18,6 +17,6 @@ namespace Binance.API.Csharp.Client.Models.Enums
         StopLossLimit,
         TakeProfit,
         TakeProfitLimit,
-        LimitMaker,
+        LimitMaker
     }
 }

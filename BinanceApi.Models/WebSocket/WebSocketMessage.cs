@@ -6,6 +6,7 @@ namespace Binance.API.Csharp.Client.Models.WebSocket
     {
         [JsonProperty("e")]
         public string EventType { get; set; }
+
         [JsonProperty("E")]
         public long EventTime { get; set; }
     }
