@@ -58,6 +58,6 @@ namespace Binance.API.Csharp.Client.Models.Market.TradingRules
         public decimal MinQty => Filters.First(f => f.FilterType == ExchangeFilterType.LotSize).MinQty;
         public decimal MaxQty => Filters.First(f => f.FilterType == ExchangeFilterType.LotSize).MaxQty;
         public decimal StepSize => Filters.First(f => f.FilterType == ExchangeFilterType.LotSize).StepSize;
-        public decimal MinNotional => Filters.First(f => f.FilterType == ExchangeFilterType.MinNotional).MinNotional;
+        public decimal MinNotional => Filters.First(f => f.FilterType == ExchangeFilterType.Notional).MinNotional;
     }
 }

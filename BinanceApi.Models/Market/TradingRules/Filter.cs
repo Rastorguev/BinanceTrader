@@ -75,8 +75,8 @@ namespace Binance.API.Csharp.Client.Models.Market.TradingRules
         [EnumMember(Value = "LOT_SIZE")]
         LotSize,
 
-        [EnumMember(Value = "MIN_NOTIONAL")]
-        MinNotional,
+        [EnumMember(Value = "NOTIONAL")]
+        Notional,
 
         [EnumMember(Value = "ICEBERG_PARTS")]
         IcebergParts,
