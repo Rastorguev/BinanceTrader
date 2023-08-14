@@ -82,10 +82,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BinanceTrader.Core\BinanceTrader.Core.csproj">
-      <Project>{A0CA2194-D70D-434A-A320-5E6CA39C3C32}</Project>
-      <Name>BinanceTrader.Core</Name>
-    </ProjectReference>
     <ProjectReference Include="..\BinanceTrader.Tools\BinanceTrader.Tools.csproj">
       <Project>{05921e52-1c36-4126-941b-f158be62c28a}</Project>
       <Name>BinanceTrader.Tools</Name>
