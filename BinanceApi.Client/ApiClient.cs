@@ -240,9 +240,9 @@ namespace Binance.API.Csharp.Client
             return ex;
         }
 
-        public static Exception AddResponseDetails(this Exception ex, string responce)
+        public static Exception AddResponseDetails(this Exception ex, string response)
         {
-            ex.Data.Add("Response", responce ?? string.Empty);
+            ex.Data.Add("Response", response ?? string.Empty);
 
             return ex;
         }
