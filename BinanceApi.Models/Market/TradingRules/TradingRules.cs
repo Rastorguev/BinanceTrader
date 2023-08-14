@@ -1,32 +1,18 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Binance.API.Csharp.Client.Models.Market.TradingRules
 {
-    public interface ITradingRules
+    public class TradingRules
     {
-        string Symbol { get; set; }
-        SymbolStatus Status { get; set; }
-        string BaseAsset { get; set; }
-        int BaseAssetPrecision { get; set; }
-        string QuoteAsset { get; set; }
-        int QuotePrecision { get; set; }
-        IEnumerable<string> OrderTypes { get; set; }
-        bool IcebergAllowed { get; set; }
-        decimal MinPrice { get; }
-        decimal MaxPrice { get; }
-        decimal TickSize { get; }
-        decimal MinQty { get; }
-        decimal MaxQty { get; }
-        decimal StepSize { get; }
-        decimal MinNotional { get; }
-    }
+        private IReadOnlyList<Filter> _filters;
 
-    public class TradingRules : ITradingRules
-    {
         [JsonProperty("filters")]
-        public IEnumerable<Filter> Filters { get; set; }
+        private JArray _rawFilters;
+
+        private IEnumerable<Filter> Filters => _filters ?? (_filters = _rawFilters.ToObject<IReadOnlyList<Filter>>());
 
         [JsonProperty("symbol")]
         public string Symbol { get; set; }

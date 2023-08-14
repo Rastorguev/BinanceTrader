@@ -5,29 +5,29 @@ namespace BinanceTrader.Trader;
 
 public static class RulesHelper
 {
-    public static decimal GetMaxFittingPrice(decimal price, [NotNull] ITradingRules rules)
+    public static decimal GetMaxFittingPrice(decimal price, [NotNull] TradingRules rules)
     {
         return (int)(price / rules.TickSize) * rules.TickSize;
     }
 
-    public static decimal GetMaxFittingQty(decimal qty, [NotNull] ITradingRules rules)
+    public static decimal GetMaxFittingQty(decimal qty, [NotNull] TradingRules rules)
     {
         return (int)(qty / rules.StepSize) * rules.StepSize;
     }
 
-    public static decimal GetMinNotionalQty(decimal price, [NotNull] ITradingRules rules)
+    public static decimal GetMinNotionalQty(decimal price, [NotNull] TradingRules rules)
     {
         var qty = rules.MinNotional / price;
 
         return Math.Ceiling(qty / rules.StepSize) * rules.StepSize;
     }
 
-    public static decimal GetFittingBaseAmount(decimal quoteAmount, decimal price, [NotNull] ITradingRules rules)
+    public static decimal GetFittingBaseAmount(decimal quoteAmount, decimal price, [NotNull] TradingRules rules)
     {
         return (int)(quoteAmount / price / rules.StepSize) * rules.StepSize;
     }
 
-    public static bool MeetsTradingRules([NotNull] this OrderRequest order, [NotNull] ITradingRules rules)
+    public static bool MeetsTradingRules([NotNull] this OrderRequest order, [NotNull] TradingRules rules)
     {
         return
             order.Price >= rules.MinPrice || (rules.MinPrice == 0 &&

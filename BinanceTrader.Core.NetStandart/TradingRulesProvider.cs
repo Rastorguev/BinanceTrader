@@ -19,7 +19,7 @@ public class TradingRulesProvider
         _client = client;
     }
 
-    public IReadOnlyList<ITradingRules> Rules => _rulesContainer?.Rules.NotNull().ToList() ?? new List<ITradingRules>();
+    public IReadOnlyList<TradingRules> Rules => _rulesContainer?.Rules.NotNull().ToList() ?? new List<TradingRules>();
 
     public async Task UpdateRulesIfNeeded()
     {
@@ -42,7 +42,7 @@ public class TradingRulesProvider
     }
 
     [NotNull]
-    public ITradingRules GetRulesFor(string symbol)
+    public TradingRules GetRulesFor(string symbol)
     {
         try
         {

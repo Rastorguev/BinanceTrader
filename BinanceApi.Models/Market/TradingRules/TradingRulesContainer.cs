@@ -15,7 +15,6 @@ namespace Binance.API.Csharp.Client.Models.Market.TradingRules
         public IEnumerable<RateLimit> RateLimits { get; set; }
 
         [JsonProperty("symbols")]
-        [JsonConverter(typeof(ConcreteTypeConverter<IEnumerable<TradingRules>>))]
-        public IEnumerable<ITradingRules> Rules { get; set; }
+        public IEnumerable<TradingRules> Rules { get; set; }
     }
 }
