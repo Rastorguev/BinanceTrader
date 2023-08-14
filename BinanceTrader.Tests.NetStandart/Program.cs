@@ -18,11 +18,6 @@ internal class Program
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
-        //var connectionStringsProvider = new ConnectionStringsProvider();
-        //var connectionString = connectionStringsProvider.GetConnectionString("BlobStorage");
-        // var keys = (new BlobKeyProvider(connectionString).GetKeysAsync().Result).First(x => x.NotNull().Name == traderName);
-        // var apiClient = new ApiClient(keys.NotNull().Api, keys.NotNull().Secret);
-
         var apiClient = new ApiClient(string.Empty, string.Empty);
         var client = new BinanceClient(apiClient);
         var candlesProvider = new CandlesProvider(client);
