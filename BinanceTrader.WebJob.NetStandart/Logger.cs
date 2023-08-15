@@ -12,13 +12,13 @@ namespace BinanceTrader.WebJob
 {
     public class Logger : ILogger
     {
-        private const string Key = "f2dbee90-56f4-48f6-b98f-cbe33f7adbd3";
+        private const string InstrumentationKey = "878b4cd1-0675-4cd0-a775-0541eaf597f1";
         private readonly string _traderName;
         [NotNull] private readonly TelemetryClient _client;
 
         public Logger(string traderName)
         {
-            _client = new TelemetryClient {InstrumentationKey = Key};
+            _client = new TelemetryClient {InstrumentationKey = InstrumentationKey};
             _traderName = traderName;
         }
 
