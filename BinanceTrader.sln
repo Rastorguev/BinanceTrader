@@ -31,6 +31,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BinanceTrader.Tools.NetStan
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BinanceTrader.Tests.NetStandart", "BinanceTrader.Tests.NetStandart\BinanceTrader.Tests.NetStandart.csproj", "{B8CF1DDE-9D56-4A3C-89B9-D097BCE6F874}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BinanceTrader.WebJob.NetStandart", "BinanceTrader.WebJob.NetStandart\BinanceTrader.WebJob.NetStandart.csproj", "{AA74DAC5-0EF7-4E3C-BAE0-BE70E7E58A14}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -73,6 +75,10 @@ Global
 		{B8CF1DDE-9D56-4A3C-89B9-D097BCE6F874}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B8CF1DDE-9D56-4A3C-89B9-D097BCE6F874}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B8CF1DDE-9D56-4A3C-89B9-D097BCE6F874}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AA74DAC5-0EF7-4E3C-BAE0-BE70E7E58A14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AA74DAC5-0EF7-4E3C-BAE0-BE70E7E58A14}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AA74DAC5-0EF7-4E3C-BAE0-BE70E7E58A14}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AA74DAC5-0EF7-4E3C-BAE0-BE70E7E58A14}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -87,6 +93,7 @@ Global
 		{D0D3C5E4-0529-44E9-998E-DF3B47F6ABF3} = {D4C1CEF6-38AD-4786-AC9F-29BB86F79A91}
 		{6F34E5CE-5016-4E56-B981-0A34FB0E6579} = {FDDD628A-427D-408E-89D2-613F3572103C}
 		{B8CF1DDE-9D56-4A3C-89B9-D097BCE6F874} = {25388734-3B93-4FE2-820A-A132C69F565D}
+		{AA74DAC5-0EF7-4E3C-BAE0-BE70E7E58A14} = {78727259-D6D3-4FFD-8EA1-AD89F26C042D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0D7E5627-8A3F-4EA2-A5DD-8249C2FAF2E8}
