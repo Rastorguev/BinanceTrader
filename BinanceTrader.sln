@@ -21,15 +21,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceApi.Client", "Api\Bi
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceApi.Tests", "Api\BinanceApi.Tests\BinanceApi.Tests.csproj", "{B20E9AAB-878E-447C-B5A2-F6AFCF1EC975}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Cli.NetStandart", "BinanceTrader.Cli.NetStandart\BinanceTrader.Cli.NetStandart.csproj", "{9BB0302C-B3D0-41B2-BB59-24C752720DF7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Cli", "BinanceTrader.Cli\BinanceTrader.Cli.csproj", "{9BB0302C-B3D0-41B2-BB59-24C752720DF7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Core.NetStandart", "BinanceTrader.Core.NetStandart\BinanceTrader.Core.NetStandart.csproj", "{D0D3C5E4-0529-44E9-998E-DF3B47F6ABF3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Core", "BinanceTrader.Core\BinanceTrader.Core.csproj", "{D0D3C5E4-0529-44E9-998E-DF3B47F6ABF3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Tools.NetStandart", "BinanceTrader.Tools.NetStandart\BinanceTrader.Tools.NetStandart.csproj", "{6F34E5CE-5016-4E56-B981-0A34FB0E6579}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Tools", "BinanceTrader.Tools\BinanceTrader.Tools.csproj", "{6F34E5CE-5016-4E56-B981-0A34FB0E6579}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Tests.NetStandart", "BinanceTrader.Tests.NetStandart\BinanceTrader.Tests.NetStandart.csproj", "{B8CF1DDE-9D56-4A3C-89B9-D097BCE6F874}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Tests", "BinanceTrader.Tests\BinanceTrader.Tests.csproj", "{B8CF1DDE-9D56-4A3C-89B9-D097BCE6F874}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.WebJob.NetStandart", "BinanceTrader.WebJob.NetStandart\BinanceTrader.WebJob.NetStandart.csproj", "{AA74DAC5-0EF7-4E3C-BAE0-BE70E7E58A14}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.WebJob", "BinanceTrader.WebJob\BinanceTrader.WebJob.csproj", "{AA74DAC5-0EF7-4E3C-BAE0-BE70E7E58A14}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

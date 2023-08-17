@@ -7,8 +7,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\BinanceTrader.Core.NetStandart\BinanceTrader.Core.NetStandart.csproj"/>
-        <ProjectReference Include="..\BinanceTrader.Tools.NetStandart\BinanceTrader.Tools.NetStandart.csproj"/>
+        <ProjectReference Include="..\BinanceTrader.Core\BinanceTrader.Core.csproj" />
+        <ProjectReference Include="..\BinanceTrader.Tools\BinanceTrader.Tools.csproj" />
     </ItemGroup>
 
 </Project>

@@ -13,7 +13,7 @@
     <ItemGroup>
         <ProjectReference Include="..\Api\BinanceApi.Client\BinanceApi.Client.csproj" />
         <ProjectReference Include="..\Api\BinanceApi.Models\BinanceApi.Models.csproj" />
-        <ProjectReference Include="..\BinanceTrader.Tools.NetStandart\BinanceTrader.Tools.NetStandart.csproj" />
+        <ProjectReference Include="..\BinanceTrader.Tools\BinanceTrader.Tools.csproj" />
     </ItemGroup>
 
     <ItemGroup>
