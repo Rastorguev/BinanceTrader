@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Binance.API.Csharp.Client.Models.Enums;
 using Binance.API.Csharp.Client.Models.General;
 using Binance.API.Csharp.Client.Models.WebSocket;
 using Binance.API.Csharp.Client.Utils;
+using Microsoft.ApplicationInsights;
 using Newtonsoft.Json;
 using WebSocketSharp;
 
@@ -16,6 +18,21 @@ namespace Binance.API.Csharp.Client
 {
     public class ApiClient : ApiClientAbstract, IApiClient
     {
+        private static TelemetryClient _tc;
+
+        private static TelemetryClient Tc
+        {
+            get
+            {
+                if (_tc==null)
+                {
+                    _tc= new TelemetryClient {InstrumentationKey = "878b4cd1-0675-4cd0-a775-0541eaf597f1"};
+                }
+
+                return _tc;
+            }
+        }
+
         private class BinanceErrorPayload
         {
             [JsonProperty("code")]
@@ -157,6 +174,8 @@ namespace Binance.API.Csharp.Client
 
             ws.OnMessage += (sender, e) =>
             {
+                LogMessage("OnWebSocketMessage", e.Data);
+
                 var message = JsonConvert.DeserializeObject<WebSocketMessage>(e.Data);
 
                 switch (message.EventType)
@@ -184,9 +203,19 @@ namespace Binance.API.Csharp.Client
                 }
             };
 
-            ws.OnClose += (sender, e) => { _openSockets.Remove(ws); };
+            ws.OnClose += (sender, e) =>
+            {
+                LogMessage("OnWebSocketClose", $"{e.Code} {e.Reason}");
 
-            ws.OnError += (sender, e) => { _openSockets.Remove(ws); };
+                _openSockets.Remove(ws);
+            };
+
+            ws.OnError += (sender, e) =>
+            {
+                LogMessage("OnWebSocketError", $"{e.Message} {e.Exception.ToString()}");
+
+                _openSockets.Remove(ws);
+            };
 
             ws.Connect();
             _openSockets.Add(ws);
@@ -229,6 +258,19 @@ namespace Binance.API.Csharp.Client
 
             ClientServerTimeDiff = serverUtcTime - utcNow;
         }
+
+
+
+        public void LogMessage(string eventName, string message)
+        {
+            Tc.TrackEvent(eventName, new Dictionary<string, string>
+                {
+                    {eventName, message}
+                });
+
+            Tc.Flush();
+        }
+
     }
 
     public static class ExceptionExtensions
