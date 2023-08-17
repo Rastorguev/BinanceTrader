@@ -6,15 +6,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="JetBrains.Annotations" Version="2023.2.0"/>
-        <PackageReference Include="Polly" Version="7.2.4"/>
+        <PackageReference Include="JetBrains.Annotations" Version="2023.2.0" />
+        <PackageReference Include="Polly" Version="7.2.4" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\BinanceApi.Client\BinanceApi.Client.csproj"/>
-        <ProjectReference Include="..\BinanceApi.Domain\BinanceApi.Domain.csproj"/>
-        <ProjectReference Include="..\BinanceApi.Models\BinanceApi.Models.csproj"/>
-        <ProjectReference Include="..\BinanceTrader.Tools.NetStandart\BinanceTrader.Tools.NetStandart.csproj"/>
+        <ProjectReference Include="..\Api\BinanceApi.Client\BinanceApi.Client.csproj" />
+        <ProjectReference Include="..\Api\BinanceApi.Models\BinanceApi.Models.csproj" />
+        <ProjectReference Include="..\BinanceTrader.Tools.NetStandart\BinanceTrader.Tools.NetStandart.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -13,13 +13,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Api", "Api", "{F90208E2-A69
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{D4C1CEF6-38AD-4786-AC9F-29BB86F79A91}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceApi.Models", "BinanceApi.Models\BinanceApi.Models.csproj", "{95A31AE9-B074-4F71-BFEE-73E8E300AB2A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceApi.Models", "Api\BinanceApi.Models\BinanceApi.Models.csproj", "{95A31AE9-B074-4F71-BFEE-73E8E300AB2A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceApi.Domain", "BinanceApi.Domain\BinanceApi.Domain.csproj", "{5FF47B71-0B9A-4B1A-AD50-8DE3D147A2BD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceApi.Domain", "Api\BinanceApi.Domain\BinanceApi.Domain.csproj", "{5FF47B71-0B9A-4B1A-AD50-8DE3D147A2BD}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceApi.Client", "BinanceApi.Client\BinanceApi.Client.csproj", "{0280485B-221F-47EE-A014-4B401C1F81D9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceApi.Client", "Api\BinanceApi.Client\BinanceApi.Client.csproj", "{0280485B-221F-47EE-A014-4B401C1F81D9}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceApi.Tests", "BinanceApi.Tests\BinanceApi.Tests.csproj", "{B20E9AAB-878E-447C-B5A2-F6AFCF1EC975}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceApi.Tests", "Api\BinanceApi.Tests\BinanceApi.Tests.csproj", "{B20E9AAB-878E-447C-B5A2-F6AFCF1EC975}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinanceTrader.Cli.NetStandart", "BinanceTrader.Cli.NetStandart\BinanceTrader.Cli.NetStandart.csproj", "{9BB0302C-B3D0-41B2-BB59-24C752720DF7}"
 EndProject
