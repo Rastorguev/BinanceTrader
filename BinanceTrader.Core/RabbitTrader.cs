@@ -335,7 +335,6 @@ public class RabbitTrader
         {
             _apiListenKey = null;
         }
-        
     }
 
     private async Task CheckDataStream()
@@ -344,7 +343,6 @@ public class RabbitTrader
         {
             _logger.LogMessage("ResetDataStream", $"{_apiListenKey}");
             ResetOrderUpdatesListening();
-         
         }
         else
         {
