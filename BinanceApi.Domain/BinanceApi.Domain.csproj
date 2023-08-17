@@ -5,11 +5,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="WebSocketSharp.Standard" Version="1.0.3"/>
+        <ProjectReference Include="..\BinanceApi.Models\BinanceApi.Models.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\BinanceApi.Models\BinanceApi.Models.csproj"/>
+      <PackageReference Include="WebSocketSharp" Version="1.0.3-rc11" />
     </ItemGroup>
 
 </Project>
