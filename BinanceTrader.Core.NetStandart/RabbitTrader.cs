@@ -71,7 +71,7 @@ public class RabbitTrader
     private IReadOnlyDictionary<string, IBalance> _funds = new Dictionary<string, IBalance>();
 
     private long _lastStreamEventTime = DateTime.Now.ToBinary();
-    private string _listenKey;
+    private string _apiListenKey;
 
     [NotNull]
     private IReadOnlyDictionary<string, decimal> _orderedVolatility = new Dictionary<string, decimal>();
@@ -255,6 +255,7 @@ public class RabbitTrader
     {
         try
         {
+            _logger.LogMessage("AccountInfoUpdated", message.EventType);
             LastStreamEventTime = DateTime.Now;
 
             var updatedFunds = message.Balances.NotNull().ToList();
@@ -277,9 +278,10 @@ public class RabbitTrader
     {
         try
         {
-            if (_listenKey != null)
+            if (_apiListenKey != null)
             {
-                await _client.KeepAliveUserStream(_listenKey).NotNull();
+                await _client.KeepAliveUserStream(_apiListenKey).NotNull();
+                _logger.LogMessage("KeepAlive", $"{_apiListenKey}");
             }
             else
             {
@@ -309,24 +311,40 @@ public class RabbitTrader
 
     private void StartListenDataStream()
     {
-        _listenKey = _client.ListenUserDataEndpoint(OnAccountInfoUpdated, OnTrade, m => { });
+        _apiListenKey = _client.ListenUserDataEndpoint(OnAccountInfoUpdated, OnTrade, m => { });
+        LastStreamEventTime = DateTime.Now;
+
+        _logger.LogMessage("StartListen", $"{_apiListenKey}");
     }
 
     private async Task StopListenDataStream()
     {
-        if (_listenKey != null)
+        try
         {
-            await _client.CloseUserStream(_listenKey).NotNull();
-            _listenKey = null;
+            if (_apiListenKey != null)
+            {
+                _logger.LogMessage("StopListenListen", $"{_apiListenKey}");
+                await _client.CloseUserStream(_apiListenKey).NotNull();
+            }
         }
+        catch (Exception ex)
+        {
+            _logger.LogException(ex);
+        }
+        finally
+        {
+            _apiListenKey = null;
+        }
+        
     }
 
     private async Task CheckDataStream()
     {
         if (LastStreamEventTime.Add(MaxStreamEventsInterval) < DateTime.Now)
         {
+            _logger.LogMessage("ResetDataStream", $"{_apiListenKey}");
             ResetOrderUpdatesListening();
-            _logger.LogMessage("ResetDataStream", "Reset data stream");
+         
         }
         else
         {
