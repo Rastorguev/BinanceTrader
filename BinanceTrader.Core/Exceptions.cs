@@ -1,4 +1,4 @@
-﻿namespace BinanceTrader.Trader;
+﻿namespace BinanceTrader.Core;
 
 public class AppException : Exception
 {

@@ -1,4 +1,4 @@
-﻿namespace Binance.API.Csharp.Client.Models.WebSocket
+﻿namespace BinanceApi.Models.WebSocket
 {
     public interface IWebSocketMessage
     {

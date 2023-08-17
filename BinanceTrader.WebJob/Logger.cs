@@ -2,9 +2,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-using Binance.API.Csharp.Client.Models.WebSocket;
+using BinanceApi.Models.WebSocket;
+using BinanceTrader.Core;
 using BinanceTrader.Tools;
-using BinanceTrader.Trader;
 using JetBrains.Annotations;
 using Microsoft.ApplicationInsights;
 

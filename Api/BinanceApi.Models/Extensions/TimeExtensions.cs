@@ -1,7 +1,7 @@
 ﻿using System;
-using Binance.API.Csharp.Client.Models.Enums;
+using BinanceApi.Models.Enums;
 
-namespace Binance.API.Csharp.Client.Models.Extensions
+namespace BinanceApi.Models.Extensions
 {
     public static class TimeExtensions
     {

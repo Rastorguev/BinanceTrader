@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace Binance.API.Csharp.Client.Models.Market
+namespace BinanceApi.Models.Market
 {
     public class AggregateTrade
     {

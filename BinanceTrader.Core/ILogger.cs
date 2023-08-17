@@ -1,7 +1,7 @@
-﻿using Binance.API.Csharp.Client.Models.WebSocket;
+﻿using BinanceApi.Models.WebSocket;
 using JetBrains.Annotations;
 
-namespace BinanceTrader.Trader;
+namespace BinanceTrader.Core;
 
 public interface ILogger
 {

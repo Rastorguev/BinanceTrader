@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using System.Net;
+using BinanceTrader.Core;
 using BinanceTrader.Tools;
-using BinanceTrader.Trader;
 
 namespace BinanceTrader.Cli;
 

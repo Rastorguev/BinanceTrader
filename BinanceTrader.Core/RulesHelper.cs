@@ -1,7 +1,7 @@
-﻿using Binance.API.Csharp.Client.Models.Market.TradingRules;
+﻿using BinanceApi.Models.Market.TradingRules;
 using JetBrains.Annotations;
 
-namespace BinanceTrader.Trader;
+namespace BinanceTrader.Core;
 
 public static class RulesHelper
 {

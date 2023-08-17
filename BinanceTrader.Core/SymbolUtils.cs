@@ -1,6 +1,6 @@
 ﻿using JetBrains.Annotations;
 
-namespace BinanceTrader.Trader;
+namespace BinanceTrader.Core;
 
 public static class SymbolUtils
 {

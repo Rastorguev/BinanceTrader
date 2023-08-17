@@ -1,10 +1,10 @@
 ﻿using System.Collections.Concurrent;
-using Binance.API.Csharp.Client.Models.Enums;
-using Binance.API.Csharp.Client.Models.Market;
+using BinanceApi.Models.Enums;
+using BinanceApi.Models.Market;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader;
+namespace BinanceTrader.Tests;
 
 public class StrategiesTests
 {

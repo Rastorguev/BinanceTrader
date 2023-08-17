@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
-using Binance.API.Csharp.Client.Models.Enums;
+using BinanceApi.Models.Enums;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader.Trader;
+namespace BinanceTrader.Core;
 
 public class VolatilityChecker
 {

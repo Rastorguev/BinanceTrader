@@ -1,6 +1,6 @@
 ﻿using JetBrains.Annotations;
 
-namespace BinanceTrader;
+namespace BinanceTrader.Tests;
 
 public static class AssetsProvider
 {

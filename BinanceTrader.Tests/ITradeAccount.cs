@@ -1,6 +1,6 @@
 ﻿using BinanceTrader.Tools;
 
-namespace BinanceTrader;
+namespace BinanceTrader.Tests;
 
 public interface ITradeAccount
 {

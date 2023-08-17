@@ -1,10 +1,10 @@
 ﻿using System.Globalization;
-using Binance.API.Csharp.Client;
+using BinanceApi.Client;
 using BinanceTrader.Tools;
 using BinanceTrader.Tools.KeyProviders;
 using JetBrains.Annotations;
 
-namespace BinanceTrader.Trader;
+namespace BinanceTrader.Core;
 
 public class TradeStarter
 {

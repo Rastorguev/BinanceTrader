@@ -1,13 +1,13 @@
 ﻿using System.Collections.Concurrent;
-using Binance.API.Csharp.Client;
-using Binance.API.Csharp.Client.Models.Enums;
-using Binance.API.Csharp.Client.Models.Market;
+using BinanceApi.Client;
+using BinanceApi.Models.Enums;
+using BinanceApi.Models.Market;
+using BinanceTrader.Core;
 using BinanceTrader.Tools;
-using BinanceTrader.Trader;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 
-namespace BinanceTrader;
+namespace BinanceTrader.Tests;
 
 public class CandlesProvider : ICandlesProvider
 {

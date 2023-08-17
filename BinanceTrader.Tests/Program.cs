@@ -1,13 +1,13 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
 using System.Net;
-using Binance.API.Csharp.Client;
-using Binance.API.Csharp.Client.Models.Enums;
-using Binance.API.Csharp.Client.Models.Market.TradingRules;
+using BinanceApi.Client;
+using BinanceApi.Models.Enums;
+using BinanceApi.Models.Market.TradingRules;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader;
+namespace BinanceTrader.Tests;
 
 internal class Program
 {

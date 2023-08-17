@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using BinanceTrader.Trader;
+using BinanceTrader.Core;
 using JetBrains.Annotations;
 using Microsoft.Azure.WebJobs;
 

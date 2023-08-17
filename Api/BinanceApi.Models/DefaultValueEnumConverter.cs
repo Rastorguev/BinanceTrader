@@ -3,7 +3,7 @@ using System.ComponentModel;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace Binance.API.Csharp.Client.Models
+namespace BinanceApi.Models
 {
     public class DefaultValueEnumConverter : StringEnumConverter
     {

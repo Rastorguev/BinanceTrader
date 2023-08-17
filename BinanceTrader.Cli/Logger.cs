@@ -1,6 +1,6 @@
-﻿using Binance.API.Csharp.Client.Models.WebSocket;
+﻿using BinanceApi.Models.WebSocket;
+using BinanceTrader.Core;
 using BinanceTrader.Tools;
-using BinanceTrader.Trader;
 
 namespace BinanceTrader.Cli;
 

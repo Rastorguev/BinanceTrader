@@ -1,4 +1,4 @@
-﻿namespace Binance.API.Csharp.Client.Models.Account
+﻿namespace BinanceApi.Models.Account
 {
     public interface IBalance
     {

@@ -1,7 +1,8 @@
-﻿using Binance.API.Csharp.Client.Models.Enums;
-using Binance.API.Csharp.Client.Models.WebSocket;
+﻿using BinanceApi.Client;
+using BinanceApi.Models.Enums;
+using BinanceApi.Models.WebSocket;
 
-namespace Binance.API.Csharp.Client.Test;
+namespace BinanceApi.Tests;
 
 [TestClass]
 public class BinanceTest

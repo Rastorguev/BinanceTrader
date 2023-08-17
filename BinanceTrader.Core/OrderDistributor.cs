@@ -1,11 +1,11 @@
-﻿using Binance.API.Csharp.Client.Models.Enums;
-using Binance.API.Csharp.Client.Models.Market;
-using Binance.API.Csharp.Client.Models.Market.TradingRules;
-using Binance.API.Csharp.Client.Models.WebSocket;
+﻿using BinanceApi.Models.Enums;
+using BinanceApi.Models.Market;
+using BinanceApi.Models.Market.TradingRules;
+using BinanceApi.Models.WebSocket;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader.Trader;
+namespace BinanceTrader.Core;
 
 public class OrderDistributor
 {

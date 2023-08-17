@@ -1,10 +1,10 @@
-﻿using Binance.API.Csharp.Client.Models.Enums;
-using Binance.API.Csharp.Client.Models.Extensions;
-using Binance.API.Csharp.Client.Models.Market;
+﻿using BinanceApi.Models.Enums;
+using BinanceApi.Models.Extensions;
+using BinanceApi.Models.Market;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader;
+namespace BinanceTrader.Tests;
 
 public class TradeSession
 {

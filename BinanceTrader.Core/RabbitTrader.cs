@@ -1,18 +1,18 @@
 ﻿using System.Globalization;
-using Binance.API.Csharp.Client.Domain.Interfaces;
-using Binance.API.Csharp.Client.Models.Account;
-using Binance.API.Csharp.Client.Models.Enums;
-using Binance.API.Csharp.Client.Models.Extensions;
-using Binance.API.Csharp.Client.Models.Market;
-using Binance.API.Csharp.Client.Models.Market.TradingRules;
-using Binance.API.Csharp.Client.Models.WebSocket;
+using BinanceApi.Domain.Interfaces;
+using BinanceApi.Models.Account;
+using BinanceApi.Models.Enums;
+using BinanceApi.Models.Extensions;
+using BinanceApi.Models.Market;
+using BinanceApi.Models.Market.TradingRules;
+using BinanceApi.Models.WebSocket;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 using Polly;
 using Polly.Retry;
 
 // ReSharper disable FunctionNeverReturns
-namespace BinanceTrader.Trader;
+namespace BinanceTrader.Core;
 
 public class RabbitTrader
 {

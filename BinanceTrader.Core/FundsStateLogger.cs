@@ -1,12 +1,12 @@
 ﻿using System.Globalization;
-using Binance.API.Csharp.Client.Domain.Interfaces;
-using Binance.API.Csharp.Client.Models.Account;
-using Binance.API.Csharp.Client.Models.Extensions;
-using Binance.API.Csharp.Client.Models.Market;
+using BinanceApi.Domain.Interfaces;
+using BinanceApi.Models.Account;
+using BinanceApi.Models.Extensions;
+using BinanceApi.Models.Market;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader.Trader;
+namespace BinanceTrader.Core;
 
 public class FundsStateLogger
 {

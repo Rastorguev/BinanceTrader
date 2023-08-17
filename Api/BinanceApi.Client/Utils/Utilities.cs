@@ -3,7 +3,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Binance.API.Csharp.Client.Utils
+namespace BinanceApi.Client.Utils
 {
     /// <summary>
     ///     Utility class for common processes.

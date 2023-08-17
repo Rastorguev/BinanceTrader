@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace Binance.API.Csharp.Client.Models.Market.TradingRules
+namespace BinanceApi.Models.Market.TradingRules
 {
     public class TradingRulesContainer
     {

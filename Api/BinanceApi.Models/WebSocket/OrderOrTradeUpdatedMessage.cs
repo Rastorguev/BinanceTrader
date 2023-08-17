@@ -1,8 +1,8 @@
-﻿using Binance.API.Csharp.Client.Models.Enums;
+﻿using BinanceApi.Models.Enums;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace Binance.API.Csharp.Client.Models.WebSocket
+namespace BinanceApi.Models.WebSocket
 {
     public class OrderOrTradeUpdatedMessage : IWebSocketMessage, IOrder
     {

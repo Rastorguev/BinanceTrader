@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Binance.API.Csharp.Client
+namespace BinanceApi.Models
 {
     /// <summary>
     ///     Allows a limited number of acquisitions during a timespan

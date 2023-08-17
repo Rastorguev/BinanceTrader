@@ -1,6 +1,6 @@
-﻿using Binance.API.Csharp.Client.Models.Enums;
+﻿using BinanceApi.Models.Enums;
 
-namespace Binance.API.Csharp.Client.Models.WebSocket
+namespace BinanceApi.Models.WebSocket
 {
     public interface IOrder
     {

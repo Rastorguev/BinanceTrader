@@ -1,9 +1,9 @@
-﻿using Binance.API.Csharp.Client.Domain.Interfaces;
-using Binance.API.Csharp.Client.Models.Market.TradingRules;
+﻿using BinanceApi.Domain.Interfaces;
+using BinanceApi.Models.Market.TradingRules;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
-namespace BinanceTrader.Trader;
+namespace BinanceTrader.Core;
 
 public class TradingRulesProvider
 {

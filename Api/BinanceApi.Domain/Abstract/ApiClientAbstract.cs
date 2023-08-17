@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using BinanceApi.Models;
 using WebSocketSharp;
 
 //using System.Net.WebSockets;
 
-namespace Binance.API.Csharp.Client.Domain.Abstract
+namespace BinanceApi.Domain.Abstract
 {
     public abstract class ApiClientAbstract
     {

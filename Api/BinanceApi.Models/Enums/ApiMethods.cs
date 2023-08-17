@@ -1,4 +1,4 @@
-﻿namespace Binance.API.Csharp.Client.Models.Enums
+﻿namespace BinanceApi.Models.Enums
 {
     /// <summary>
     ///     HTTPMethods to be used by the API.

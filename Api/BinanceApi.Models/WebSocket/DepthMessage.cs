@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
-using Binance.API.Csharp.Client.Models.Market;
+using BinanceApi.Models.Market;
 
-namespace Binance.API.Csharp.Client.Models.WebSocket
+namespace BinanceApi.Models.WebSocket
 {
     public class DepthMessage : IWebSocketMessage
     {

@@ -1,9 +1,9 @@
-﻿using Binance.API.Csharp.Client.Models.Enums;
-using Binance.API.Csharp.Client.Models.WebSocket;
+﻿using BinanceApi.Models.Enums;
+using BinanceApi.Models.WebSocket;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace Binance.API.Csharp.Client.Models.Account
+namespace BinanceApi.Models.Account
 {
     public class Order : IOrder
     {

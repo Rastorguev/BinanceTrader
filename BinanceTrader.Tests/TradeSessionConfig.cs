@@ -1,4 +1,4 @@
-﻿namespace BinanceTrader;
+﻿namespace BinanceTrader.Tests;
 
 public class TradeSessionConfig
 {

@@ -3,7 +3,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Binance.API.Csharp.Client.Models.Market.TradingRules
+namespace BinanceApi.Models.Market.TradingRules
 {
     public class TradingRules
     {

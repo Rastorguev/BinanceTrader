@@ -1,6 +1,6 @@
-﻿using Binance.API.Csharp.Client.Models.Enums;
+﻿using BinanceApi.Models.Enums;
 
-namespace BinanceTrader.Trader;
+namespace BinanceTrader.Core;
 
 public class OrderRequest
 {

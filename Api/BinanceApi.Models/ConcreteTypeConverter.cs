@@ -1,7 +1,7 @@
 ﻿using System;
 using Newtonsoft.Json;
 
-namespace Binance.API.Csharp.Client.Models
+namespace BinanceApi.Models
 {
     public class ConcreteTypeConverter<TConcrete> : JsonConverter
     {

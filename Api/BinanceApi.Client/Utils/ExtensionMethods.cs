@@ -5,7 +5,7 @@ using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Binance.API.Csharp.Client.Utils
+namespace BinanceApi.Client.Utils
 {
     /// <summary>
     ///     Class to define extension methods.

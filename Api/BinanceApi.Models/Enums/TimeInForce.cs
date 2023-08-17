@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using Newtonsoft.Json;
 
-namespace Binance.API.Csharp.Client.Models.Enums
+namespace BinanceApi.Models.Enums
 {
     /// <summary>
     ///     Different Time in force of an order.

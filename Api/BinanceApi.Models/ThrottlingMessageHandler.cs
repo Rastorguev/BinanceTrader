@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Binance.API.Csharp.Client
+namespace BinanceApi.Models
 {
     public class ThrottlingMessageHandler : DelegatingHandler
     {

@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Binance.API.Csharp.Client.Models.Market
+namespace BinanceApi.Models.Market
 {
     public class OrderBook
     {
