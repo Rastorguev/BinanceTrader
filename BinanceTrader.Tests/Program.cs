@@ -37,8 +37,8 @@ internal class Program
         var candles = tests.LoadCandles(
                 assets,
                 quoteAsset,
-                new DateTime(2023, 01, 01, 00, 00, 00),
-                new DateTime(2023, 08, 14, 00, 00, 00),
+                new DateTime(2023, 08, 01, 00, 00, 00),
+                new DateTime(2023, 08, 18, 00, 00, 00),
                 TimeInterval.Minutes_1)
             .Result
             .NotNull();
@@ -71,28 +71,33 @@ internal class Program
     [ItemNotNull]
     private static IReadOnlyList<TradeSessionConfig> GetConfigs()
     {
-        TradeSessionConfig CreateConfig(decimal minProfit, TimeSpan idle)
-        {
-            return new TradeSessionConfig(
-                1m,
-                0.075m,
-                0.01m,
-                minProfit,
-                idle);
-        }
-
         var configs = new List<TradeSessionConfig>();
 
-        var startProfit = 0.5m;
-        var startIdle = TimeSpan.FromMinutes(1);
+        AddNormalProfitConfigs(configs);
+        AddSmallProfitConfigs(configs);
 
-        var maxProfit = 4m;
-        var maxIdle = TimeSpan.FromMinutes(10);
+        return configs;
+    }
 
-        var profitStep = 0.5m;
-        var idleStep = TimeSpan.FromMinutes(1);
+    private static TradeSessionConfig CreateConfig(decimal minProfit, TimeSpan idle)
+    {
+        return new TradeSessionConfig(
+            1m,
+            0.075m,
+            0.01m,
+            minProfit,
+            idle);
+    }
 
-        configs.Add(CreateConfig(0.5m, TimeSpan.FromDays(365)));
+    private static void AddNormalProfitConfigs(ICollection<TradeSessionConfig> configs)
+    {
+        const decimal startProfit = 0.5m;
+        const decimal maxProfit = 4m;
+        const decimal profitStep = 0.5m;
+
+        var startIdle = TimeSpan.FromHours(0.5);
+        var maxIdle = TimeSpan.FromHours(12);
+        var idleStep = TimeSpan.FromHours(0.5);
 
         var profit = startProfit;
         while (profit <= maxProfit)
@@ -106,17 +111,20 @@ internal class Program
 
             profit += profitStep;
         }
+    }
 
-        startProfit = 0.5m;
-        startIdle = TimeSpan.FromHours(0.5);
+    private static void AddSmallProfitConfigs(ICollection<TradeSessionConfig> configs)
+    {
+        const decimal startProfit = 0.1m;
+        const decimal maxProfit = 1m;
+        const decimal profitStep = 0.1m;
 
-        maxProfit = 4m;
-        maxIdle = TimeSpan.FromHours(12);
+        var startIdle = TimeSpan.FromMinutes(1);
+        var maxIdle = TimeSpan.FromMinutes(10);
+        var idleStep = TimeSpan.FromMinutes(1);
 
-        profitStep = 0.5m;
-        idleStep = TimeSpan.FromHours(0.5);
 
-        profit = startProfit;
+        var profit = startProfit;
         while (profit <= maxProfit)
         {
             var idle = startIdle;
@@ -128,9 +136,8 @@ internal class Program
 
             profit += profitStep;
         }
-
-        return configs;
     }
+
 
     private static void PreventAppClose()
     {
