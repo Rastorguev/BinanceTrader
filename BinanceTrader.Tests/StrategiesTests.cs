@@ -32,9 +32,9 @@ public class StrategiesTests
 
                 var tradeResults = new List<TradeResult>();
 
-                foreach (var value in candlesDict)
+                foreach (var assetCandles in candlesDict)
                 {
-                    var candles = value.Value ?? new List<Candlestick>();
+                    var candles = assetCandles.Value ?? new List<Candlestick>();
 
                     if (!candles.Any())
                     {
@@ -42,7 +42,7 @@ public class StrategiesTests
                     }
 
                     var account = Trade(candles, config.NotNull());
-                    var firstPrice = candles.First().NotNull().Close;
+                    var firstPrice = candles.First().NotNull().Open;
                     var lastPrice = candles.Last().NotNull().Close;
 
                     var tradeResult = new TradeResult(

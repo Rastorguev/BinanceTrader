@@ -4,6 +4,7 @@ using System.Net;
 using BinanceApi.Client;
 using BinanceApi.Models.Enums;
 using BinanceApi.Models.Market.TradingRules;
+using BinanceTrader.Core;
 using BinanceTrader.Tools;
 using JetBrains.Annotations;
 
@@ -38,11 +39,35 @@ internal class Program
         var candles = tests.LoadCandles(
                 assets,
                 quoteAsset,
+                //Current Period
                 new DateTime(2023, 08, 01, 00, 00, 00),
                 new DateTime(2023, 08, 18, 00, 00, 00),
+
+                //Bull Run 2017
+                // new DateTime(2017, 11, 01, 00, 00, 00),
+                // new DateTime(2018, 02, 01, 00, 00, 00),
                 TimeInterval.Minutes_1)
             .Result
-            .NotNull();
+            .NotNull()
+            .Where(x=>x.Value.Any())
+            .ToDictionary(x=>x.Key, x=>x.Value);
+
+        var volatility = candles
+            .Select(x => (BaseAsset: x.Key, Volatility: TechAnalyzer.CalculateVolatilityIndex(x.Value)))
+            .OrderByDescending(x => x.Volatility)
+            .ToList();
+
+        var n = 10;
+        var mostVolatile = volatility.Take(n);
+        var lessVolatile = volatility.Skip(Math.Max(0, volatility.Count - n));
+
+        var mostVolatilesAssetNames = mostVolatile
+            .Select(x => x.BaseAsset)
+            .ToList();
+
+        var topVolatilityCandles = candles
+            .Where(x => mostVolatilesAssetNames.Contains(x.Key))
+            .ToDictionary(x => x.Key, x => x.Value);
 
         var results = tests.CompareStrategies(candles, configs);
 
@@ -76,9 +101,6 @@ internal class Program
     private static IReadOnlyList<TradeSessionConfig> GetConfigs()
     {
         var configs = new List<TradeSessionConfig>();
-
-        var holdConfig = CreateConfig(int.MaxValue, TimeSpan.FromDays(365));
-        configs.Add(holdConfig);
 
         AddNormalProfitConfigs(configs);
         AddSmallProfitConfigs(configs);
