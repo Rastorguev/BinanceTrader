@@ -30,6 +30,7 @@ public class RabbitTrader
     private static readonly TimeSpan MaxStreamEventsInterval = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan VolatilityCheckInterval = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan MaxStepExecutionTime = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan NonVolatileAssetsBuyOrderExpiration = TimeSpan.FromMinutes(30);
 
     [NotNull]
     private readonly IBinanceClient _client;
@@ -372,18 +373,40 @@ public class RabbitTrader
         try
         {
             var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
-            var now = DateTime.Now;
+            var now = DateTime.Now.ToLocalTime();
+            var nonVolatileAssetsBuyOrderExpiration =
+                new TimeSpan(Math.Min(_orderExpiration.Ticks, NonVolatileAssetsBuyOrderExpiration.Ticks));
 
             var expiredOrders = openOrders
                 .Where(o =>
                 {
-                    var orderTime = o.NotNull().UnixTime.GetTime().ToLocalTime();
+                    var orderTime = o.UnixTime.GetTime().ToLocalTime();
 
-                    return now.ToLocalTime() - orderTime > _orderExpiration;
+                    return now - orderTime > _orderExpiration;
                 })
                 .ToList();
 
-            var cancelTasks = expiredOrders
+            var nonVolatileAssetsBuyOrders = openOrders
+                .Where(o =>
+                {
+                    var orderTime = o.UnixTime.GetTime().ToLocalTime();
+                    var baseAsset = SymbolUtils.GetBaseAsset(o.Symbol, _quoteAsset);
+                    var isInMostVolatileAssets = !_mostVolatileAssets.Any() || _mostVolatileAssets.Contains(baseAsset);
+                    var shouldCancel =
+                        o.Side == OrderSide.Buy &&
+                        !isInMostVolatileAssets &&
+                        now - orderTime > nonVolatileAssetsBuyOrderExpiration;
+
+                    return shouldCancel;
+                })
+                .ToList();
+
+            var ordersToCancel = expiredOrders
+                .Concat(nonVolatileAssetsBuyOrders)
+                .DistinctBy(x => x.OrderId)
+                .ToList();
+
+            var cancelTasks = ordersToCancel
                 .Where(o => _rulesProvider.GetRulesFor(o.NotNull().Symbol).Status == SymbolStatus.Trading)
                 .Select(
                     async order =>
