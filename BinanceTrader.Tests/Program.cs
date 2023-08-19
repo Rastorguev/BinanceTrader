@@ -9,6 +9,7 @@ using JetBrains.Annotations;
 
 namespace BinanceTrader.Tests;
 
+// ReSharper disable once ClassNeverInstantiated.Global
 internal class Program
 {
     private static void Main()
@@ -48,7 +49,10 @@ internal class Program
         watch.Stop();
         var elapsed = new TimeSpan(watch.ElapsedTicks);
 
-        var ordered = results.NotNull().OrderByDescending(r => r.Value.NotNull().TradeProfit).ToList();
+        var ordered = results.NotNull()
+            .OrderByDescending(r => r.Value.NotNull().TradeProfit)
+            .ToList();
+
         var max = ordered.First();
         var min = ordered.Last();
 
@@ -72,6 +76,9 @@ internal class Program
     private static IReadOnlyList<TradeSessionConfig> GetConfigs()
     {
         var configs = new List<TradeSessionConfig>();
+
+        var holdConfig = CreateConfig(int.MaxValue, TimeSpan.FromDays(365));
+        configs.Add(holdConfig);
 
         AddNormalProfitConfigs(configs);
         AddSmallProfitConfigs(configs);
@@ -123,7 +130,6 @@ internal class Program
         var maxIdle = TimeSpan.FromMinutes(10);
         var idleStep = TimeSpan.FromMinutes(1);
 
-
         var profit = startProfit;
         while (profit <= maxProfit)
         {
@@ -137,7 +143,6 @@ internal class Program
             profit += profitStep;
         }
     }
-
 
     private static void PreventAppClose()
     {
