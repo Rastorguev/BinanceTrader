@@ -662,12 +662,12 @@ public class RabbitTrader
 
     private void LogVolatility([NotNull] IReadOnlyDictionary<string, decimal> volatility)
     {
-        var medium = volatility.Select(v => v.Value).Median();
+        var median = volatility.Select(v => v.Value).Median();
         var average = volatility.Select(v => v.Value).Average();
 
         _logger.LogMessage("Volatility", new Dictionary<string, string>
         {
-            { "Median", medium.ToString(CultureInfo.InvariantCulture) },
+            { "Median", median.ToString(CultureInfo.InvariantCulture) },
             { "Average", average.ToString(CultureInfo.InvariantCulture) }
         });
     }

@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Net;
 using BinanceApi.Client;
 using BinanceApi.Models.Enums;
+using BinanceApi.Models.Extensions;
 using BinanceApi.Models.Market.TradingRules;
 using BinanceTrader.Core;
 using BinanceTrader.Tools;
@@ -40,12 +41,16 @@ internal class Program
                 assets,
                 quoteAsset,
                 //Current Period
-                new DateTime(2023, 08, 01, 00, 00, 00),
-                new DateTime(2023, 08, 18, 00, 00, 00),
+                // new DateTime(2023, 08, 01, 00, 00, 00),
+                // new DateTime(2023, 08, 18, 00, 00, 00),
 
                 //Bull Run 2017
                 // new DateTime(2017, 11, 01, 00, 00, 00),
                 // new DateTime(2018, 02, 01, 00, 00, 00),
+
+                //Bull Run 2021
+                new DateTime(2021, 01, 01, 00, 00, 00),
+                new DateTime(2021, 12, 01, 00, 00, 00),
                 TimeInterval.Minutes_1)
             .Result
             .NotNull()
@@ -56,6 +61,9 @@ internal class Program
             .Select(x => (BaseAsset: x.Key, Volatility: TechAnalyzer.CalculateVolatilityIndex(x.Value)))
             .OrderByDescending(x => x.Volatility)
             .ToList();
+
+        var medianVolatility = volatility.Select(v => v.Volatility).Median();
+        var averageVolatility = volatility.Select(v => v.Volatility).Average();
 
         var n = 10;
         var mostVolatile = volatility.Take(n);
