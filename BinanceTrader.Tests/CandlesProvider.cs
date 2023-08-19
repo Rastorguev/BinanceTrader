@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 using BinanceApi.Client;
 using BinanceApi.Models.Enums;
 using BinanceApi.Models.Market;
@@ -15,10 +16,10 @@ public class CandlesProvider : ICandlesProvider
     private const string DirName = "Candles";
 
     [NotNull]
-    private readonly string _dirPath = $@"C:\{DirName}";
+    private readonly string _dirPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), DirName);
 
     [NotNull]
-    private readonly ConcurrentDictionary<string, IReadOnlyList<Candlestick>> _inMimoryCache = new();
+    private readonly ConcurrentDictionary<string, IReadOnlyList<Candlestick>> _inMemoryCache = new();
 
     [NotNull]
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _semaphores = new();
@@ -77,12 +78,12 @@ public class CandlesProvider : ICandlesProvider
     private void PutToInMemoryCache([NotNull] IReadOnlyList<Candlestick> candles,
         [NotNull] string key)
     {
-        _inMimoryCache.TryAdd(key, candles);
+        _inMemoryCache.TryAdd(key, candles);
     }
 
     private bool TryGetFromInMemoryCache([NotNull] string key, out IReadOnlyList<Candlestick> candles)
     {
-        return _inMimoryCache.TryGetValue(key, out candles);
+        return _inMemoryCache.TryGetValue(key, out candles);
     }
 
     private void PutToDiskCache(
