@@ -54,8 +54,8 @@ internal class Program
                 TimeInterval.Minutes_1)
             .Result
             .NotNull()
-            .Where(x=>x.Value.Any())
-            .ToDictionary(x=>x.Key, x=>x.Value);
+            .Where(x => x.Value.Any())
+            .ToDictionary(x => x.Key, x => x.Value);
 
         var volatility = candles
             .Select(x => (BaseAsset: x.Key, Volatility: TechAnalyzer.CalculateVolatilityIndex(x.Value)))
@@ -69,12 +69,12 @@ internal class Program
         var mostVolatile = volatility.Take(n);
         var lessVolatile = volatility.Skip(Math.Max(0, volatility.Count - n));
 
-        var mostVolatilesAssetNames = mostVolatile
+        var tradeAssets = mostVolatile
             .Select(x => x.BaseAsset)
             .ToList();
 
-        var topVolatilityCandles = candles
-            .Where(x => mostVolatilesAssetNames.Contains(x.Key))
+        var tradeAssetsCandles = candles
+            .Where(x => tradeAssets.Contains(x.Key))
             .ToDictionary(x => x.Key, x => x.Value);
 
         var results = tests.CompareStrategies(candles, configs);

@@ -16,7 +16,8 @@ public class CandlesProvider : ICandlesProvider
     private const string DirName = "Candles";
 
     [NotNull]
-    private readonly string _dirPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), DirName);
+    private readonly string _dirPath =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), DirName);
 
     [NotNull]
     private readonly ConcurrentDictionary<string, IReadOnlyList<Candlestick>> _inMemoryCache = new();

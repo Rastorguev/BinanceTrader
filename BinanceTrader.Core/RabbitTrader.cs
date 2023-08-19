@@ -77,6 +77,9 @@ public class RabbitTrader
     private IReadOnlyDictionary<string, decimal> _orderedVolatility = new Dictionary<string, decimal>();
 
     [NotNull]
+    private IReadOnlyList<string> _mostVolatileAssets = new List<string>();
+
+    [NotNull]
     [ItemNotNull]
     private IReadOnlyList<string> _tradingAssets = new List<string>();
 
@@ -480,8 +483,9 @@ public class RabbitTrader
 
             var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
             var prices = (await _client.GetAllPrices().NotNull()).NotNull().ToList();
+            var assetsToBuy = _mostVolatileAssets.Any() ? _mostVolatileAssets : _tradingAssets;
             var orderRequests =
-                _orderDistributor.SplitIntoBuyOrders(freeQuoteBalance, _tradingAssets, openOrders, prices);
+                _orderDistributor.SplitIntoBuyOrders(freeQuoteBalance, assetsToBuy, openOrders, prices);
 
             var placeTasks = orderRequests.Select(async r =>
             {
@@ -625,6 +629,7 @@ public class RabbitTrader
         {
             await UpdateVolatility();
             LogVolatility(_orderedVolatility.NotNull());
+            _logger.LogMessage("MostVolatileAssets", string.Join(",", _mostVolatileAssets));
         }
         catch (Exception ex)
         {
@@ -634,7 +639,9 @@ public class RabbitTrader
 
     private async Task UpdateVolatility()
     {
-        IReadOnlyDictionary<string, decimal> orderedVolatility = new Dictionary<string, decimal>();
+        var orderedVolatility = new Dictionary<string, decimal>();
+        var mostVolatileAssets = new List<string>();
+
         try
         {
             orderedVolatility = (await _volatilityChecker.GetAssetsVolatility(
@@ -646,6 +653,15 @@ public class RabbitTrader
                 .OrderByDescending(x => x.Value)
                 .ToList()
                 .ToDictionary(x => x.Key, x => x.Value);
+
+            var volatileAssets = orderedVolatility
+                .Where(x => x.Value > 0)
+                .Select(x => x.Key)
+                .ToList();
+
+            mostVolatileAssets = volatileAssets
+                .Take(Math.Min(volatileAssets.Count, orderedVolatility.Count / 2))
+                .ToList();
         }
         catch (Exception ex)
         {
@@ -656,6 +672,7 @@ public class RabbitTrader
             if (orderedVolatility.Any())
             {
                 Interlocked.Exchange(ref _orderedVolatility, orderedVolatility);
+                Interlocked.Exchange(ref _mostVolatileAssets, mostVolatileAssets);
             }
         }
     }
