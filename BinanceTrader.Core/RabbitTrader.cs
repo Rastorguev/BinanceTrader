@@ -255,7 +255,6 @@ public class RabbitTrader
     {
         try
         {
-            _logger.LogMessage("AccountInfoUpdated", message.EventType);
             LastStreamEventTime = DateTime.Now;
 
             var updatedFunds = message.Balances.NotNull().ToList();
