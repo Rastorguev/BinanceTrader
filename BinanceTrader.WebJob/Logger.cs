@@ -18,7 +18,9 @@ public class Logger : ILogger
 
     public Logger(string traderName)
     {
+#pragma warning disable CS0618
         _client = new TelemetryClient { InstrumentationKey = InstrumentationKey };
+#pragma warning restore CS0618
         _traderName = traderName;
     }
 
@@ -77,7 +79,7 @@ public class Logger : ILogger
         var properties = new Dictionary<string, string>();
         foreach (DictionaryEntry d in ex.Data)
         {
-            properties.Add(d.Key.NotNull().ToString(), d.Value.NotNull().ToString());
+            properties.Add(d.Key.ToString()!, d.Value!.ToString()!);
         }
 
         properties.AddTraderName(_traderName);

@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Net;
+using BinanceTrader.Tools;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Hosting;
 
@@ -21,7 +22,7 @@ internal class Program
         using (host)
         {
             var jobHost = host.Services.GetService(typeof(IJobHost)) as JobHost;
-            await jobHost.CallAsync("Start");
+            await jobHost!.CallAsync("Start");
             await host.RunAsync();
         }
     }
