@@ -9,9 +9,14 @@ public static class MathUtils
         return value / 100 * percents;
     }
 
-    public static decimal Round(this decimal value)
+    public static decimal Round8(this decimal value)
     {
         return decimal.Round(value, 8);
+    }
+
+    public static decimal Round4(this decimal value)
+    {
+        return decimal.Round(value, 4);
     }
 
     public static decimal Gain(decimal initialAmount, decimal currentAmount)

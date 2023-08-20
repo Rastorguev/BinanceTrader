@@ -32,7 +32,7 @@ public class TradeSession
             return account;
         }
 
-        _nextPrice = candles.First().NotNull().Close.Round();
+        _nextPrice = candles.First().NotNull().Close.Round8();
         _nextAction = OrderSide.Buy;
         _lastActionDate = null;
 
@@ -48,14 +48,14 @@ public class TradeSession
                 return _config.ProfitRatio;
             }
 
-            var inRange = _nextPrice > candle.Low.Round() && _nextPrice < candle.High.Round();
+            var inRange = _nextPrice > candle.Low.Round8() && _nextPrice < candle.High.Round8();
 
             if (_nextAction == OrderSide.Buy)
             {
                 if (inRange)
                 {
                     var price = _nextPrice;
-                    var nextPrice = (price + price.Percents(GetProfitRatio())).Round();
+                    var nextPrice = (price + price.Percents(GetProfitRatio())).Round8();
 
                     Buy(account, price, nextPrice, candle);
                     //Console.WriteLine($"Buy\t {price}\t {candle.OpenTime.GetTime().ToLocalTime()}");
@@ -65,8 +65,8 @@ public class TradeSession
                 }
                 else if (isExpired)
                 {
-                    var price = candle.High.Round();
-                    var nextPrice = (price - price.Percents(GetProfitRatio())).Round();
+                    var price = candle.High.Round8();
+                    var nextPrice = (price - price.Percents(GetProfitRatio())).Round8();
 
                     Cancel(account, nextPrice, candle);
                 }
@@ -76,15 +76,15 @@ public class TradeSession
                 if (inRange)
                 {
                     var price = _nextPrice;
-                    var nextPrice = (price - price.Percents(GetProfitRatio())).Round();
+                    var nextPrice = (price - price.Percents(GetProfitRatio())).Round8();
 
                     Sell(account, price, nextPrice, candle);
                     //Console.WriteLine($"Sell\t {price}\t {candle.OpenTime.GetTime().ToLocalTime()}");
                 }
                 else if (isExpired)
                 {
-                    var price = candle.Low.Round();
-                    var nextPrice = (price + price.Percents(GetProfitRatio())).Round();
+                    var price = candle.Low.Round8();
+                    var nextPrice = (price + price.Percents(GetProfitRatio())).Round8();
 
                     Cancel(account, nextPrice, candle);
                 }

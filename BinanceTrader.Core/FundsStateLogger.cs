@@ -36,7 +36,7 @@ public class FundsStateLogger
     {
         try
         {
-            var prices = (await _client.GetAllPrices().NotNull().NotNull()).ToList();
+            var prices = (await _client.GetAllPrices().NotNull()).ToList();
             var averagePrice = GetAveragePrice(prices, assets);
             var medianPrice = GetMedianPrice(prices, assets);
 
@@ -55,11 +55,11 @@ public class FundsStateLogger
 
             _logger.LogMessage("Funds", new Dictionary<string, string>
             {
-                { "Quote", quoteTotal.Round().ToString(CultureInfo.InvariantCulture) },
-                { "BTC", btcTotal.Round().ToString(CultureInfo.InvariantCulture) },
-                { "Usdt", usdtTotal.Round().ToString(CultureInfo.InvariantCulture) },
-                { "AverageAssetPrice", averagePrice.Round().ToString(CultureInfo.InvariantCulture) },
-                { "MedianAssetPrice", medianPrice.Round().ToString(CultureInfo.InvariantCulture) }
+                { "Quote", quoteTotal.Round8().ToString(CultureInfo.InvariantCulture) },
+                { "BTC", btcTotal.Round8().ToString(CultureInfo.InvariantCulture) },
+                { "Usdt", usdtTotal.Round8().ToString(CultureInfo.InvariantCulture) },
+                { "AverageAssetPrice", averagePrice.Round8().ToString(CultureInfo.InvariantCulture) },
+                { "MedianAssetPrice", medianPrice.Round8().ToString(CultureInfo.InvariantCulture) }
             });
         }
         catch (Exception ex)
@@ -103,7 +103,7 @@ public class FundsStateLogger
     {
         var assetsPrices = GetPrices(prices, assets);
 
-        return assetsPrices.Average().Round();
+        return assetsPrices.Average().Round8();
     }
 
     private decimal GetMedianPrice(
@@ -112,7 +112,7 @@ public class FundsStateLogger
     {
         var assetsPrices = GetPrices(prices, assets);
 
-        return assetsPrices.Median().Round();
+        return assetsPrices.Median().Round8();
     }
 
     [NotNull]

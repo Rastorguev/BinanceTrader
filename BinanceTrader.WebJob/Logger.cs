@@ -47,9 +47,9 @@ public class Logger : ILogger
             {
                 { "Symbol", orderRequest.Symbol },
                 { "Side", orderRequest.Side.ToString() },
-                { "Price", orderRequest.Price.Round().ToString(CultureInfo.InvariantCulture) },
-                { "Qty", orderRequest.Qty.Round().ToString(CultureInfo.InvariantCulture) },
-                { "Total", (orderRequest.Qty * orderRequest.Price).Round().ToString(CultureInfo.InvariantCulture) }
+                { "Price", orderRequest.Price.Round8().ToString(CultureInfo.InvariantCulture) },
+                { "Qty", orderRequest.Qty.Round8().ToString(CultureInfo.InvariantCulture) },
+                { "Total", (orderRequest.Qty * orderRequest.Price).Round8().ToString(CultureInfo.InvariantCulture) }
             }
             .AddTraderName(_traderName));
 
@@ -102,9 +102,9 @@ public class Logger : ILogger
             { "Symbol", order.Symbol },
             { "Side", order.Side.ToString() },
             { "Status", order.Status.ToString() },
-            { "Price", order.Price.Round().ToString(CultureInfo.InvariantCulture) },
-            { "Qty", order.OrderQuantity.Round().ToString(CultureInfo.InvariantCulture) },
-            { "Total", (order.OrderQuantity * order.Price).Round().ToString(CultureInfo.InvariantCulture) }
+            { "Price", order.Price.Round8().ToString(CultureInfo.InvariantCulture) },
+            { "Qty", order.OrderQuantity.Round8().ToString(CultureInfo.InvariantCulture) },
+            { "Total", (order.OrderQuantity * order.Price).Round8().ToString(CultureInfo.InvariantCulture) }
         }.AddTraderName(_traderName));
 
         _client.Flush();

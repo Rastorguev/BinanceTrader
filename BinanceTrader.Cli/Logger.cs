@@ -42,8 +42,8 @@ public class Logger : ILogger
         Console.ResetColor();
 
         Console.WriteLine($"Side:\t\t {orderRequest.Side}");
-        Console.WriteLine($"Price:\t\t {orderRequest.Price.Round()}");
-        Console.WriteLine($"Qty:\t\t {orderRequest.Qty.Round()}");
+        Console.WriteLine($"Price:\t\t {orderRequest.Price.Round8()}");
+        Console.WriteLine($"Qty:\t\t {orderRequest.Qty.Round8()}");
 
         Console.WriteLine();
     }
@@ -108,8 +108,8 @@ public class Logger : ILogger
 
         Console.WriteLine($"Side:\t\t {order.Side}");
         Console.WriteLine($"Status:\t\t {order.Status}");
-        Console.WriteLine($"Price:\t\t {order.Price.Round()}");
-        Console.WriteLine($"Qty:\t\t {order.OrderQuantity.Round()}");
+        Console.WriteLine($"Price:\t\t {order.Price.Round8()}");
+        Console.WriteLine($"Qty:\t\t {order.OrderQuantity.Round8()}");
 
         Console.WriteLine();
     }

@@ -19,7 +19,6 @@ public class RabbitTrader
 {
     [NotNull]
     [ItemNotNull]
-    //private readonly IReadOnlyList<string> _baseAssets;
     private const string FeeAsset = "BNB";
 
     private const string MaxStepExecutionTimeExceededError = "MaxStepExecutionTimeExceeded";
@@ -92,7 +91,6 @@ public class RabbitTrader
         [NotNull] VolatilityChecker volatilityChecker)
     {
         _quoteAsset = config.QuoteAsset;
-        //_baseAssets = config.BaseAssets;
         _orderExpiration = config.OrderExpiration;
         _profitRatio = config.ProfitRatio;
 
@@ -104,7 +102,7 @@ public class RabbitTrader
         _orderDistributor = new OrderDistributor(_quoteAsset, _profitRatio, _rulesProvider, logger);
     }
 
-    public DateTime LastStreamEventTime
+    private DateTime LastStreamEventTime
     {
         get => DateTime.FromBinary(_lastStreamEventTime);
         set => Interlocked.Exchange(ref _lastStreamEventTime, value.ToBinary());
@@ -198,7 +196,7 @@ public class RabbitTrader
 
             Interlocked.Exchange(ref _funds, newFunds);
 
-            await _fundsStateLogger.LogFundsState(_funds.Values.ToList(), _tradingAssets);
+            await _fundsStateLogger.LogFundsState(_funds.NotNull().Values.ToList(), _tradingAssets);
         }
         catch (Exception ex)
         {
@@ -315,7 +313,7 @@ public class RabbitTrader
 
     private void StartListenDataStream()
     {
-        _apiListenKey = _client.ListenUserDataEndpoint(OnAccountInfoUpdated, OnTrade, m => { });
+        _apiListenKey = _client.ListenUserDataEndpoint(OnAccountInfoUpdated, OnTrade, _ => { });
         LastStreamEventTime = DateTime.Now;
 
         _logger.LogMessage("StartListen", $"{_apiListenKey}");
@@ -573,13 +571,11 @@ public class RabbitTrader
         return newOrder;
     }
 
-    private async Task<CanceledOrder> CancelOrder([NotNull] IOrder order)
+    private async Task CancelOrder([NotNull] IOrder order)
     {
-        var canceledOrder = await _client.CancelOrder(order.Symbol, order.OrderId).NotNull();
+        await _client.CancelOrder(order.Symbol, order.OrderId).NotNull();
 
         _logger.LogOrderCanceled(order);
-
-        return canceledOrder;
     }
 
     private bool MeetsTradingRules([NotNull] OrderRequest orderRequest)
@@ -685,7 +681,6 @@ public class RabbitTrader
             var volatileAssets = orderedVolatility
                 .Where(x => x.Value > 0)
                 .ToDictionary(x => x.Key, x => x.Value);
-            ;
 
             mostVolatileAssets = volatileAssets
                 .OrderByDescending(x => x.Value)
@@ -721,18 +716,13 @@ public class RabbitTrader
     private void LogMostVolatileAssets(IReadOnlyDictionary<string, decimal> mostVolatileAssets)
     {
         _logger.LogMessage("MostVolatileAssets",
-            string.Join(",\n", mostVolatileAssets.Select(x => string.Join(" - ", x.Key, Round(x.Value,4)))));
+            string.Join(",\n", mostVolatileAssets.Select(x => string.Join(" - ", x.Key, x.Value.Round4()))));
     }
 
     [NotNull]
     private List<string> GetTradingAssets()
     {
         var assets = _rulesProvider.GetBaseAssetsFor(_quoteAsset).Where(r => r != FeeAsset).ToList();
-
-        //if (_baseAssets.Any())
-        //{
-        //    assets = assets.Where(x => _baseAssets.Contains(x)).ToList();
-        //}
 
         return assets;
     }
