@@ -10,6 +10,7 @@ using BinanceTrader.Tools;
 using JetBrains.Annotations;
 using Polly;
 using Polly.Retry;
+using static System.Decimal;
 
 // ReSharper disable FunctionNeverReturns
 namespace BinanceTrader.Core;
@@ -78,7 +79,7 @@ public class RabbitTrader
     private IReadOnlyDictionary<string, decimal> _orderedVolatility = new Dictionary<string, decimal>();
 
     [NotNull]
-    private IReadOnlyList<string> _mostVolatileAssets = new List<string>();
+    private IReadOnlyDictionary<string, decimal> _mostVolatileAssets = new Dictionary<string, decimal>();
 
     [NotNull]
     [ItemNotNull]
@@ -391,7 +392,8 @@ public class RabbitTrader
                 {
                     var orderTime = o.UnixTime.GetTime().ToLocalTime();
                     var baseAsset = SymbolUtils.GetBaseAsset(o.Symbol, _quoteAsset);
-                    var isInMostVolatileAssets = !_mostVolatileAssets.Any() || _mostVolatileAssets.Contains(baseAsset);
+                    var isInMostVolatileAssets =
+                        !_mostVolatileAssets.Any() || _mostVolatileAssets.ContainsKey(baseAsset);
                     var shouldCancel =
                         o.Side == OrderSide.Buy &&
                         !isInMostVolatileAssets &&
@@ -506,7 +508,9 @@ public class RabbitTrader
 
             var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
             var prices = (await _client.GetAllPrices().NotNull()).NotNull().ToList();
-            var assetsToBuy = _mostVolatileAssets.Any() ? _mostVolatileAssets : _tradingAssets;
+            var assetsToBuy = _mostVolatileAssets.Any()
+                ? _mostVolatileAssets.Select(x => x.Key).ToList()
+                : _tradingAssets;
             var orderRequests =
                 _orderDistributor.SplitIntoBuyOrders(freeQuoteBalance, assetsToBuy, openOrders, prices);
 
@@ -651,8 +655,9 @@ public class RabbitTrader
         try
         {
             await UpdateVolatility();
-            LogVolatility(_orderedVolatility.NotNull());
-            _logger.LogMessage("MostVolatileAssets", string.Join(",", _mostVolatileAssets));
+
+            LogVolatility(_orderedVolatility);
+            LogMostVolatileAssets(_mostVolatileAssets);
         }
         catch (Exception ex)
         {
@@ -663,7 +668,7 @@ public class RabbitTrader
     private async Task UpdateVolatility()
     {
         var orderedVolatility = new Dictionary<string, decimal>();
-        var mostVolatileAssets = new List<string>();
+        var mostVolatileAssets = new Dictionary<string, decimal>();
 
         try
         {
@@ -679,12 +684,13 @@ public class RabbitTrader
 
             var volatileAssets = orderedVolatility
                 .Where(x => x.Value > 0)
-                .Select(x => x.Key)
-                .ToList();
+                .ToDictionary(x => x.Key, x => x.Value);
+            ;
 
             mostVolatileAssets = volatileAssets
+                .OrderByDescending(x => x.Value)
                 .Take(Math.Min(volatileAssets.Count, orderedVolatility.Count / 2))
-                .ToList();
+                .ToDictionary(x => x.Key, x => x.Value);
         }
         catch (Exception ex)
         {
@@ -712,6 +718,12 @@ public class RabbitTrader
         });
     }
 
+    private void LogMostVolatileAssets(IReadOnlyDictionary<string, decimal> mostVolatileAssets)
+    {
+        _logger.LogMessage("MostVolatileAssets",
+            string.Join(",\n", mostVolatileAssets.Select(x => string.Join(" - ", x.Key, Round(x.Value,4)))));
+    }
+
     [NotNull]
     private List<string> GetTradingAssets()
     {
@@ -723,22 +735,5 @@ public class RabbitTrader
         //}
 
         return assets;
-    }
-
-    [NotNull]
-    private IReadOnlyList<string> GetMostVolatileAssets(
-        [NotNull] IReadOnlyDictionary<string, decimal> orderedVolatility)
-    {
-        const int mostVolatileAssetsPercent = 20;
-
-        //In case of something went wrong during volatility loading
-        if (!orderedVolatility.Any())
-        {
-            return _tradingAssets;
-        }
-
-        var topVolatileToUse = (int)MathUtils.Percents(orderedVolatility.Count, mostVolatileAssetsPercent);
-
-        return orderedVolatility.Take(topVolatileToUse).Select(x => x.Key).ToList();
     }
 }
