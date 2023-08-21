@@ -259,6 +259,5 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
-/BinanceTrader.Core/Configs/ConnectionStrings.config
 /BinanceTrader.Core/Configs/Keys.config
 /BinanceTrader.Core/Configs/Keys_Rambler.config

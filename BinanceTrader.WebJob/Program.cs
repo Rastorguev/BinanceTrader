@@ -1,28 +1,29 @@
 ﻿using System.Globalization;
 using System.Net;
+using BinanceTrader.Tools;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Extensions.Hosting;
 
-namespace BinanceTrader.WebJob
+namespace BinanceTrader.WebJob;
+
+internal class Program
 {
-    internal class Program
+    private static async Task Main()
     {
-        private static void Main()
+        ServicePointManager.DefaultConnectionLimit = 10;
+
+        CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+        CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+
+        var builder = new HostBuilder();
+        builder.UseEnvironment("development");
+        builder.ConfigureWebJobs(b => { b.AddAzureStorageCoreServices(); });
+        var host = builder.Build();
+        using (host)
         {
-            ServicePointManager.DefaultConnectionLimit = 10;
-
-            CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-            CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
-
-            var config = new JobHostConfiguration();
-
-            if (config.IsDevelopment)
-            {
-                config.UseDevelopmentSettings();
-            }
-
-            var host = new JobHost(config);
-            host.Call(typeof(Functions).GetMethod("Start"));
-            host.RunAndBlock();
+            var jobHost = host.Services.GetService(typeof(IJobHost)) as JobHost;
+            await jobHost!.CallAsync("Start");
+            await host.RunAsync();
         }
     }
 }

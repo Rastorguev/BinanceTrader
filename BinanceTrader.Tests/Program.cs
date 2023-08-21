@@ -1,150 +1,221 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using System.Net;
-using System.Threading.Tasks;
-using Binance.API.Csharp.Client;
-using Binance.API.Csharp.Client.Models.Enums;
+using BinanceApi.Client;
+using BinanceApi.Models.Account;
+using BinanceApi.Models.Enums;
+using BinanceApi.Models.Extensions;
+using BinanceApi.Models.Market.TradingRules;
+using BinanceTrader.Core;
 using BinanceTrader.Tools;
 using BinanceTrader.Tools.KeyProviders;
 using JetBrains.Annotations;
 
-namespace BinanceTrader
+namespace BinanceTrader.Tests;
+
+// ReSharper disable once ClassNeverInstantiated.Global
+internal class Program
 {
-    internal class Program
+    private const string TraderName = "Rambler";
+    const string QuoteAsset = "ETH";
+
+    private static void Main()
     {
-        private static void Main()
+        RunTests().Wait();
+        PreventAppClose();
+    }
+
+    private static async Task RunTests()
+    {
+        ServicePointManager.DefaultConnectionLimit = 10;
+
+        CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+        CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+
+        var connectionStringsProvider = new ConnectionStringsProvider();
+        var connectionString = connectionStringsProvider.GetConnectionString("BlobStorage");
+        var keys = (await new BlobKeyProvider(connectionString).GetKeysAsync()).First(x => x.Name == TraderName);
+
+        var apiClient = new ApiClient(
+            keys.Api,
+            keys.Secret);
+
+        var client = new BinanceClient(apiClient);
+        var candlesProvider = new CandlesProvider(client);
+        var rules = await client.LoadTradingRules();
+
+        var assets = rules.Rules.NotNull()
+            .Where(r => r.NotNull().QuoteAsset == QuoteAsset && r.NotNull().Status == SymbolStatus.Trading)
+            .Select(r => r.BaseAsset)
+            .OrderBy(a => a)
+            .ToList();
+
+        var assetsTradesHistory = new Dictionary<string, IReadOnlyList<Trade>>();
+        var historyStartTime = new DateTime(2023, 08, 01, 00, 00, 00);
+
+        foreach (var asset in assets)
         {
-            ServicePointManager.DefaultConnectionLimit = 10;
+            var symbol = SymbolUtils.GetCurrencySymbol(asset, QuoteAsset);
 
-            CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-            CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+            Console.WriteLine($"Trade History Load Started: {symbol}");
 
-            var connectionStringsProvider = new ConnectionStringsProvider();
-            var connectionString = connectionStringsProvider.GetConnectionString("BlobStorage");
+            var tradeHistory = (await client.GetTradeList(symbol, startTime: historyStartTime)).ToList();
+            await Task.Delay(100);
 
-            const string traderName = "Google";
-            var keys = new BlobKeyProvider(connectionString).GetKeys().First(x => x.NotNull().Name == traderName);
-            var apiClient = new ApiClient(keys.NotNull().Api, keys.NotNull().Secret);
-            var client = new BinanceClient(apiClient);
-            var candlesProvider = new CandlesProvider(client);
-            var rules = client.LoadTradingRules().Result.NotNull();
-            var logger = new Logger(traderName);
+            Console.WriteLine($"Trade History Load Finished: {symbol}");
 
-            const string quoteAsset = "ETH";
-            var assets = rules.Rules.NotNull()
-                .Where(r => r.NotNull().QuoteAsset == quoteAsset)
-                .Select(r => r.BaseAsset)
-                .OrderBy(a => a)
-                .ToList();
-
-            var configs = GetConfigs();
-            var tests = new StrategiesTests(candlesProvider);
-            var watch = Stopwatch.StartNew();
-
-            var candles = tests.LoadCandles(
-                    assets,
-                    quoteAsset,
-                    new DateTime(2019, 11, 07, 00, 00, 00),
-                    new DateTime(2019, 11, 10, 23, 00, 00),
-                    TimeInterval.Minutes_1)
-                .Result
-                .NotNull();
-
-            var results = tests.CompareStrategies(candles, configs);
-
-            watch.Stop();
-            var elapsed = new TimeSpan(watch.ElapsedTicks);
-
-            var ordered = results.NotNull().OrderByDescending(r => r.Value.NotNull().TradeProfit).ToList();
-            var max = ordered.First();
-            var min = ordered.Last();
-
-            Console.WriteLine($"Elapsed Time: {elapsed.TotalSeconds}");
-
-            var tradeResults = ordered.Select(o => (
-                    Profit: o.Key.NotNull().ProfitRatio,
-                    Idle: o.Key.NotNull().MaxIdlePeriod,
-                    o.Value.NotNull().TradeProfit,
-                    TradesCount: o.Value.NotNull().CompletedCount))
-                .OrderByDescending(o => o.TradeProfit)
-                .ToList();
-
-            Debugger.Break();
-
-            PreventAppClose();
+            assetsTradesHistory.Add(asset, tradeHistory);
         }
 
-        [NotNull]
-        [ItemNotNull]
-        private static IReadOnlyList<TradeSessionConfig> GetConfigs()
+        var analysis = TechAnalyzer.AnalyzeTradeHistory(assetsTradesHistory, 0.1289m);
+        var pnlNet = analysis.Sum(x => x.Value.PnlNet);
+        var pnlGross = analysis.Sum(x => x.Value.PnlGross);
+        var fee = analysis.Sum(x => x.Value.Fee);
+        var feeInQuote = analysis.Sum(x => x.Value.FeeInQuote);
+        var pnlNetMedian = analysis.Select(x => x.Value.PnlNet).Median();
+        var pnlGrossMedian = analysis.Select(x => x.Value.PnlGross).Median();
+        var pnlNetAverage = analysis.Select(x => x.Value.PnlNet).Average();
+        var pnlGrossAverage = analysis.Select(x => x.Value.PnlGross).Average();
+
+        var configs = GetConfigs();
+        var tests = new StrategiesTests(candlesProvider);
+        var watch = Stopwatch.StartNew();
+
+        var candles = (await tests.LoadCandles(
+                assets,
+                QuoteAsset,
+                //Current Period
+                // new DateTime(2023, 08, 01, 00, 00, 00),
+                // new DateTime(2023, 08, 18, 00, 00, 00),
+
+                //Bull Run 2017
+                // new DateTime(2017, 11, 01, 00, 00, 00),
+                // new DateTime(2018, 02, 01, 00, 00, 00),
+
+                //Bull Run 2021
+                new DateTime(2021, 01, 01, 00, 00, 00),
+                new DateTime(2021, 12, 01, 00, 00, 00),
+                TimeInterval.Minutes_1))
+            .Where(x => x.Value.Any())
+            .ToDictionary(x => x.Key, x => x.Value);
+
+        var volatility = candles
+            .Select(x => (BaseAsset: x.Key, Volatility: TechAnalyzer.CalculateVolatilityIndex(x.Value)))
+            .OrderByDescending(x => x.Volatility)
+            .ToList();
+
+        var medianVolatility = volatility.Select(v => v.Volatility).Median();
+        var averageVolatility = volatility.Select(v => v.Volatility).Average();
+
+        var n = 10;
+        var mostVolatile = volatility.Take(n);
+        var lessVolatile = volatility.Skip(Math.Max(0, volatility.Count - n));
+
+        var tradeAssets = mostVolatile
+            .Select(x => x.BaseAsset)
+            .ToList();
+
+        var tradeAssetsCandles = candles
+            .Where(x => tradeAssets.Contains(x.Key))
+            .ToDictionary(x => x.Key, x => x.Value);
+
+        var results = tests.CompareStrategies(candles, configs);
+
+        watch.Stop();
+        var elapsed = new TimeSpan(watch.ElapsedTicks);
+
+        var ordered = results.NotNull()
+            .OrderByDescending(r => r.Value.NotNull().TradeProfit)
+            .ToList();
+
+        var max = ordered.First();
+        var min = ordered.Last();
+
+        Console.WriteLine($"Elapsed Time: {elapsed.TotalSeconds}");
+
+        var tradeResults = ordered.Select(o => (
+                Profit: o.Key.NotNull().ProfitRatio,
+                Idle: o.Key.NotNull().MaxIdlePeriod,
+                o.Value.NotNull().TradeProfit,
+                TradesCount: o.Value.NotNull().CompletedCount))
+            .OrderByDescending(o => o.TradeProfit)
+            .ToList();
+
+        Debugger.Break();
+    }
+
+    [NotNull]
+    [ItemNotNull]
+    private static IReadOnlyList<TradeSessionConfig> GetConfigs()
+    {
+        var configs = new List<TradeSessionConfig>();
+
+        AddNormalProfitConfigs(configs);
+        AddSmallProfitConfigs(configs);
+
+        return configs;
+    }
+
+    private static TradeSessionConfig CreateConfig(decimal minProfit, TimeSpan idle)
+    {
+        return new TradeSessionConfig(
+            1m,
+            0.075m,
+            0.01m,
+            minProfit,
+            idle);
+    }
+
+    private static void AddNormalProfitConfigs(ICollection<TradeSessionConfig> configs)
+    {
+        const decimal startProfit = 0.5m;
+        const decimal maxProfit = 4m;
+        const decimal profitStep = 0.5m;
+
+        var startIdle = TimeSpan.FromHours(0.5);
+        var maxIdle = TimeSpan.FromHours(12);
+        var idleStep = TimeSpan.FromHours(0.5);
+
+        var profit = startProfit;
+        while (profit <= maxProfit)
         {
-            TradeSessionConfig CreateConfig(decimal minProfit, TimeSpan idle)
+            var idle = startIdle;
+            while (idle <= maxIdle)
             {
-                return new TradeSessionConfig(
-                    1m,
-                    0.075m,
-                    0.01m,
-                    minProfit,
-                    idle);
+                configs.Add(CreateConfig(profit, idle));
+                idle += idleStep;
             }
 
-            var configs = new List<TradeSessionConfig>();
-
-            var startProfit = 0.5m;
-            var startIdle = TimeSpan.FromMinutes(1);
-
-            var maxProfit = 4m;
-            var maxIdle = TimeSpan.FromMinutes(10);
-
-            var profitStep = 0.5m;
-            var idleStep = TimeSpan.FromMinutes(1);
-
-            configs.Add(CreateConfig(0.5m, TimeSpan.FromDays(365)));
-           
-            var profit = startProfit;
-            while (profit <= maxProfit)
-            {
-                var idle = startIdle;
-                while (idle <= maxIdle)
-                {
-                    configs.Add(CreateConfig(profit, idle));
-                    idle += idleStep;
-                }
-
-                profit += profitStep;
-            }
-
-            startProfit = 0.5m;
-            startIdle = TimeSpan.FromHours(0.5);
-
-            maxProfit = 4m;
-            maxIdle = TimeSpan.FromHours(12);
-
-            profitStep = 0.5m;
-            idleStep = TimeSpan.FromHours(0.5);
-
-            profit = startProfit;
-            while (profit <= maxProfit)
-            {
-                var idle = startIdle;
-                while (idle <= maxIdle)
-                {
-                    configs.Add(CreateConfig(profit, idle));
-                    idle += idleStep;
-                }
-
-                profit += profitStep;
-            }
-
-            return configs;
+            profit += profitStep;
         }
+    }
 
-        private static void PreventAppClose()
+    private static void AddSmallProfitConfigs(ICollection<TradeSessionConfig> configs)
+    {
+        const decimal startProfit = 0.1m;
+        const decimal maxProfit = 1m;
+        const decimal profitStep = 0.1m;
+
+        var startIdle = TimeSpan.FromMinutes(1);
+        var maxIdle = TimeSpan.FromMinutes(10);
+        var idleStep = TimeSpan.FromMinutes(1);
+
+        var profit = startProfit;
+        while (profit <= maxProfit)
         {
-            Task.Delay(-1).NotNull().Wait();
+            var idle = startIdle;
+            while (idle <= maxIdle)
+            {
+                configs.Add(CreateConfig(profit, idle));
+                idle += idleStep;
+            }
+
+            profit += profitStep;
         }
+    }
+
+    private static void PreventAppClose()
+    {
+        Task.Delay(-1).NotNull().Wait();
     }
 }

@@ -1,19 +1,16 @@
-﻿using System;
+﻿namespace BinanceTrader.Core;
 
-namespace BinanceTrader.Trader
+public class AppException : Exception
 {
-    public class AppException : Exception
+    public AppException()
     {
-        public AppException()
-        {
-        }
+    }
 
-        public AppException(string message) : base(message)
-        {
-        }
+    public AppException(string message) : base(message)
+    {
+    }
 
-        public AppException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
+    public AppException(string message, Exception innerException) : base(message, innerException)
+    {
     }
 }
