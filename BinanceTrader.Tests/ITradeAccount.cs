@@ -1,4 +1,6 @@
-﻿namespace BinanceTrader.Tests;
+﻿using BinanceApi.Models.Account;
+
+namespace BinanceTrader.Tests;
 
 public interface ITradeAccount
 {
@@ -9,6 +11,7 @@ public interface ITradeAccount
     public decimal TotalFee { get; }
     int CompletedCount { get; }
     int CanceledCount { get; }
+    public IReadOnlyList<Trade> Trades { get; }
     void Buy(decimal baseAmount, decimal price, DateTime time);
     void Sell(decimal baseAmount, decimal price, DateTime time);
     void Cancel();

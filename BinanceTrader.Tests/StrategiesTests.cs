@@ -1,6 +1,8 @@
 ﻿using System.Collections.Concurrent;
+using BinanceApi.Models.Account;
 using BinanceApi.Models.Enums;
 using BinanceApi.Models.Market;
+using BinanceTrader.Core;
 using BinanceTrader.Tools;
 
 namespace BinanceTrader.Tests;
@@ -27,7 +29,7 @@ public class StrategiesTests
             {
                 Console.WriteLine($"Start: {config.NotNull().ProfitRatio} / {config.MaxIdlePeriod}");
 
-                var tradeResults = new List<TradeResult>();
+                var assetTradeResults = new List<AssetTradeResult>();
 
                 foreach (var assetCandles in candlesDict)
                 {
@@ -42,22 +44,31 @@ public class StrategiesTests
                     var firstPrice = candles[0].NotNull().Open;
                     var lastPrice = candles[^1].NotNull().Close;
 
-                    var tradeResult = new TradeResult(
+                    var tradeAmount = account.CurrentBaseAmount * lastPrice + account.CurrentQuoteAmount -
+                                      account.TotalFee * config.FeeAssetToQuoteConversionRatio;
+
+                    var assetTradeResult = new AssetTradeResult(
+                        assetCandles.Key,
                         config.InitialQuoteAmount,
-                        account.CurrentBaseAmount * lastPrice + account.CurrentQuoteAmount - account.TotalFee * config.FeeAssetToQuoteConversionRatio,
+                        tradeAmount,
                         account.InitialQuoteAmount / firstPrice * lastPrice + account.InitialBaseAmount,
                         account.CompletedCount,
-                        account.CanceledCount);
+                        account.CanceledCount,
+                        account.Trades,
+                        config.FeeAssetToQuoteConversionRatio);
 
-                    tradeResults.Add(tradeResult);
+                    assetTradeResults.Add(assetTradeResult);
                 }
 
+                var tradeHistory = assetTradeResults.ToDictionary(x => x.BaseAsset, x => x.Trades);
+
                 var tradesResult = new TradeResult(
-                    tradeResults.Sum(r => r.NotNull().InitialAmount),
-                    tradeResults.Sum(r => r.NotNull().TradeAmount),
-                    tradeResults.Sum(r => r.NotNull().HoldAmount),
-                    tradeResults.Sum(r => r.NotNull().CompletedCount),
-                    tradeResults.Sum(r => r.NotNull().CanceledCount));
+                    assetTradeResults.Sum(r => r.NotNull().InitialAmount),
+                    assetTradeResults.Sum(r => r.NotNull().TradeAmount),
+                    assetTradeResults.Sum(r => r.NotNull().HoldAmount),
+                    assetTradeResults.Sum(r => r.NotNull().CompletedCount),
+                    assetTradeResults.Sum(r => r.NotNull().CanceledCount),
+                    TechAnalyzer.AnalyzeTradeHistory(tradeHistory, config.FeeAssetToQuoteConversionRatio));
 
                 results[config.NotNull()] = tradesResult;
 

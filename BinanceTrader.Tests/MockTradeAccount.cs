@@ -1,3 +1,4 @@
+using BinanceApi.Models.Account;
 using BinanceTrader.Tools;
 
 namespace BinanceTrader.Tests;
@@ -6,6 +7,7 @@ public class MockTradeAccount : ITradeAccount
 {
     private readonly decimal _feePercent;
     private readonly decimal _feeAssetToQuoteConversionRatio;
+    private readonly List<Trade> _trades = new List<Trade>();
 
     public MockTradeAccount(
         decimal initialBaseAmount,
@@ -26,6 +28,7 @@ public class MockTradeAccount : ITradeAccount
     public decimal TotalFee { get; private set; }
     public int CompletedCount { get; private set; }
     public int CanceledCount { get; private set; }
+    public IReadOnlyList<Trade> Trades => _trades;
 
     public void Buy(decimal baseAmount, decimal price, DateTime time)
     {
@@ -35,9 +38,14 @@ public class MockTradeAccount : ITradeAccount
             throw new Exception("Insufficient Balance");
         }
 
+        var fee = quoteAmount.Percents(_feePercent) / _feeAssetToQuoteConversionRatio;
+
         CurrentQuoteAmount -= quoteAmount;
         CurrentBaseAmount += baseAmount;
-        TotalFee += quoteAmount.Percents(_feePercent) / _feeAssetToQuoteConversionRatio;
+
+        TotalFee += fee;
+
+        AddTrade(true, baseAmount, price, time, fee);
 
         IncreaseCompletedCount();
     }
@@ -50,9 +58,13 @@ public class MockTradeAccount : ITradeAccount
         }
 
         var quoteAmount = baseAmount * price;
+        var fee = quoteAmount.Percents(_feePercent) / _feeAssetToQuoteConversionRatio;
+
         CurrentBaseAmount -= baseAmount;
         CurrentQuoteAmount += quoteAmount;
-        TotalFee += quoteAmount.Percents(_feePercent) / _feeAssetToQuoteConversionRatio;
+        TotalFee += fee;
+
+        AddTrade(false, baseAmount, price, time, fee);
 
         IncreaseCompletedCount();
     }
@@ -65,5 +77,19 @@ public class MockTradeAccount : ITradeAccount
     private void IncreaseCompletedCount()
     {
         CompletedCount++;
+    }
+
+    private void AddTrade(bool isBuyer, decimal baseAmount, decimal price, DateTime time, decimal fee)
+    {
+        var unixTime = new DateTimeOffset(time).ToUnixTimeMilliseconds();
+
+        _trades.Add(new Trade()
+        {
+            UnixTime = unixTime,
+            IsBuyer = isBuyer,
+            Quantity = baseAmount,
+            Price = price,
+            Commission = fee
+        });
     }
 }

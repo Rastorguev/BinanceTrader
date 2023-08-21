@@ -1,19 +1,20 @@
-using BinanceApi.Models.Account;
-using BinanceTrader.Core;
+﻿using BinanceApi.Models.Account;
 using BinanceTrader.Tools;
 
 namespace BinanceTrader.Tests;
 
-public class TradeResult
+public class AssetTradeResult
 {
-    public TradeResult(
+    public AssetTradeResult(string baseAsset,
         decimal initialAmount,
         decimal tradeAmount,
         decimal holdAmount,
         int completedCount,
         int canceledCount,
-        TradesAnalysis tradeAnalysis)
+        IReadOnlyList<Trade> trades,
+        decimal feeAssetToQuoteConversionRatio)
     {
+        BaseAsset = baseAsset;
         InitialAmount = initialAmount;
         TradeAmount = tradeAmount;
         HoldAmount = holdAmount;
@@ -23,9 +24,11 @@ public class TradeResult
         HoldProfit = MathUtils.Gain(InitialAmount, HoldAmount);
         Diff = MathUtils.Gain(HoldAmount, TradeAmount);
         Efficiency = TradeProfit - HoldProfit;
-        TradeAnalysis = tradeAnalysis;
+        Trades = trades;
+        FeeAssetToQuoteConversionRatio = feeAssetToQuoteConversionRatio;
     }
 
+    public string BaseAsset { get; }
     public decimal InitialAmount { get; }
     public decimal TradeAmount { get; }
     public decimal HoldAmount { get; }
@@ -35,5 +38,6 @@ public class TradeResult
     public decimal Efficiency { get; }
     public int CompletedCount { get; }
     public int CanceledCount { get; }
-    public TradesAnalysis TradeAnalysis { get; }
+    public IReadOnlyList<Trade> Trades { get; }
+    public decimal FeeAssetToQuoteConversionRatio { get; }
 }

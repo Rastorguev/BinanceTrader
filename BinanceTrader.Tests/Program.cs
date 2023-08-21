@@ -78,12 +78,12 @@ internal class Program
                 assets,
                 QuoteAsset,
                 //Current Period
-                new DateTime(2023, 08, 01, 00, 00, 00),
-                new DateTime(2023, 08, 18, 00, 00, 00),
+                // new DateTime(2023, 08, 01, 00, 00, 00),
+                // new DateTime(2023, 08, 18, 00, 00, 00),
 
                 //Bull Run 2017
-                // new DateTime(2017, 11, 01, 00, 00, 00),
-                // new DateTime(2018, 02, 01, 00, 00, 00),
+                new DateTime(2017, 11, 01, 00, 00, 00),
+                new DateTime(2018, 02, 01, 00, 00, 00),
 
                 //Bull Run 2021
                 // new DateTime(2021, 01, 01, 00, 00, 00),
@@ -154,7 +154,7 @@ internal class Program
         return new TradeSessionConfig(
             1m,
             0.075m,
-            0.1289m,
+            1m,
             0.01m,
             minProfit,
             idle);

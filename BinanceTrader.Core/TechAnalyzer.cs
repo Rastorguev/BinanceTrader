@@ -94,7 +94,7 @@ public static class TechAnalyzer
         var pnlGross = (sellQty * (sellAvgPrice - buyAvgPrice)).Round8();
         var pnlNet = (pnlGross - feeInQuote).Round8();
         var pnlNetPercent = ((sellQty * sellAvgPrice / (sellQty * buyAvgPrice) - 1) * 100).Round8();
-        var pnlGrossPercent = ((sellQty * sellAvgPrice / ((sellQty * buyAvgPrice) + feeInQuote) - 1) * 100).Round8();
+        var pnlGrossPercent = ((sellQty * sellAvgPrice / (sellQty * buyAvgPrice + feeInQuote) - 1) * 100).Round8();
 
         var analysis = new AssetTradesAnalysis(
             baseAsset,
