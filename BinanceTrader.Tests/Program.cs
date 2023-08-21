@@ -2,11 +2,13 @@
 using System.Globalization;
 using System.Net;
 using BinanceApi.Client;
+using BinanceApi.Models.Account;
 using BinanceApi.Models.Enums;
 using BinanceApi.Models.Extensions;
 using BinanceApi.Models.Market.TradingRules;
 using BinanceTrader.Core;
 using BinanceTrader.Tools;
+using BinanceTrader.Tools.KeyProviders;
 using JetBrains.Annotations;
 
 namespace BinanceTrader.Tests;
@@ -14,32 +16,74 @@ namespace BinanceTrader.Tests;
 // ReSharper disable once ClassNeverInstantiated.Global
 internal class Program
 {
+    private const string TraderName = "Rambler";
+    const string QuoteAsset = "ETH";
+
     private static void Main()
+    {
+        RunTests().Wait();
+        PreventAppClose();
+    }
+
+    private static async Task RunTests()
     {
         ServicePointManager.DefaultConnectionLimit = 10;
 
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
-        var apiClient = new ApiClient(string.Empty, string.Empty);
+        var connectionStringsProvider = new ConnectionStringsProvider();
+        var connectionString = connectionStringsProvider.GetConnectionString("BlobStorage");
+        var keys = (await new BlobKeyProvider(connectionString).GetKeysAsync()).First(x => x.Name == TraderName);
+
+        var apiClient = new ApiClient(
+            keys.Api,
+            keys.Secret);
+
         var client = new BinanceClient(apiClient);
         var candlesProvider = new CandlesProvider(client);
-        var rules = client.LoadTradingRules().Result.NotNull();
+        var rules = await client.LoadTradingRules();
 
-        const string quoteAsset = "ETH";
         var assets = rules.Rules.NotNull()
-            .Where(r => r.NotNull().QuoteAsset == quoteAsset && r.NotNull().Status == SymbolStatus.Trading)
+            .Where(r => r.NotNull().QuoteAsset == QuoteAsset && r.NotNull().Status == SymbolStatus.Trading)
             .Select(r => r.BaseAsset)
             .OrderBy(a => a)
             .ToList();
+
+        var assetsTradesHistory = new Dictionary<string, IReadOnlyList<Trade>>();
+        var historyStartTime = new DateTime(2023, 08, 01, 00, 00, 00);
+
+        foreach (var asset in assets)
+        {
+            var symbol = SymbolUtils.GetCurrencySymbol(asset, QuoteAsset);
+
+            Console.WriteLine($"Trade History Load Started: {symbol}");
+
+            var tradeHistory = (await client.GetTradeList(symbol, startTime: historyStartTime)).ToList();
+            await Task.Delay(100);
+
+            Console.WriteLine($"Trade History Load Finished: {symbol}");
+
+            assetsTradesHistory.Add(asset, tradeHistory);
+        }
+
+        var analysis = TechAnalyzer.AnalyzeTradeHistory(assetsTradesHistory, 0.1289m);
+        var pnlNet = analysis.Sum(x => x.Value.PnlNet);
+        var pnlGross = analysis.Sum(x => x.Value.PnlGross);
+        var fee = analysis.Sum(x => x.Value.Fee);
+        var feeInQuote = analysis.Sum(x => x.Value.FeeInQuote);
+        var pnlNetMedian = analysis.Select(x => x.Value.PnlNet).Median();
+        var pnlGrossMedian = analysis.Select(x => x.Value.PnlGross).Median();
+        var pnlNetAverage = analysis.Select(x => x.Value.PnlNet).Average();
+        var pnlGrossAverage = analysis.Select(x => x.Value.PnlGross).Average();
 
         var configs = GetConfigs();
         var tests = new StrategiesTests(candlesProvider);
         var watch = Stopwatch.StartNew();
 
-        var candles = tests.LoadCandles(
+        var candles = (await tests.LoadCandles(
                 assets,
-                quoteAsset,
+                QuoteAsset,
                 //Current Period
                 // new DateTime(2023, 08, 01, 00, 00, 00),
                 // new DateTime(2023, 08, 18, 00, 00, 00),
@@ -51,9 +95,7 @@ internal class Program
                 //Bull Run 2021
                 new DateTime(2021, 01, 01, 00, 00, 00),
                 new DateTime(2021, 12, 01, 00, 00, 00),
-                TimeInterval.Minutes_1)
-            .Result
-            .NotNull()
+                TimeInterval.Minutes_1))
             .Where(x => x.Value.Any())
             .ToDictionary(x => x.Key, x => x.Value);
 
@@ -100,8 +142,6 @@ internal class Program
             .ToList();
 
         Debugger.Break();
-
-        PreventAppClose();
     }
 
     [NotNull]

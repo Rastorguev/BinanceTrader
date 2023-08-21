@@ -1,4 +1,6 @@
-﻿using Newtonsoft.Json;
+﻿using System;
+using BinanceApi.Models.Extensions;
+using Newtonsoft.Json;
 
 namespace BinanceApi.Models.Account
 {
@@ -20,7 +22,9 @@ namespace BinanceApi.Models.Account
         public string CommissionAsset { get; set; }
 
         [JsonProperty("time")]
-        public long Time { get; set; }
+        public long UnixTime { get; set; }
+
+        public DateTime Time => UnixTime.GetTime();
 
         [JsonProperty("isBuyer")]
         public bool IsBuyer { get; set; }
