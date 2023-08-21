@@ -52,6 +52,7 @@ internal class Program
 
         var assetsTradesHistory = new Dictionary<string, IReadOnlyList<Trade>>();
         var historyStartTime = new DateTime(2023, 08, 01, 00, 00, 00);
+        //var historyEndTime = new DateTime(2019, 05, 01, 00, 00, 00);
 
         foreach (var asset in assets)
         {
@@ -59,8 +60,8 @@ internal class Program
 
             Console.WriteLine($"Trade History Load Started: {symbol}");
 
-            var tradeHistory = (await client.GetTradeList(symbol, startTime: historyStartTime)).ToList();
-            await Task.Delay(100);
+            var tradeHistory = (await client.GetTradeList(symbol, historyStartTime)).ToList();
+            await Task.Delay(300);
 
             Console.WriteLine($"Trade History Load Finished: {symbol}");
 
@@ -68,14 +69,6 @@ internal class Program
         }
 
         var analysis = TechAnalyzer.AnalyzeTradeHistory(assetsTradesHistory, 0.1289m);
-        var pnlNet = analysis.Sum(x => x.Value.PnlNet);
-        var pnlGross = analysis.Sum(x => x.Value.PnlGross);
-        var fee = analysis.Sum(x => x.Value.Fee);
-        var feeInQuote = analysis.Sum(x => x.Value.FeeInQuote);
-        var pnlNetMedian = analysis.Select(x => x.Value.PnlNet).Median();
-        var pnlGrossMedian = analysis.Select(x => x.Value.PnlGross).Median();
-        var pnlNetAverage = analysis.Select(x => x.Value.PnlNet).Average();
-        var pnlGrossAverage = analysis.Select(x => x.Value.PnlGross).Average();
 
         var configs = GetConfigs();
         var tests = new StrategiesTests(candlesProvider);
