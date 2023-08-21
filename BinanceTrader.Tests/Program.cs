@@ -54,21 +54,21 @@ internal class Program
         var historyStartTime = new DateTime(2023, 08, 01, 00, 00, 00);
         //var historyEndTime = new DateTime(2019, 05, 01, 00, 00, 00);
 
-        foreach (var asset in assets)
-        {
-            var symbol = SymbolUtils.GetCurrencySymbol(asset, QuoteAsset);
-
-            Console.WriteLine($"Trade History Load Started: {symbol}");
-
-            var tradeHistory = (await client.GetTradeList(symbol, historyStartTime)).ToList();
-            await Task.Delay(300);
-
-            Console.WriteLine($"Trade History Load Finished: {symbol}");
-
-            assetsTradesHistory.Add(asset, tradeHistory);
-        }
-
-        var analysis = TechAnalyzer.AnalyzeTradeHistory(assetsTradesHistory, 0.1289m);
+        // foreach (var asset in assets)
+        // {
+        //     var symbol = SymbolUtils.GetCurrencySymbol(asset, QuoteAsset);
+        //
+        //     Console.WriteLine($"Trade History Load Started: {symbol}");
+        //
+        //     var tradeHistory = (await client.GetTradeList(symbol, historyStartTime)).ToList();
+        //     await Task.Delay(300);
+        //
+        //     Console.WriteLine($"Trade History Load Finished: {symbol}");
+        //
+        //     assetsTradesHistory.Add(asset, tradeHistory);
+        // }
+        //
+        // var analysis = TechAnalyzer.AnalyzeTradeHistory(assetsTradesHistory, 0.1289m);
 
         var configs = GetConfigs();
         var tests = new StrategiesTests(candlesProvider);
@@ -78,16 +78,16 @@ internal class Program
                 assets,
                 QuoteAsset,
                 //Current Period
-                // new DateTime(2023, 08, 01, 00, 00, 00),
-                // new DateTime(2023, 08, 18, 00, 00, 00),
+                new DateTime(2023, 08, 01, 00, 00, 00),
+                new DateTime(2023, 08, 18, 00, 00, 00),
 
                 //Bull Run 2017
                 // new DateTime(2017, 11, 01, 00, 00, 00),
                 // new DateTime(2018, 02, 01, 00, 00, 00),
 
                 //Bull Run 2021
-                new DateTime(2021, 01, 01, 00, 00, 00),
-                new DateTime(2021, 12, 01, 00, 00, 00),
+                // new DateTime(2021, 01, 01, 00, 00, 00),
+                // new DateTime(2021, 12, 01, 00, 00, 00),
                 TimeInterval.Minutes_1))
             .Where(x => x.Value.Any())
             .ToDictionary(x => x.Key, x => x.Value);
@@ -112,7 +112,7 @@ internal class Program
             .Where(x => tradeAssets.Contains(x.Key))
             .ToDictionary(x => x.Key, x => x.Value);
 
-        var results = tests.CompareStrategies(candles, configs);
+        var results = StrategiesTests.CompareStrategies(candles, configs);
 
         watch.Stop();
         var elapsed = new TimeSpan(watch.ElapsedTicks);
@@ -154,6 +154,7 @@ internal class Program
         return new TradeSessionConfig(
             1m,
             0.075m,
+            0.1289m,
             0.01m,
             minProfit,
             idle);

@@ -22,7 +22,11 @@ public class TradeSession
 
     public ITradeAccount Run(IReadOnlyList<Candlestick> candles)
     {
-        _account = new MockTradeAccount(0, _config.InitialQuoteAmount, _config.Fee);
+        _account = new MockTradeAccount(
+            0,
+            _config.InitialQuoteAmount,
+            _config.FeePercent,
+            _config.FeeAssetToQuoteConversionRatio);
 
         if (!candles.Any())
         {

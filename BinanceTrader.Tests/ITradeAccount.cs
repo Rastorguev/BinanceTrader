@@ -6,6 +6,7 @@ public interface ITradeAccount
     decimal InitialQuoteAmount { get; }
     decimal CurrentBaseAmount { get; }
     decimal CurrentQuoteAmount { get; }
+    public decimal TotalFee { get; }
     int CompletedCount { get; }
     int CanceledCount { get; }
     void Buy(decimal baseAmount, decimal price, DateTime time);

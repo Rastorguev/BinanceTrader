@@ -2,24 +2,21 @@
 using BinanceApi.Models.Enums;
 using BinanceApi.Models.Market;
 using BinanceTrader.Tools;
-using JetBrains.Annotations;
 
 namespace BinanceTrader.Tests;
 
 public class StrategiesTests
 {
-    [NotNull]
     private readonly CandlesProvider _candlesProvider;
 
-    public StrategiesTests([NotNull] CandlesProvider candlesProvider)
+    public StrategiesTests(CandlesProvider candlesProvider)
     {
         _candlesProvider = candlesProvider;
     }
 
-    [NotNull]
-    public ConcurrentDictionary<TradeSessionConfig, TradeResult> CompareStrategies(
-        [NotNull] Dictionary<string, IReadOnlyList<Candlestick>> candlesDict,
-        [NotNull] IReadOnlyList<TradeSessionConfig> configs)
+    public static ConcurrentDictionary<TradeSessionConfig, TradeResult> CompareStrategies(
+        Dictionary<string, IReadOnlyList<Candlestick>> candlesDict,
+        IReadOnlyList<TradeSessionConfig> configs)
     {
         var results = new ConcurrentDictionary<TradeSessionConfig, TradeResult>();
 
@@ -42,12 +39,12 @@ public class StrategiesTests
                     }
 
                     var account = Trade(candles, config.NotNull());
-                    var firstPrice = candles.First().NotNull().Open;
-                    var lastPrice = candles.Last().NotNull().Close;
+                    var firstPrice = candles[0].NotNull().Open;
+                    var lastPrice = candles[^1].NotNull().Close;
 
                     var tradeResult = new TradeResult(
                         config.InitialQuoteAmount,
-                        account.CurrentBaseAmount * lastPrice + account.CurrentQuoteAmount,
+                        account.CurrentBaseAmount * lastPrice + account.CurrentQuoteAmount - account.TotalFee * config.FeeAssetToQuoteConversionRatio,
                         account.InitialQuoteAmount / firstPrice * lastPrice + account.InitialBaseAmount,
                         account.CompletedCount,
                         account.CanceledCount);
@@ -70,9 +67,8 @@ public class StrategiesTests
         return results;
     }
 
-    [NotNull]
     public async Task<Dictionary<string, IReadOnlyList<Candlestick>>> LoadCandles(
-        [NotNull] IEnumerable<string> assets,
+        IEnumerable<string> assets,
         string baseAsset,
         DateTime start,
         DateTime end,
@@ -99,9 +95,7 @@ public class StrategiesTests
         return candlesDict;
     }
 
-    [NotNull]
-    private static ITradeAccount Trade([NotNull] IReadOnlyList<Candlestick> candles,
-        [NotNull] TradeSessionConfig config)
+    private static ITradeAccount Trade(IReadOnlyList<Candlestick> candles, TradeSessionConfig config)
     {
         var tradeSession = new TradeSession(config);
         var result = tradeSession.Run(candles);
