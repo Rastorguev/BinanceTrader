@@ -20,10 +20,10 @@ public class AssetTradeResult
         HoldAmount = holdAmount;
         CompletedCount = completedCount;
         CanceledCount = canceledCount;
-        TradeProfit = MathUtils.Gain(InitialAmount, TradeAmount);
-        HoldProfit = MathUtils.Gain(InitialAmount, HoldAmount);
+        TradeProfitPercentage = MathUtils.Gain(InitialAmount, TradeAmount);
+        HoldProfitPercentage = MathUtils.Gain(InitialAmount, HoldAmount);
         Diff = MathUtils.Gain(HoldAmount, TradeAmount);
-        Efficiency = TradeProfit - HoldProfit;
+        Efficiency = TradeProfitPercentage - HoldProfitPercentage;
         Trades = trades;
         FeeAssetToQuoteConversionRatio = feeAssetToQuoteConversionRatio;
     }
@@ -32,8 +32,8 @@ public class AssetTradeResult
     public decimal InitialAmount { get; }
     public decimal TradeAmount { get; }
     public decimal HoldAmount { get; }
-    public decimal TradeProfit { get; }
-    public decimal HoldProfit { get; }
+    public decimal TradeProfitPercentage { get; }
+    public decimal HoldProfitPercentage { get; }
     public decimal Diff { get; }
     public decimal Efficiency { get; }
     public int CompletedCount { get; }

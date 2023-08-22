@@ -455,7 +455,7 @@ public class RabbitTrader
 
                     var price = prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
                     var sellPrice =
-                        RulesHelper.GetMaxFittingPrice(price + price.Percents(_profitRatio), tradingRules);
+                        RulesHelper.GetMaxFittingPrice(price + price.Percentage(_profitRatio), tradingRules);
 
                     var minNotionalQty = RulesHelper.GetMinNotionalQty(price, tradingRules);
                     var maxFittingQty = RulesHelper.GetMaxFittingQty(balance.Free, tradingRules);
@@ -602,7 +602,7 @@ public class RabbitTrader
     private OrderRequest CreateSellOrder([NotNull] IOrder message, decimal qty, decimal price)
     {
         var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
-        var sellPrice = RulesHelper.GetMaxFittingPrice(price + price.Percents(_profitRatio), tradingRules);
+        var sellPrice = RulesHelper.GetMaxFittingPrice(price + price.Percentage(_profitRatio), tradingRules);
         var orderRequest =
             new OrderRequest(message.Symbol, OrderSide.Sell, qty, sellPrice);
 
@@ -613,7 +613,7 @@ public class RabbitTrader
     private OrderRequest CreateBuyOrder([NotNull] IOrder message, decimal quoteAmount, decimal price)
     {
         var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
-        var buyPrice = RulesHelper.GetMaxFittingPrice(price - price.Percents(_profitRatio), tradingRules);
+        var buyPrice = RulesHelper.GetMaxFittingPrice(price - price.Percentage(_profitRatio), tradingRules);
         var qty = quoteAmount / buyPrice;
         var adjustedQty = RulesHelper.GetMaxFittingQty(qty, tradingRules);
         var orderRequest = new OrderRequest(message.Symbol, OrderSide.Buy, adjustedQty, buyPrice);

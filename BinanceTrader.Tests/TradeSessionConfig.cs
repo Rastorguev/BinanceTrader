@@ -4,14 +4,14 @@ public class TradeSessionConfig
 {
     public TradeSessionConfig(
         decimal initialQuoteAmount,
-        decimal feePercent,
+        decimal feePercentage,
         decimal feeAssetToQuoteConversionRatio,
         decimal minQuoteAmount,
         decimal profitRatio,
         TimeSpan maxIdle)
     {
         InitialQuoteAmount = initialQuoteAmount;
-        FeePercent = feePercent;
+        FeePercentage = feePercentage;
         FeeAssetToQuoteConversionRatio = feeAssetToQuoteConversionRatio;
         MinQuoteAmount = minQuoteAmount;
         ProfitRatio = profitRatio;
@@ -19,7 +19,7 @@ public class TradeSessionConfig
     }
 
     public decimal InitialQuoteAmount { get; }
-    public decimal FeePercent { get; }
+    public decimal FeePercentage { get; }
     public decimal FeeAssetToQuoteConversionRatio { get; }
     public decimal MinQuoteAmount { get; }
     public decimal ProfitRatio { get; }
@@ -29,7 +29,7 @@ public class TradeSessionConfig
     {
         return obj is TradeSessionConfig config &&
                InitialQuoteAmount == config.InitialQuoteAmount &&
-               FeePercent == config.FeePercent &&
+               FeePercentage == config.FeePercentage &&
                MinQuoteAmount == config.MinQuoteAmount &&
                ProfitRatio == config.ProfitRatio &&
                MaxIdlePeriod == config.MaxIdlePeriod;
@@ -39,7 +39,7 @@ public class TradeSessionConfig
     {
         var hashCode = 1639983505;
         hashCode = hashCode * -1521134295 + InitialQuoteAmount.GetHashCode();
-        hashCode = hashCode * -1521134295 + FeePercent.GetHashCode();
+        hashCode = hashCode * -1521134295 + FeePercentage.GetHashCode();
         hashCode = hashCode * -1521134295 + FeeAssetToQuoteConversionRatio.GetHashCode();
         hashCode = hashCode * -1521134295 + MinQuoteAmount.GetHashCode();
         hashCode = hashCode * -1521134295 + ProfitRatio.GetHashCode();

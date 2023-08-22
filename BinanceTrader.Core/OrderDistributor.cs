@@ -73,7 +73,7 @@ public class OrderDistributor
 
                 var currentPrice = symbolPrice.Price;
                 var buyPrice =
-                    RulesHelper.GetMaxFittingPrice(currentPrice - currentPrice.Percents(_profitRatio),
+                    RulesHelper.GetMaxFittingPrice(currentPrice - currentPrice.Percentage(_profitRatio),
                         tradingRules);
                 var minNotionalQty = RulesHelper.GetMinNotionalQty(buyPrice, tradingRules);
                 var fittingAmount =

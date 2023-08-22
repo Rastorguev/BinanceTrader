@@ -25,7 +25,7 @@ public class TradeSession
         _account = new MockTradeAccount(
             0,
             _config.InitialQuoteAmount,
-            _config.FeePercent,
+            _config.FeePercentage,
             _config.FeeAssetToQuoteConversionRatio);
 
         if (!candles.Any())
@@ -50,7 +50,7 @@ public class TradeSession
                 case OrderSide.Buy when isInRange:
                 {
                     var price = _expectedPrice;
-                    var expectedPrice = (price + price.Percents(_profitRatio)).Round8();
+                    var expectedPrice = (price + price.Percentage(_profitRatio)).Round8();
 
                     Buy(price, expectedPrice, time);
                     break;
@@ -58,7 +58,7 @@ public class TradeSession
                 case OrderSide.Buy when isExpired:
                 {
                     var price = candle.High.Round8();
-                    var expectedPrice = (price - price.Percents(_profitRatio)).Round8();
+                    var expectedPrice = (price - price.Percentage(_profitRatio)).Round8();
 
                     Cancel(expectedPrice, time);
                     break;
@@ -66,7 +66,7 @@ public class TradeSession
                 case OrderSide.Sell when isInRange:
                 {
                     var price = _expectedPrice;
-                    var expectedPrice = (price - price.Percents(_profitRatio)).Round8();
+                    var expectedPrice = (price - price.Percentage(_profitRatio)).Round8();
 
                     Sell(price, expectedPrice, time);
                     break;
@@ -74,7 +74,7 @@ public class TradeSession
                 case OrderSide.Sell when isExpired:
                 {
                     var price = candle.Low.Round8();
-                    var expectedPrice = price + price.Percents(_profitRatio).Round8();
+                    var expectedPrice = price + price.Percentage(_profitRatio).Round8();
 
                     Cancel(expectedPrice, time);
                     break;

@@ -5,19 +5,19 @@ namespace BinanceTrader.Tests;
 
 public class MockTradeAccount : ITradeAccount
 {
-    private readonly decimal _feePercent;
+    private readonly decimal _feePercentage;
     private readonly decimal _feeAssetToQuoteConversionRatio;
     private readonly List<Trade> _trades = new List<Trade>();
 
     public MockTradeAccount(
         decimal initialBaseAmount,
         decimal initialQuoteAmount,
-        decimal feePercent,
+        decimal feePercentage,
         decimal feeAssetToQuoteConversionRatio)
     {
         CurrentBaseAmount = InitialBaseAmount = initialBaseAmount;
         CurrentQuoteAmount = InitialQuoteAmount = initialQuoteAmount;
-        _feePercent = feePercent;
+        _feePercentage = feePercentage;
         _feeAssetToQuoteConversionRatio = feeAssetToQuoteConversionRatio;
     }
 
@@ -38,7 +38,7 @@ public class MockTradeAccount : ITradeAccount
             throw new Exception("Insufficient Balance");
         }
 
-        var fee = quoteAmount.Percents(_feePercent) / _feeAssetToQuoteConversionRatio;
+        var fee = quoteAmount.Percentage(_feePercentage) / _feeAssetToQuoteConversionRatio;
 
         CurrentQuoteAmount -= quoteAmount;
         CurrentBaseAmount += baseAmount;
@@ -58,7 +58,7 @@ public class MockTradeAccount : ITradeAccount
         }
 
         var quoteAmount = baseAmount * price;
-        var fee = quoteAmount.Percents(_feePercent) / _feeAssetToQuoteConversionRatio;
+        var fee = quoteAmount.Percentage(_feePercentage) / _feeAssetToQuoteConversionRatio;
 
         CurrentBaseAmount -= baseAmount;
         CurrentQuoteAmount += quoteAmount;

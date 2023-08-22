@@ -6,13 +6,13 @@ public class TradesAnalysis
     public decimal PnlNetTotal { get; }
     public decimal PnlNetAvg { get; }
     public decimal PnlNetMedian { get; }
-    public decimal PnlNetPercentAvg { get; }
-    public decimal PnlNetPercentMedian { get; }
+    public decimal PnlNetPercentageAvg { get; }
+    public decimal PnlNetPercentageMedian { get; }
     public decimal PnlGrossTotal { get; }
     public decimal PnlGrossAvg { get; }
     public decimal PnlGrossMedian { get; }
-    public decimal PnlGrossPercentAvg { get; }
-    public decimal PnlGrossPercentMedian { get; }
+    public decimal PnlGrossPercentageAvg { get; }
+    public decimal PnlGrossPercentageMedian { get; }
     public decimal FeeTotal { get; }
     public decimal FeeInQuoteTotal { get; }
 
@@ -21,13 +21,13 @@ public class TradesAnalysis
         decimal pnlNetTotal,
         decimal pnlNetAvg,
         decimal pnlNetMedian,
-        decimal pnlNetPercentAvg,
-        decimal pnlNetPercentMedian,
+        decimal pnlNetPercentageAvg,
+        decimal pnlNetPercentageMedian,
         decimal pnlGrossTotal,
         decimal pnlGrossAvg,
         decimal pnlGrossMedian,
-        decimal pnlGrossPercentAvg,
-        decimal pnlGrossPercentMedian,
+        decimal pnlGrossPercentageAvg,
+        decimal pnlGrossPercentageMedian,
         decimal feeTotal,
         decimal feeInQuoteTotal)
     {
@@ -35,13 +35,13 @@ public class TradesAnalysis
         PnlNetTotal = pnlNetTotal;
         PnlNetAvg = pnlNetAvg;
         PnlNetMedian = pnlNetMedian;
-        PnlNetPercentAvg = pnlNetPercentAvg;
-        PnlNetPercentMedian = pnlNetPercentMedian;
+        PnlNetPercentageAvg = pnlNetPercentageAvg;
+        PnlNetPercentageMedian = pnlNetPercentageMedian;
         PnlGrossTotal = pnlGrossTotal;
         PnlGrossAvg = pnlGrossAvg;
         PnlGrossMedian = pnlGrossMedian;
-        PnlGrossPercentAvg = pnlGrossPercentAvg;
-        PnlGrossPercentMedian = pnlGrossPercentMedian;
+        PnlGrossPercentageAvg = pnlGrossPercentageAvg;
+        PnlGrossPercentageMedian = pnlGrossPercentageMedian;
         FeeTotal = feeTotal;
         FeeInQuoteTotal = feeInQuoteTotal;
     }

@@ -14,8 +14,8 @@ public class AssetTradesAnalysis
     public decimal SellAvgPrice { get; }
     public decimal PnlNet { get; }
     public decimal PnlGross { get; }
-    public decimal PnlNetPercent { get; }
-    public decimal PnlGrossPercent { get; }
+    public decimal PnlNetPercentage { get; }
+    public decimal PnlGrossPercentage { get; }
 
     public AssetTradesAnalysis(
         string baseAsset,
@@ -30,8 +30,8 @@ public class AssetTradesAnalysis
         decimal sellAvgPrice,
         decimal pnlNet,
         decimal pnlGross,
-        decimal pnlNetPercent,
-        decimal pnlGrossPercent)
+        decimal pnlNetPercentage,
+        decimal pnlGrossPercentage)
     {
         BaseAsset = baseAsset;
         TradesCount = tradesCount;
@@ -45,7 +45,7 @@ public class AssetTradesAnalysis
         SellAvgPrice = sellAvgPrice;
         PnlNet = pnlNet;
         PnlGross = pnlGross;
-        PnlNetPercent = pnlNetPercent;
-        PnlGrossPercent = pnlGrossPercent;
+        PnlNetPercentage = pnlNetPercentage;
+        PnlGrossPercentage = pnlGrossPercentage;
     }
 }
