@@ -6,13 +6,11 @@ public class TradesAnalysis
     public decimal PnlNetTotal { get; }
     public decimal PnlNetAvg { get; }
     public decimal PnlNetMedian { get; }
-    public decimal PnlNetPercentageAvg { get; }
-    public decimal PnlNetPercentageMedian { get; }
     public decimal PnlGrossTotal { get; }
     public decimal PnlGrossAvg { get; }
     public decimal PnlGrossMedian { get; }
-    public decimal PnlGrossPercentageAvg { get; }
-    public decimal PnlGrossPercentageMedian { get; }
+    public decimal PnlPercentageAvg { get; }
+    public decimal PnlPercentageMedian { get; }
     public decimal FeeTotal { get; }
     public decimal FeeInQuoteTotal { get; }
 
@@ -21,13 +19,11 @@ public class TradesAnalysis
         decimal pnlNetTotal,
         decimal pnlNetAvg,
         decimal pnlNetMedian,
-        decimal pnlNetPercentageAvg,
-        decimal pnlNetPercentageMedian,
         decimal pnlGrossTotal,
         decimal pnlGrossAvg,
         decimal pnlGrossMedian,
-        decimal pnlGrossPercentageAvg,
-        decimal pnlGrossPercentageMedian,
+        decimal pnlPercentageAvg,
+        decimal pnlPercentageMedian,
         decimal feeTotal,
         decimal feeInQuoteTotal)
     {
@@ -35,13 +31,11 @@ public class TradesAnalysis
         PnlNetTotal = pnlNetTotal;
         PnlNetAvg = pnlNetAvg;
         PnlNetMedian = pnlNetMedian;
-        PnlNetPercentageAvg = pnlNetPercentageAvg;
-        PnlNetPercentageMedian = pnlNetPercentageMedian;
+        PnlPercentageAvg = pnlPercentageAvg;
+        PnlPercentageMedian = pnlPercentageMedian;
         PnlGrossTotal = pnlGrossTotal;
         PnlGrossAvg = pnlGrossAvg;
         PnlGrossMedian = pnlGrossMedian;
-        PnlGrossPercentageAvg = pnlGrossPercentageAvg;
-        PnlGrossPercentageMedian = pnlGrossPercentageMedian;
         FeeTotal = feeTotal;
         FeeInQuoteTotal = feeInQuoteTotal;
     }

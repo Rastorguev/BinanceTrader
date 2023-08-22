@@ -30,37 +30,34 @@ public static class TechAnalyzer
             }
         }
 
-        var ordered = tradeResults
-            .OrderByDescending(x => x.Value.PnlNetPercentage)
+        var orderedByPnlNet = tradeResults
+            .OrderByDescending(x => x.Value.PnlNet)
             .ToDictionary(x => x.Key, x => x.Value);
 
-        var pnlNetTotal = ordered.Sum(x => x.Value.PnlNet).Round8();
-        var pnlNetAvg = ordered.Select(x => x.Value.PnlNet).Average().Round8();
-        var pnlNetMedian = ordered.Select(x => x.Value.PnlNet).Median().Round8();
-        var pnlNetPercentageAvg = ordered.Select(x => x.Value.PnlNetPercentage).Average().Round8();
-        var pnlNetPercentageMedian = ordered.Select(x => x.Value.PnlNetPercentage).Median().Round8();
+        var pnlNetTotal = orderedByPnlNet.Sum(x => x.Value.PnlNet).Round8();
+        var pnlNetAvg = orderedByPnlNet.Select(x => x.Value.PnlNet).Average().Round8();
+        var pnlNetMedian = orderedByPnlNet.Select(x => x.Value.PnlNet).Median().Round8();
 
-        var pnlGrossTotal = ordered.Sum(x => x.Value.PnlGross).Round8();
-        var pnlGrossAvg = ordered.Select(x => x.Value.PnlGross).Median().Round8();
-        var pnlGrossMedian = ordered.Select(x => x.Value.PnlGross).Median().Round8();
-        var pnlGrossPercentageAvg = ordered.Select(x => x.Value.PnlGrossPercentage).Average().Round8();
-        var pnlGrossPercentageMedian = ordered.Select(x => x.Value.PnlGrossPercentage).Median().Round8();
+        var pnlGrossTotal = orderedByPnlNet.Sum(x => x.Value.PnlGross).Round8();
+        var pnlGrossAvg = orderedByPnlNet.Select(x => x.Value.PnlGross).Average().Round8();
+        var pnlGrossMedian = orderedByPnlNet.Select(x => x.Value.PnlGross).Median().Round8();
 
-        var feeTotal = ordered.Sum(x => x.Value.Fee).Round8();
-        var feeInQuoteTotal = ordered.Sum(x => x.Value.FeeInQuote).Round8();
+        var pnlPercentageAvg = orderedByPnlNet.Select(x => x.Value.PnlPercentage).Average().Round8();
+        var pnlPercentageMedian = orderedByPnlNet.Select(x => x.Value.PnlPercentage).Median().Round8();
+
+        var feeTotal = orderedByPnlNet.Sum(x => x.Value.Fee).Round8();
+        var feeInQuoteTotal = orderedByPnlNet.Sum(x => x.Value.FeeInQuote).Round8();
 
         var tradesAnalysis = new TradesAnalysis(
-            ordered,
+            orderedByPnlNet,
             pnlNetTotal,
             pnlNetAvg,
             pnlNetMedian,
-            pnlNetPercentageAvg,
-            pnlNetPercentageMedian,
             pnlGrossTotal,
             pnlGrossAvg,
             pnlGrossMedian,
-            pnlGrossPercentageAvg,
-            pnlGrossPercentageMedian,
+            pnlPercentageAvg,
+            pnlPercentageMedian,
             feeTotal,
             feeInQuoteTotal
         );
@@ -93,8 +90,7 @@ public static class TechAnalyzer
 
         var pnlGross = (sellQty * (sellAvgPrice - buyAvgPrice)).Round8();
         var pnlNet = (pnlGross - feeInQuote).Round8();
-        var pnlNetPercentage = ((sellQty * sellAvgPrice / (sellQty * buyAvgPrice) - 1) * 100).Round8();
-        var pnlGrossPercentage = ((sellQty * sellAvgPrice / (sellQty * buyAvgPrice + feeInQuote) - 1) * 100).Round8();
+        var pnlPercentage = ((sellQty * sellAvgPrice / (sellQty * buyAvgPrice) - 1) * 100).Round8();
 
         var analysis = new AssetTradesAnalysis(
             baseAsset,
@@ -109,8 +105,7 @@ public static class TechAnalyzer
             sellAvgPrice,
             pnlNet,
             pnlGross,
-            pnlNetPercentage,
-            pnlGrossPercentage
+            pnlPercentage
         );
 
         return analysis;
