@@ -27,7 +27,7 @@ public class StrategiesTests
             //new ParallelOptions { MaxDegreeOfParallelism = 1 },
             config =>
             {
-                Console.WriteLine($"Start: {config.NotNull().ProfitRatio} / {config.MaxIdlePeriod}");
+                Console.WriteLine($"Start: {config.ProfitRatio} / {config.MaxIdlePeriod}");
 
                 var assetTradeResults = new List<AssetTradeResult>();
 
@@ -40,9 +40,9 @@ public class StrategiesTests
                         continue;
                     }
 
-                    var account = Trade(candles, config.NotNull());
-                    var firstPrice = candles[0].NotNull().Open;
-                    var lastPrice = candles[^1].NotNull().Close;
+                    var account = Trade(candles, config);
+                    var firstPrice = candles[0].Open;
+                    var lastPrice = candles[^1].Close;
 
                     var tradeAmount = account.CurrentBaseAmount * lastPrice + account.CurrentQuoteAmount -
                                       account.TotalFee * config.FeeAssetToQuoteConversionRatio;
@@ -63,14 +63,14 @@ public class StrategiesTests
                 var tradeHistory = assetTradeResults.ToDictionary(x => x.BaseAsset, x => x.Trades);
 
                 var tradesResult = new TradeResult(
-                    assetTradeResults.Sum(r => r.NotNull().InitialAmount),
-                    assetTradeResults.Sum(r => r.NotNull().TradeAmount),
-                    assetTradeResults.Sum(r => r.NotNull().HoldAmount),
-                    assetTradeResults.Sum(r => r.NotNull().CompletedCount),
-                    assetTradeResults.Sum(r => r.NotNull().CanceledCount),
+                    assetTradeResults.Sum(r => r.InitialAmount),
+                    assetTradeResults.Sum(r => r.TradeAmount),
+                    assetTradeResults.Sum(r => r.HoldAmount),
+                    assetTradeResults.Sum(r => r.CompletedCount),
+                    assetTradeResults.Sum(r => r.CanceledCount),
                     TechAnalyzer.AnalyzeTradeHistory(tradeHistory, config.FeeAssetToQuoteConversionRatio));
 
-                results[config.NotNull()] = tradesResult;
+                results[config] = tradesResult;
 
                 Console.WriteLine($"End: {config.ProfitRatio} / {config.MaxIdlePeriod}");
             });
@@ -98,7 +98,7 @@ public class StrategiesTests
                 end,
                 interval);
 
-            candlesDict.Add(asset.NotNull(), assetCandles);
+            candlesDict.Add(asset, assetCandles);
 
             Console.WriteLine($"{asset} load completed");
         }

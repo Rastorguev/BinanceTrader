@@ -1,11 +1,7 @@
-﻿using JetBrains.Annotations;
-
-namespace BinanceTrader.Tests;
+﻿namespace BinanceTrader.Tests;
 
 public static class AssetsProvider
 {
-    [NotNull]
-    [ItemNotNull]
     public static IReadOnlyList<string> Assets =>
         new List<string>
         {

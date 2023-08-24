@@ -1,11 +1,9 @@
 ﻿using System.Collections.Concurrent;
-using System.Runtime.InteropServices;
 using BinanceApi.Client;
 using BinanceApi.Models.Enums;
 using BinanceApi.Models.Market;
 using BinanceTrader.Core;
 using BinanceTrader.Tools;
-using JetBrains.Annotations;
 using Newtonsoft.Json;
 
 namespace BinanceTrader.Tests;
@@ -15,20 +13,16 @@ public class CandlesProvider : ICandlesProvider
     private const string DateFormat = "yyyy-MM-dd_hh-mm";
     private const string DirName = "Candles";
 
-    [NotNull]
     private readonly string _dirPath =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), DirName);
 
-    [NotNull]
     private readonly ConcurrentDictionary<string, IReadOnlyList<Candlestick>> _inMemoryCache = new();
 
-    [NotNull]
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _semaphores = new();
 
-    [NotNull]
     private readonly BinanceClient _client;
 
-    public CandlesProvider([NotNull] BinanceClient client)
+    public CandlesProvider(BinanceClient client)
     {
         _client = client;
     }
@@ -47,8 +41,8 @@ public class CandlesProvider : ICandlesProvider
             return cachedInMemory;
         }
 
-        var semaphore = _semaphores.GetOrAdd(fileName, new SemaphoreSlim(1, 1)).NotNull();
-        await semaphore.WaitAsync().NotNull();
+        var semaphore = _semaphores.GetOrAdd(fileName, new SemaphoreSlim(1, 1));
+        await semaphore.WaitAsync();
         try
         {
             if (TryGetFromInMemoryCache(fileName, out cachedInMemory))
@@ -76,20 +70,20 @@ public class CandlesProvider : ICandlesProvider
         }
     }
 
-    private void PutToInMemoryCache([NotNull] IReadOnlyList<Candlestick> candles,
-        [NotNull] string key)
+    private void PutToInMemoryCache(IReadOnlyList<Candlestick> candles,
+        string key)
     {
         _inMemoryCache.TryAdd(key, candles);
     }
 
-    private bool TryGetFromInMemoryCache([NotNull] string key, out IReadOnlyList<Candlestick> candles)
+    private bool TryGetFromInMemoryCache(string key, out IReadOnlyList<Candlestick> candles)
     {
         return _inMemoryCache.TryGetValue(key, out candles);
     }
 
     private void PutToDiskCache(
-        [NotNull] IReadOnlyList<Candlestick> candles,
-        [NotNull] string fileName)
+        IReadOnlyList<Candlestick> candles,
+        string fileName)
     {
         var serialized = JsonConvert.SerializeObject(candles);
 
@@ -109,10 +103,7 @@ public class CandlesProvider : ICandlesProvider
         }
     }
 
-    private bool TryGetFromDiskCache(
-        [NotNull] string fileName,
-        out IReadOnlyList<Candlestick> candles
-    )
+    private bool TryGetFromDiskCache(string fileName, out IReadOnlyList<Candlestick> candles)
     {
         candles = new List<Candlestick>();
         var path = Path.Combine(_dirPath, fileName);
@@ -133,7 +124,6 @@ public class CandlesProvider : ICandlesProvider
         return true;
     }
 
-    [NotNull]
     private string GenerateFileName(
         string baseAsset,
         string quoteAsset,

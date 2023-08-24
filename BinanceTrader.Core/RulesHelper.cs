@@ -1,33 +1,32 @@
 ﻿using BinanceApi.Models.Market.TradingRules;
-using JetBrains.Annotations;
 
 namespace BinanceTrader.Core;
 
 public static class RulesHelper
 {
-    public static decimal GetMaxFittingPrice(decimal price, [NotNull] TradingRules rules)
+    public static decimal GetMaxFittingPrice(decimal price, TradingRules rules)
     {
         return (int)(price / rules.TickSize) * rules.TickSize;
     }
 
-    public static decimal GetMaxFittingQty(decimal qty, [NotNull] TradingRules rules)
+    public static decimal GetMaxFittingQty(decimal qty, TradingRules rules)
     {
         return (int)(qty / rules.StepSize) * rules.StepSize;
     }
 
-    public static decimal GetMinNotionalQty(decimal price, [NotNull] TradingRules rules)
+    public static decimal GetMinNotionalQty(decimal price, TradingRules rules)
     {
         var qty = rules.MinNotional / price;
 
         return Math.Ceiling(qty / rules.StepSize) * rules.StepSize;
     }
 
-    public static decimal GetFittingBaseAmount(decimal quoteAmount, decimal price, [NotNull] TradingRules rules)
+    public static decimal GetFittingBaseAmount(decimal quoteAmount, decimal price, TradingRules rules)
     {
         return (int)(quoteAmount / price / rules.StepSize) * rules.StepSize;
     }
 
-    public static bool MeetsTradingRules([NotNull] this OrderRequest order, [NotNull] TradingRules rules)
+    public static bool MeetsTradingRules(this OrderRequest order, TradingRules rules)
     {
         return
             order.Price >= rules.MinPrice || (rules.MinPrice == 0 &&

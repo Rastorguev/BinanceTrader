@@ -1,13 +1,11 @@
 ﻿using System.Configuration;
 using System.Reflection;
-using JetBrains.Annotations;
 
 namespace BinanceTrader.Tools.KeyProviders;
 
 public interface IConnectionStringsProvider
 {
-    [NotNull]
-    string GetConnectionString([NotNull] string name);
+    string GetConnectionString(string name);
 }
 
 public class ConnectionStringsProvider : IConnectionStringsProvider
@@ -20,7 +18,7 @@ public class ConnectionStringsProvider : IConnectionStringsProvider
         var configMap = new ExeConfigurationFileMap
         {
             ExeConfigFilename =
-                Path.Combine(Path.GetDirectoryName(assembly.Location).NotNull(), "Configs", filename)
+                Path.Combine(Path.GetDirectoryName(assembly.Location), "Configs", filename)
         };
 
         var config = ConfigurationManager.OpenMappedExeConfiguration(configMap, ConfigurationUserLevel.None);
@@ -29,13 +27,13 @@ public class ConnectionStringsProvider : IConnectionStringsProvider
             throw new FileNotFoundException("File not found", configMap.ExeConfigFilename);
         }
 
-        var settings = config.AppSettings.NotNull().Settings.NotNull();
+        var settings = config.AppSettings.Settings;
         if (settings[name] == null)
         {
             throw new ArgumentException($"Connection string '{name}' not found", nameof(name));
         }
 
-        var connectionString = settings[name].NotNull().Value.NotNull();
+        var connectionString = settings[name].Value;
 
         return connectionString;
     }

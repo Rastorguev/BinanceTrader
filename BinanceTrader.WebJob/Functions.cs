@@ -1,12 +1,11 @@
 ﻿using BinanceTrader.Core;
-using JetBrains.Annotations;
 using Microsoft.Azure.WebJobs;
 
 namespace BinanceTrader.WebJob;
 
 public class Functions
 {
-    public static void ProcessQueueMessage([QueueTrigger("queue")] string message, [NotNull] TextWriter log)
+    public static void ProcessQueueMessage([QueueTrigger("queue")] string message, TextWriter log)
     {
         log.WriteLine(message);
     }

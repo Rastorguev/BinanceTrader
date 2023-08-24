@@ -3,28 +3,24 @@ using BinanceApi.Models.Market;
 using BinanceApi.Models.Market.TradingRules;
 using BinanceApi.Models.WebSocket;
 using BinanceTrader.Tools;
-using JetBrains.Annotations;
 
 namespace BinanceTrader.Core;
 
 public class OrderDistributor
 {
-    [NotNull]
     private readonly string _quoteAsset;
 
     private readonly decimal _profitRatio;
 
-    [NotNull]
     private readonly TradingRulesProvider _rulesProvider;
 
-    [NotNull]
     private readonly ILogger _logger;
 
     public OrderDistributor(
-        [NotNull] string quoteAsset,
+        string quoteAsset,
         decimal profitRatio,
-        [NotNull] TradingRulesProvider rulesProvider,
-        [NotNull] ILogger logger)
+        TradingRulesProvider rulesProvider,
+        ILogger logger)
     {
         _quoteAsset = quoteAsset;
         _profitRatio = profitRatio;
@@ -32,12 +28,11 @@ public class OrderDistributor
         _logger = logger;
     }
 
-    [NotNull]
     public IReadOnlyList<OrderRequest> SplitIntoBuyOrders(
         decimal freeQuoteAmount,
-        [NotNull] [ItemNotNull] IReadOnlyList<string> assets,
-        [NotNull] IReadOnlyList<IOrder> openOrders,
-        [NotNull] IReadOnlyList<SymbolPrice> prices)
+        IReadOnlyList<string> assets,
+        IReadOnlyList<IOrder> openOrders,
+        IReadOnlyList<SymbolPrice> prices)
     {
         var requests = new List<OrderRequest>();
         var remainingQuoteAmount = freeQuoteAmount;
@@ -45,7 +40,7 @@ public class OrderDistributor
         var openOrdersCount = assets.Select(asset =>
         {
             var symbol = SymbolUtils.GetCurrencySymbol(asset, _quoteAsset);
-            var count = openOrders.Count(o => o.NotNull().Symbol == symbol);
+            var count = openOrders.Count(o => o.Symbol == symbol);
             return (symbol, count);
         });
 
@@ -53,7 +48,7 @@ public class OrderDistributor
             .Where(x => _rulesProvider.GetRulesFor(x.symbol).Status == SymbolStatus.Trading)
             .GroupBy(x => x.count)
             .OrderBy(g => g.Key)
-            .First().NotNull()
+            .First()
             .Select(g => g.symbol)
             .ToList();
 
@@ -65,7 +60,7 @@ public class OrderDistributor
             {
                 var tradingRules = _rulesProvider.GetRulesFor(symbol);
 
-                var symbolPrice = prices.FirstOrDefault(p => p.NotNull().Symbol == symbol);
+                var symbolPrice = prices.FirstOrDefault(p => p.Symbol == symbol);
                 if (symbolPrice == null)
                 {
                     continue;

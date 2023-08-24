@@ -1,6 +1,4 @@
-﻿using JetBrains.Annotations;
-
-namespace BinanceTrader.Tools;
+﻿namespace BinanceTrader.Tools;
 
 public static class MathUtils
 {
@@ -26,7 +24,7 @@ public static class MathUtils
         return profit;
     }
 
-    public static decimal StandardDeviation([NotNull] this IEnumerable<decimal> input)
+    public static decimal StandardDeviation(this IEnumerable<decimal> input)
     {
         var list = input.ToList();
         var avg = list.Average();

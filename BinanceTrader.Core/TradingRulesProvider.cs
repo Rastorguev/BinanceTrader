@@ -1,25 +1,23 @@
 ﻿using BinanceApi.Domain.Interfaces;
 using BinanceApi.Models.Market.TradingRules;
 using BinanceTrader.Tools;
-using JetBrains.Annotations;
 
 namespace BinanceTrader.Core;
 
 public class TradingRulesProvider
 {
-    [NotNull]
     private readonly IBinanceClient _client;
 
     private readonly TimeSpan _expiration = TimeSpan.FromMinutes(10);
     private DateTime? _lastUpdateTime;
     private TradingRulesContainer _rulesContainer;
 
-    public TradingRulesProvider([NotNull] IBinanceClient client)
+    public TradingRulesProvider(IBinanceClient client)
     {
         _client = client;
     }
 
-    public IReadOnlyList<TradingRules> Rules => _rulesContainer?.Rules.NotNull().ToList() ?? new List<TradingRules>();
+    public IReadOnlyList<TradingRules> Rules => _rulesContainer?.Rules.ToList() ?? new List<TradingRules>();
 
     public async Task UpdateRulesIfNeeded()
     {
@@ -31,7 +29,7 @@ public class TradingRulesProvider
 
             if (!isValid)
             {
-                _rulesContainer = await _client.LoadTradingRules().NotNull();
+                _rulesContainer = await _client.LoadTradingRules();
                 _lastUpdateTime = DateTime.Now;
             }
         }
@@ -41,12 +39,11 @@ public class TradingRulesProvider
         }
     }
 
-    [NotNull]
     public TradingRules GetRulesFor(string symbol)
     {
         try
         {
-            return _rulesContainer.NotNull().Rules.NotNull().First(s => s.NotNull().Symbol == symbol).NotNull();
+            return _rulesContainer.Rules.First(s => s.Symbol == symbol);
         }
         catch (Exception ex)
         {
@@ -54,10 +51,9 @@ public class TradingRulesProvider
         }
     }
 
-    [NotNull]
     public List<string> GetBaseAssetsFor(string asset)
     {
-        return _rulesContainer.NotNull().Rules.NotNull().Where(r => r.NotNull().QuoteAsset == asset)
+        return _rulesContainer.Rules.Where(r => r.QuoteAsset == asset)
             .Select(r => r.BaseAsset).ToList();
     }
 }

@@ -3,7 +3,6 @@ using System.Globalization;
 using BinanceApi.Models.WebSocket;
 using BinanceTrader.Core;
 using BinanceTrader.Tools;
-using JetBrains.Annotations;
 using Microsoft.ApplicationInsights;
 
 namespace BinanceTrader.WebJob;
@@ -13,7 +12,6 @@ public class Logger : ILogger
     private const string InstrumentationKey = "cf5db4c4-8f2b-444b-94b9-7957f4b476b8";
     private readonly string _traderName;
 
-    [NotNull]
     private readonly TelemetryClient _client;
 
     public Logger(string traderName)
@@ -115,7 +113,7 @@ public class Logger : ILogger
 
 public static class LoggerHelpers
 {
-    public static Dictionary<string, string> AddTraderName([NotNull] this Dictionary<string, string> properties,
+    public static Dictionary<string, string> AddTraderName(this Dictionary<string, string> properties,
         string traderName)
     {
         properties.Add("Trader", traderName);

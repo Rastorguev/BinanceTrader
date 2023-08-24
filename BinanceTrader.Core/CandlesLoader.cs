@@ -3,13 +3,11 @@ using BinanceApi.Models.Enums;
 using BinanceApi.Models.Extensions;
 using BinanceApi.Models.Market;
 using BinanceTrader.Tools;
-using JetBrains.Annotations;
 
 namespace BinanceTrader.Core;
 
 public interface ICandlesProvider
 {
-    [NotNull]
     Task<IReadOnlyList<Candlestick>> LoadCandles(
         string baseAsset,
         string quoteAsset,
@@ -22,13 +20,11 @@ public class CandlesLoader : ICandlesProvider
 {
     private readonly IBinanceClient _client;
 
-    public CandlesLoader([NotNull] IBinanceClient client)
+    public CandlesLoader(IBinanceClient client)
     {
         _client = client;
     }
 
-    [NotNull]
-    [ItemNotNull]
     public async Task<IReadOnlyList<Candlestick>> LoadCandles(
         string baseAsset,
         string quoteAsset,
@@ -53,9 +49,9 @@ public class CandlesLoader : ICandlesProvider
             start = rangeEnd;
         }
 
-        var candles = (await Task.WhenAll(tasks).NotNull()).SelectMany(c => c).ToList();
+        var candles = (await Task.WhenAll(tasks)).SelectMany(c => c).ToList();
 
-        var orderedCandles = candles.OrderBy(c => c.NotNull().OpenTime).ToList();
+        var orderedCandles = candles.OrderBy(c => c.OpenTime).ToList();
         return orderedCandles;
     }
 }

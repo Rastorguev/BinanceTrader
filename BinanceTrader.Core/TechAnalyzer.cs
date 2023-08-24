@@ -2,13 +2,12 @@
 using BinanceApi.Models.Extensions;
 using BinanceApi.Models.Market;
 using BinanceTrader.Tools;
-using JetBrains.Annotations;
 
 namespace BinanceTrader.Core;
 
 public static class TechAnalyzer
 {
-    public static decimal CalculateVolatilityIndex([NotNull] IEnumerable<Candlestick> candles)
+    public static decimal CalculateVolatilityIndex(IEnumerable<Candlestick> candles)
     {
         var list = candles.ToList();
 

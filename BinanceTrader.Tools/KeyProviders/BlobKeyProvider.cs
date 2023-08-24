@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using JetBrains.Annotations;
 using Microsoft.WindowsAzure.Storage;
 using Newtonsoft.Json;
 
@@ -7,10 +6,9 @@ namespace BinanceTrader.Tools.KeyProviders;
 
 public class BlobKeyProvider : IKeyProvider
 {
-    [NotNull]
     private readonly string _connectionString;
 
-    public BlobKeyProvider([NotNull] string connectionString)
+    public BlobKeyProvider(string connectionString)
     {
         _connectionString = connectionString;
     }
@@ -18,10 +16,10 @@ public class BlobKeyProvider : IKeyProvider
     public async Task<IReadOnlyList<BinanceKeySet>> GetKeysAsync()
     {
         const string containerName = "configs";
-        var account = CloudStorageAccount.Parse(_connectionString).NotNull();
-        var client = account.CreateCloudBlobClient().NotNull();
-        var container = client.GetContainerReference(containerName).NotNull();
-        var blob = container.GetBlobReference("Keys.json").NotNull();
+        var account = CloudStorageAccount.Parse(_connectionString);
+        var client = account.CreateCloudBlobClient();
+        var container = client.GetContainerReference(containerName);
+        var blob = container.GetBlobReference("Keys.json");
 
         string content;
         using (var result = await blob.OpenReadAsync())
@@ -31,7 +29,7 @@ public class BlobKeyProvider : IKeyProvider
             content = Encoding.Default.GetString(bytes);
         }
 
-        var keys = JsonConvert.DeserializeObject<IReadOnlyList<BinanceKeySet>>(content).NotNull();
+        var keys = JsonConvert.DeserializeObject<IReadOnlyList<BinanceKeySet>>(content);
 
         return keys;
     }

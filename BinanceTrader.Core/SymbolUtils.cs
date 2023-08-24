@@ -1,15 +1,13 @@
-﻿using JetBrains.Annotations;
-
-namespace BinanceTrader.Core;
+﻿namespace BinanceTrader.Core;
 
 public static class SymbolUtils
 {
-    public static string GetCurrencySymbol([NotNull] string baseAsset, [NotNull] string quoteAsset)
+    public static string GetCurrencySymbol(string baseAsset, string quoteAsset)
     {
         return string.Format($"{baseAsset}{quoteAsset}");
     }
 
-    public static string GetBaseAsset([NotNull] string symbol, [NotNull] string quoteAsset)
+    public static string GetBaseAsset(string symbol, string quoteAsset)
     {
         if (!symbol.Contains(quoteAsset))
         {
