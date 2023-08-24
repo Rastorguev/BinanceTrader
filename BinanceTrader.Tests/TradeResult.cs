@@ -1,4 +1,3 @@
-using BinanceApi.Models.Account;
 using BinanceTrader.Core;
 using BinanceTrader.Tools;
 
@@ -19,19 +18,19 @@ public class TradeResult
         HoldAmount = holdAmount;
         CompletedCount = completedCount;
         CanceledCount = canceledCount;
-        TradeProfit = MathUtils.Gain(InitialAmount, TradeAmount);
-        HoldProfit = MathUtils.Gain(InitialAmount, HoldAmount);
-        Diff = MathUtils.Gain(HoldAmount, TradeAmount);
-        Efficiency = TradeProfit - HoldProfit;
+        TradeProfitPercentage = MathUtils.Gain(InitialAmount, TradeAmount);
+        HoldProfitPercentage = MathUtils.Gain(InitialAmount, HoldAmount);
+        TradeHoldDiffPercentage = MathUtils.Gain(HoldAmount, TradeAmount);
+        Efficiency = TradeProfitPercentage - HoldProfitPercentage;
         TradeAnalysis = tradeAnalysis;
     }
 
     public decimal InitialAmount { get; }
     public decimal TradeAmount { get; }
     public decimal HoldAmount { get; }
-    public decimal TradeProfit { get; }
-    public decimal HoldProfit { get; }
-    public decimal Diff { get; }
+    public decimal TradeProfitPercentage { get; }
+    public decimal HoldProfitPercentage { get; }
+    public decimal TradeHoldDiffPercentage { get; }
     public decimal Efficiency { get; }
     public int CompletedCount { get; }
     public int CanceledCount { get; }

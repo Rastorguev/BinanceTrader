@@ -7,9 +7,7 @@ using BinanceApi.Models.Enums;
 using BinanceApi.Models.Extensions;
 using BinanceApi.Models.Market.TradingRules;
 using BinanceTrader.Core;
-using BinanceTrader.Tools;
 using BinanceTrader.Tools.KeyProviders;
-using JetBrains.Annotations;
 
 namespace BinanceTrader.Tests;
 
@@ -44,31 +42,31 @@ internal class Program
         var candlesProvider = new CandlesProvider(client);
         var rules = await client.LoadTradingRules();
 
-        var assets = rules.Rules.NotNull()
-            .Where(r => r.NotNull().QuoteAsset == QuoteAsset && r.NotNull().Status == SymbolStatus.Trading)
+        var assets = rules.Rules
+            .Where(r => r.QuoteAsset == QuoteAsset && r.Status == SymbolStatus.Trading)
             .Select(r => r.BaseAsset)
             .OrderBy(a => a)
             .ToList();
 
         var assetsTradesHistory = new Dictionary<string, IReadOnlyList<Trade>>();
         var historyStartTime = new DateTime(2023, 08, 01, 00, 00, 00);
-        //var historyEndTime = new DateTime(2019, 05, 01, 00, 00, 00);
+        var historyEndTime = new DateTime(2019, 05, 01, 00, 00, 00);
 
-        // foreach (var asset in assets)
-        // {
-        //     var symbol = SymbolUtils.GetCurrencySymbol(asset, QuoteAsset);
-        //
-        //     Console.WriteLine($"Trade History Load Started: {symbol}");
-        //
-        //     var tradeHistory = (await client.GetTradeList(symbol, historyStartTime)).ToList();
-        //     await Task.Delay(300);
-        //
-        //     Console.WriteLine($"Trade History Load Finished: {symbol}");
-        //
-        //     assetsTradesHistory.Add(asset, tradeHistory);
-        // }
-        //
-        // var analysis = TechAnalyzer.AnalyzeTradeHistory(assetsTradesHistory, 0.1289m);
+        foreach (var asset in assets)
+        {
+            var symbol = SymbolUtils.GetCurrencySymbol(asset, QuoteAsset);
+
+            Console.WriteLine($"Trade History Load Started: {symbol}");
+
+            var tradeHistory = (await client.GetTradeList(symbol, historyStartTime)).ToList();
+            await Task.Delay(300);
+
+            Console.WriteLine($"Trade History Load Finished: {symbol}");
+
+            assetsTradesHistory.Add(asset, tradeHistory);
+        }
+
+        var analysis = TechAnalyzer.AnalyzeTradeHistory(assetsTradesHistory, 0.1289m);
 
         var configs = GetConfigs();
         var tests = new StrategiesTests(candlesProvider);
@@ -78,12 +76,12 @@ internal class Program
                 assets,
                 QuoteAsset,
                 //Current Period
-                // new DateTime(2023, 08, 01, 00, 00, 00),
-                // new DateTime(2023, 08, 18, 00, 00, 00),
+                new DateTime(2023, 08, 01, 00, 00, 00),
+                new DateTime(2023, 08, 24, 00, 00, 00),
 
                 //Bull Run 2017
-                new DateTime(2017, 11, 01, 00, 00, 00),
-                new DateTime(2018, 02, 01, 00, 00, 00),
+                // new DateTime(2017, 11, 01, 00, 00, 00),
+                // new DateTime(2018, 02, 01, 00, 00, 00),
 
                 //Bull Run 2021
                 // new DateTime(2021, 01, 01, 00, 00, 00),
@@ -117,8 +115,8 @@ internal class Program
         watch.Stop();
         var elapsed = new TimeSpan(watch.ElapsedTicks);
 
-        var ordered = results.NotNull()
-            .OrderByDescending(r => r.Value.NotNull().TradeProfit)
+        var ordered = results
+            .OrderByDescending(r => r.Value.TradeProfitPercentage)
             .ToList();
 
         var max = ordered.First();
@@ -127,18 +125,16 @@ internal class Program
         Console.WriteLine($"Elapsed Time: {elapsed.TotalSeconds}");
 
         var tradeResults = ordered.Select(o => (
-                Profit: o.Key.NotNull().ProfitRatio,
-                Idle: o.Key.NotNull().MaxIdlePeriod,
-                o.Value.NotNull().TradeProfit,
-                TradesCount: o.Value.NotNull().CompletedCount))
-            .OrderByDescending(o => o.TradeProfit)
+                Profit: o.Key.ProfitRatio,
+                Idle: o.Key.MaxIdlePeriod,
+                TradeProfitPercentages: o.Value.TradeProfitPercentage,
+                TradesCount: o.Value.CompletedCount))
+            .OrderByDescending(o => o.TradeProfitPercentages)
             .ToList();
 
         Debugger.Break();
     }
 
-    [NotNull]
-    [ItemNotNull]
     private static IReadOnlyList<TradeSessionConfig> GetConfigs()
     {
         var configs = new List<TradeSessionConfig>();
@@ -210,6 +206,6 @@ internal class Program
 
     private static void PreventAppClose()
     {
-        Task.Delay(-1).NotNull().Wait();
+        Task.Delay(-1).Wait();
     }
 }
