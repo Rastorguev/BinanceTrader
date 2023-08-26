@@ -8,8 +8,8 @@ namespace BinanceApi.Models.Extensions
         public static decimal Median(this IEnumerable<decimal> source)
         {
             var ordered = source.OrderBy(n => n).ToList();
-            var count = ordered.Count();
-            var halfIndex = ordered.Count() / 2;
+            var count = ordered.Count;
+            var halfIndex = ordered.Count / 2;
 
             var median = count % 2 == 0
                 ? (ordered.ElementAt(halfIndex) +

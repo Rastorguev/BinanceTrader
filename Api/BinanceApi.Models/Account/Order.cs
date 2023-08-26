@@ -1,4 +1,6 @@
-﻿using BinanceApi.Models.Enums;
+﻿using System;
+using BinanceApi.Models.Enums;
+using BinanceApi.Models.Extensions;
 using BinanceApi.Models.WebSocket;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -24,6 +26,8 @@ namespace BinanceApi.Models.Account
 
         [JsonProperty("time")]
         public long UnixTime { get; set; }
+
+        public DateTime LocalTime => UnixTime.GetLocalTime();
 
         [JsonProperty("orderId")]
         public int OrderId { get; set; }

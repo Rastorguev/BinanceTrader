@@ -40,10 +40,10 @@ public class TradeSession
         foreach (var candle in candles)
         {
             var isExpired = _lastActionTime == null ||
-                            candle.CloseTime.GetTime() - _lastActionTime.Value >= _config.MaxIdlePeriod;
+                            candle.CloseLocalTime - _lastActionTime.Value >= _config.MaxIdlePeriod;
 
             var isInRange = _expectedPrice > candle.Low.Round8() && _expectedPrice < candle.High.Round8();
-            var time = candle.OpenTime.GetTime();
+            var time = candle.OpenLocalTime;
 
             switch (_nextAction)
             {

@@ -5,9 +5,14 @@ namespace BinanceApi.Models.Extensions
 {
     public static class TimeExtensions
     {
-        public static DateTime GetTime(this long unixTime)
+        public static DateTime GetUtcTime(this long unixTime)
         {
             return DateTimeOffset.FromUnixTimeMilliseconds(unixTime).DateTime;
+        }
+
+        public static DateTime GetLocalTime(this long unixTime)
+        {
+            return DateTimeOffset.FromUnixTimeMilliseconds(unixTime).DateTime.ToLocalTime();
         }
 
         public static int ToMinutes(this TimeInterval interval)

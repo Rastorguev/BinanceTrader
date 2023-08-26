@@ -362,7 +362,7 @@ public class RabbitTrader
             var expiredOrders = openOrders
                 .Where(o =>
                 {
-                    var orderTime = o.UnixTime.GetTime().ToLocalTime();
+                    var orderTime = o.LocalTime;
 
                     return now - orderTime > _orderExpiration;
                 })
@@ -371,7 +371,7 @@ public class RabbitTrader
             var nonVolatileAssetsBuyOrders = openOrders
                 .Where(o =>
                 {
-                    var orderTime = o.UnixTime.GetTime().ToLocalTime();
+                    var orderTime = o.LocalTime;
                     var baseAsset = SymbolUtils.GetBaseAsset(o.Symbol, _quoteAsset);
                     var isInMostVolatileAssets =
                         !_mostVolatileAssets.Any() || _mostVolatileAssets.ContainsKey(baseAsset);

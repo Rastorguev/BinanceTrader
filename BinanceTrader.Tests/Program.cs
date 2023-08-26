@@ -51,7 +51,7 @@ internal class Program
             .OrderBy(a => a)
             .ToList();
 
-        await AnaliseTradesHistory(assets, QuoteAsset, client);
+        //await AnaliseTradesHistory(assets, QuoteAsset, client);
 
         var configs = GetConfigs();
         var watch = Stopwatch.StartNew();
@@ -60,8 +60,8 @@ internal class Program
             assets,
             QuoteAsset,
             //Current Period
-            new DateTime(2023, 06, 01, 00, 00, 00),
-            new DateTime(2023, 08, 24, 00, 00, 00),
+            new DateTime(2023, 08, 01, 00, 00, 00),
+            new DateTime(2023, 08, 18, 00, 00, 00),
 
             //Bull Run 2017
             // new DateTime(2017, 11, 01, 00, 00, 00),

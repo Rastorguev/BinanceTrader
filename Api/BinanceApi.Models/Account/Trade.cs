@@ -24,7 +24,7 @@ namespace BinanceApi.Models.Account
         [JsonProperty("time")]
         public long UnixTime { get; set; }
 
-        public DateTime Time => UnixTime.GetTime();
+        public DateTime LocalTime => UnixTime.GetLocalTime();
 
         [JsonProperty("isBuyer")]
         public bool IsBuyer { get; set; }

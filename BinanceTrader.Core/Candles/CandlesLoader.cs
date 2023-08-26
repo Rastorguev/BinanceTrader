@@ -34,13 +34,13 @@ public class CandlesLoader : ICandlesProvider
 
             var symbol = $"{baseAsset}{quoteAsset}";
 
-            tasks.Add(_client.GetCandleSticks(symbol, interval, start, rangeEnd));
+            tasks.Add(_client.GetCandleSticks(symbol, interval, start, rangeEnd, maxRange));
             start = rangeEnd;
         }
 
         var candles = (await Task.WhenAll(tasks)).SelectMany(c => c).ToList();
 
-        var orderedCandles = candles.OrderBy(c => c.OpenTime).ToList();
+        var orderedCandles = candles.OrderBy(c => c.OpenLocalTime).ToList();
         return orderedCandles;
     }
 }

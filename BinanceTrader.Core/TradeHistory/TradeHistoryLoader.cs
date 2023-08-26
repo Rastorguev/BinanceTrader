@@ -77,7 +77,7 @@ public class TradeHistoryLoader : ITradeHistoryProvider
         tradeHistory = tradeHistory
             .GroupBy(x => x.Id)
             .Select(x => x.First())
-            .OrderByDescending(x => x.Time).ToList();
+            .OrderByDescending(x => x.LocalTime).ToList();
 
         return tradeHistory;
     }
