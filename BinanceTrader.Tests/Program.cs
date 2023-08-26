@@ -8,6 +8,7 @@ using BinanceApi.Models.Enums;
 using BinanceApi.Models.Extensions;
 using BinanceApi.Models.Market.TradingRules;
 using BinanceTrader.Core;
+using BinanceTrader.Core.Analysis;
 using BinanceTrader.Tools.KeyProviders;
 
 namespace BinanceTrader.Tests;

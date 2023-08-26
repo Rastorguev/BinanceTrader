@@ -1,4 +1,4 @@
-namespace BinanceTrader.Core;
+namespace BinanceTrader.Core.Analysis;
 
 public class TradesAnalysis
 {

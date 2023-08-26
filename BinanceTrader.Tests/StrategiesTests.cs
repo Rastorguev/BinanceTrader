@@ -3,6 +3,7 @@ using BinanceApi.Models.Account;
 using BinanceApi.Models.Enums;
 using BinanceApi.Models.Market;
 using BinanceTrader.Core;
+using BinanceTrader.Core.Analysis;
 using BinanceTrader.Tools;
 
 namespace BinanceTrader.Tests;

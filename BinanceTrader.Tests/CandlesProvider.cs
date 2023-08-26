@@ -3,6 +3,7 @@ using BinanceApi.Client;
 using BinanceApi.Models.Enums;
 using BinanceApi.Models.Market;
 using BinanceTrader.Core;
+using BinanceTrader.Core.Candles;
 using Newtonsoft.Json;
 
 namespace BinanceTrader.Tests;

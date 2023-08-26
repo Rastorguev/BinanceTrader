@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using BinanceApi.Models.Enums;
+using BinanceTrader.Core.Analysis;
+using BinanceTrader.Core.Candles;
 using BinanceTrader.Tools;
 
 namespace BinanceTrader.Core;

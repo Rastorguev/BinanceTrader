@@ -2,19 +2,8 @@
 using BinanceApi.Models.Enums;
 using BinanceApi.Models.Extensions;
 using BinanceApi.Models.Market;
-using BinanceTrader.Tools;
 
-namespace BinanceTrader.Core;
-
-public interface ICandlesProvider
-{
-    Task<IReadOnlyList<Candlestick>> LoadCandles(
-        string baseAsset,
-        string quoteAsset,
-        DateTime start,
-        DateTime end,
-        TimeInterval interval);
-}
+namespace BinanceTrader.Core.Candles;
 
 public class CandlesLoader : ICandlesProvider
 {

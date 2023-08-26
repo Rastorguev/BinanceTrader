@@ -3,7 +3,7 @@ using BinanceApi.Models.Extensions;
 using BinanceApi.Models.Market;
 using BinanceTrader.Tools;
 
-namespace BinanceTrader.Core;
+namespace BinanceTrader.Core.Analysis;
 
 public static class TechAnalyzer
 {
@@ -22,7 +22,7 @@ public static class TechAnalyzer
         foreach (var assetTrades in tradeHistory)
         {
             var assetTradesAnalysis =
-                GetAssetTradesAnalysis(assetTrades.Key, assetTrades.Value, feeAssetToQuoteConversionRatio);
+                GetTradesAnalysis(assetTrades.Key, assetTrades.Value, feeAssetToQuoteConversionRatio);
             if (assetTradesAnalysis != null)
             {
                 tradeResults.Add(assetTrades.Key, assetTradesAnalysis);
@@ -64,7 +64,7 @@ public static class TechAnalyzer
         return tradesAnalysis;
     }
 
-    private static AssetTradesAnalysis GetAssetTradesAnalysis(
+    private static AssetTradesAnalysis GetTradesAnalysis(
         string baseAsset, IReadOnlyList<Trade> trades, decimal feeAssetToQuoteConversionRatio)
     {
         var buyTrades = trades.Where(x => x.IsBuyer == true).ToList();

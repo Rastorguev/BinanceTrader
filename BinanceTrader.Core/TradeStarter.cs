@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using BinanceApi.Client;
+using BinanceTrader.Core.Candles;
 using BinanceTrader.Tools;
 using BinanceTrader.Tools.KeyProviders;
 
