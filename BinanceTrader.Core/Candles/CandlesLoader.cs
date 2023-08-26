@@ -21,7 +21,7 @@ public class CandlesLoader : ICandlesProvider
         DateTime end,
         TimeInterval interval)
     {
-        const int maxRange = 500;
+        const int maxRange = 1000;
 
         var tasks = new List<Task<IEnumerable<Candlestick>>>();
 
