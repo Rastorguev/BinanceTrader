@@ -3,7 +3,6 @@ using BinanceApi.Client;
 using BinanceApi.Models.Enums;
 using BinanceApi.Models.Market;
 using BinanceTrader.Core;
-using BinanceTrader.Tools;
 using Newtonsoft.Json;
 
 namespace BinanceTrader.Tests;
@@ -25,6 +24,34 @@ public class CandlesProvider : ICandlesProvider
     public CandlesProvider(BinanceClient client)
     {
         _client = client;
+    }
+
+    public async Task<Dictionary<string, IReadOnlyList<Candlestick>>> LoadCandles(
+        IEnumerable<string> assets,
+        string baseAsset,
+        DateTime start,
+        DateTime end,
+        TimeInterval interval)
+    {
+        var candlesDict = new Dictionary<string, IReadOnlyList<Candlestick>>();
+
+        foreach (var asset in assets)
+        {
+            Console.WriteLine($"{asset} load started");
+
+            var assetCandles = await LoadCandles(
+                asset,
+                baseAsset,
+                start,
+                end,
+                interval);
+
+            candlesDict.Add(asset, assetCandles);
+
+            Console.WriteLine($"{asset} load completed");
+        }
+
+        return candlesDict;
     }
 
     public async Task<IReadOnlyList<Candlestick>> LoadCandles(

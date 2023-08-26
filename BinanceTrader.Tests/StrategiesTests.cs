@@ -7,15 +7,8 @@ using BinanceTrader.Tools;
 
 namespace BinanceTrader.Tests;
 
-public class StrategiesTests
+public static class StrategiesTests
 {
-    private readonly CandlesProvider _candlesProvider;
-
-    public StrategiesTests(CandlesProvider candlesProvider)
-    {
-        _candlesProvider = candlesProvider;
-    }
-
     public static ConcurrentDictionary<TradeSessionConfig, TradeResult> CompareStrategies(
         Dictionary<string, IReadOnlyList<Candlestick>> candlesDict,
         IReadOnlyList<TradeSessionConfig> configs)
@@ -76,34 +69,6 @@ public class StrategiesTests
             });
 
         return results;
-    }
-
-    public async Task<Dictionary<string, IReadOnlyList<Candlestick>>> LoadCandles(
-        IEnumerable<string> assets,
-        string baseAsset,
-        DateTime start,
-        DateTime end,
-        TimeInterval interval)
-    {
-        var candlesDict = new Dictionary<string, IReadOnlyList<Candlestick>>();
-
-        foreach (var asset in assets)
-        {
-            Console.WriteLine($"{asset} load started");
-
-            var assetCandles = await _candlesProvider.LoadCandles(
-                asset,
-                baseAsset,
-                start,
-                end,
-                interval);
-
-            candlesDict.Add(asset, assetCandles);
-
-            Console.WriteLine($"{asset} load completed");
-        }
-
-        return candlesDict;
     }
 
     private static ITradeAccount Trade(IReadOnlyList<Candlestick> candles, TradeSessionConfig config)

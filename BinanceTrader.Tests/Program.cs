@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Net;
 using BinanceApi.Client;
+using BinanceApi.Domain.Interfaces;
 using BinanceApi.Models.Account;
 using BinanceApi.Models.Enums;
 using BinanceApi.Models.Extensions;
@@ -48,45 +49,28 @@ internal class Program
             .OrderBy(a => a)
             .ToList();
 
-        var assetsTradesHistory = new Dictionary<string, IReadOnlyList<Trade>>();
-        var historyStartTime = new DateTime(2023, 08, 01, 00, 00, 00);
-        var historyEndTime = new DateTime(2019, 05, 01, 00, 00, 00);
-
-        foreach (var asset in assets)
-        {
-            var symbol = SymbolUtils.GetCurrencySymbol(asset, QuoteAsset);
-
-            Console.WriteLine($"Trade History Load Started: {symbol}");
-
-            var tradeHistory = (await client.GetTradeList(symbol, historyStartTime)).ToList();
-            await Task.Delay(300);
-
-            Console.WriteLine($"Trade History Load Finished: {symbol}");
-
-            assetsTradesHistory.Add(asset, tradeHistory);
-        }
-
-        var analysis = TechAnalyzer.AnalyzeTradeHistory(assetsTradesHistory, 0.1289m);
+        //await AnaliseTradesHistory(assets, client);
 
         var configs = GetConfigs();
-        var tests = new StrategiesTests(candlesProvider);
         var watch = Stopwatch.StartNew();
 
-        var candles = (await tests.LoadCandles(
-                assets,
-                QuoteAsset,
-                //Current Period
-                new DateTime(2023, 08, 01, 00, 00, 00),
-                new DateTime(2023, 08, 24, 00, 00, 00),
+        var candles = await candlesProvider.LoadCandles(
+            assets,
+            QuoteAsset,
+            //Current Period
+            new DateTime(2023, 06, 01, 00, 00, 00),
+            new DateTime(2023, 08, 24, 00, 00, 00),
 
-                //Bull Run 2017
-                // new DateTime(2017, 11, 01, 00, 00, 00),
-                // new DateTime(2018, 02, 01, 00, 00, 00),
+            //Bull Run 2017
+            // new DateTime(2017, 11, 01, 00, 00, 00),
+            // new DateTime(2018, 02, 01, 00, 00, 00),
 
-                //Bull Run 2021
-                // new DateTime(2021, 01, 01, 00, 00, 00),
-                // new DateTime(2021, 12, 01, 00, 00, 00),
-                TimeInterval.Minutes_1))
+            //Bull Run 2021
+            // new DateTime(2021, 01, 01, 00, 00, 00),
+            // new DateTime(2021, 12, 01, 00, 00, 00),
+            TimeInterval.Minutes_1);
+
+        candles = candles
             .Where(x => x.Value.Any())
             .ToDictionary(x => x.Key, x => x.Value);
 
@@ -133,6 +117,29 @@ internal class Program
             .ToList();
 
         Debugger.Break();
+    }
+
+    private static async Task AnaliseTradesHistory(List<string> assets, IBinanceClient client)
+    {
+        var assetsTradesHistory = new Dictionary<string, IReadOnlyList<Trade>>();
+        var historyStartTime = new DateTime(2023, 08, 01, 00, 00, 00);
+        var historyEndTime = new DateTime(2019, 05, 01, 00, 00, 00);
+
+        foreach (var asset in assets)
+        {
+            var symbol = SymbolUtils.GetCurrencySymbol(asset, QuoteAsset);
+
+            Console.WriteLine($"Trade History Load Started: {symbol}");
+
+            var tradeHistory = (await client.GetTradeList(symbol, historyStartTime)).ToList();
+            await Task.Delay(300);
+
+            Console.WriteLine($"Trade History Load Finished: {symbol}");
+
+            assetsTradesHistory.Add(asset, tradeHistory);
+        }
+
+        var analysis = TechAnalyzer.AnalyzeTradeHistory(assetsTradesHistory, 0.1289m);
     }
 
     private static IReadOnlyList<TradeSessionConfig> GetConfigs()
