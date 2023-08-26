@@ -6,7 +6,7 @@ using BinanceTrader.Tools.KeyProviders;
 
 namespace BinanceTrader.Core;
 
-public class TradeStarter
+public static class TradeStarter
 {
     public static async void Start(
         IEnumerable<string> traderNames,
@@ -29,7 +29,7 @@ public class TradeStarter
         }
     }
 
-    public static async void Start(
+    private static async void Start(
         BinanceKeySet keys,
         TraderConfig config,
         Func<string, ILogger> loggerResolver)

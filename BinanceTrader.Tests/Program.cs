@@ -120,7 +120,7 @@ internal class Program
         Debugger.Break();
     }
 
-    private static async Task AnaliseTradesHistory(List<string> assets, IBinanceClient client)
+    private static async Task AnaliseTradesHistory(IReadOnlyList<string> assets, IBinanceClient client)
     {
         var assetsTradesHistory = new Dictionary<string, IReadOnlyList<Trade>>();
         var historyStartTime = new DateTime(2023, 08, 01, 00, 00, 00);
