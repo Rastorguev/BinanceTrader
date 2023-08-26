@@ -9,6 +9,7 @@ using BinanceApi.Models.Extensions;
 using BinanceApi.Models.Market.TradingRules;
 using BinanceTrader.Core;
 using BinanceTrader.Core.Analysis;
+using BinanceTrader.Core.TradeHistory;
 using BinanceTrader.Tools.KeyProviders;
 
 namespace BinanceTrader.Tests;
@@ -50,7 +51,7 @@ internal class Program
             .OrderBy(a => a)
             .ToList();
 
-        //await AnaliseTradesHistory(assets, client);
+        await AnaliseTradesHistory(assets, QuoteAsset, client);
 
         var configs = GetConfigs();
         var watch = Stopwatch.StartNew();
@@ -120,27 +121,16 @@ internal class Program
         Debugger.Break();
     }
 
-    private static async Task AnaliseTradesHistory(IReadOnlyList<string> assets, IBinanceClient client)
+    private static async Task AnaliseTradesHistory(IReadOnlyList<string> baseAssets, string quoteAsset,
+        IBinanceClient client)
     {
-        var assetsTradesHistory = new Dictionary<string, IReadOnlyList<Trade>>();
-        var historyStartTime = new DateTime(2023, 08, 01, 00, 00, 00);
-        var historyEndTime = new DateTime(2019, 05, 01, 00, 00, 00);
+        var startTime = new DateTime(2023, 08, 01, 00, 00, 00);
+        var endTime = DateTime.Now; //new DateTime(2019, 05, 01, 00, 00, 00);
 
-        foreach (var asset in assets)
-        {
-            var symbol = SymbolUtils.GetCurrencySymbol(asset, QuoteAsset);
+        var tradeHistoryLoader = new TradeHistoryLoader(client);
+        var tradeHistory = await tradeHistoryLoader.LoadTradeHistory(baseAssets, quoteAsset, startTime, endTime);
 
-            Console.WriteLine($"Trade History Load Started: {symbol}");
-
-            var tradeHistory = (await client.GetTradeList(symbol, historyStartTime)).ToList();
-            await Task.Delay(300);
-
-            Console.WriteLine($"Trade History Load Finished: {symbol}");
-
-            assetsTradesHistory.Add(asset, tradeHistory);
-        }
-
-        var analysis = TechAnalyzer.AnalyzeTradeHistory(assetsTradesHistory, 0.1289m);
+        var analysis = TechAnalyzer.AnalyzeTradeHistory(tradeHistory, 0.1289m);
     }
 
     private static IReadOnlyList<TradeSessionConfig> GetConfigs()

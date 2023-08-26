@@ -458,18 +458,20 @@ namespace BinanceApi.Client
         ///     Get trades for a specific account and symbol.
         /// </summary>
         /// <param name="symbol">Ticker symbol.</param>
+        /// <param name="limit">Limit of records to retrieve. Default 500; max 1000.</param>
         /// <param name="recvWindow">Specific number of milliseconds the request is valid for.</param>
+        /// <param name="startTime">Start time.</param>
+        /// <param name="endTime">End time.</param>
         /// <returns></returns>
         public async Task<IEnumerable<Trade>> GetTradeList(string symbol, DateTime? startTime = null,
-            DateTime? endTime = null,
-            long recvWindow = 6000)
+            DateTime? endTime = null, int limit = 1000, long recvWindow = 6000)
         {
             if (string.IsNullOrWhiteSpace(symbol))
             {
                 throw new ArgumentException("symbol cannot be empty. ", "symbol");
             }
 
-            var parameters = $"symbol={symbol.ToUpper()}&recvWindow={recvWindow}"
+            var parameters = $"symbol={symbol.ToUpper()}&recvWindow={recvWindow}&limit={limit}"
                              + (startTime.HasValue ? $"&startTime={startTime.Value.GetUnixTimeStamp()}" : "")
                              + (endTime.HasValue ? $"&endTime={endTime.Value.GetUnixTimeStamp()}" : "");
 
