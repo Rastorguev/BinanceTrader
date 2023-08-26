@@ -12,6 +12,9 @@ namespace BinanceApi.Models.Enums
     {
         Unknown = -1000,
 
+        [Description("1s")]
+        Seconds_1,
+
         [Description("1m")]
         Minutes_1,
 

@@ -15,22 +15,24 @@ namespace BinanceApi.Models.Extensions
             return DateTimeOffset.FromUnixTimeMilliseconds(unixTime).DateTime.ToLocalTime();
         }
 
-        public static int ToMinutes(this TimeInterval interval)
+        public static TimeSpan ToTimeSpan(this TimeInterval interval)
         {
             switch (interval)
             {
+                case TimeInterval.Seconds_1:
+                    return TimeSpan.FromSeconds(1);
                 case TimeInterval.Minutes_1:
-                    return 1;
+                    return  TimeSpan.FromMinutes(1);
                 case TimeInterval.Minutes_3:
-                    return 3;
+                    return TimeSpan.FromMinutes(3);
                 case TimeInterval.Minutes_5:
-                    return 5;
+                    return TimeSpan.FromMinutes(5);;
                 case TimeInterval.Minutes_15:
-                    return 15;
+                    return TimeSpan.FromMinutes(15);;
                 case TimeInterval.Minutes_30:
-                    return 30;
+                    return TimeSpan.FromMinutes(30);
                 case TimeInterval.Hours_1:
-                    return 60;
+                    return TimeSpan.FromHours(1);;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(interval), interval, null);
             }

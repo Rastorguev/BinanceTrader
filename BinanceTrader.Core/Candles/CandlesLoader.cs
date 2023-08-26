@@ -27,15 +27,15 @@ public class CandlesLoader : ICandlesProvider
 
         while (start < end)
         {
-            var intervalMinutes = maxRange * interval.ToMinutes();
-            var rangeEnd = (end - start).TotalMinutes > intervalMinutes
-                ? start.AddMinutes(intervalMinutes)
+            var period = maxRange * interval.ToTimeSpan();
+            var endTime = end - start > period
+                ? start.Add(period)
                 : end;
 
             var symbol = $"{baseAsset}{quoteAsset}";
 
-            tasks.Add(_client.GetCandleSticks(symbol, interval, start, rangeEnd, maxRange));
-            start = rangeEnd;
+            tasks.Add(_client.GetCandleSticks(symbol, interval, start, endTime, maxRange));
+            start = endTime;
         }
 
         var candles = (await Task.WhenAll(tasks)).SelectMany(c => c).ToList();
