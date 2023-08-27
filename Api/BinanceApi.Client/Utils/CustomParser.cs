@@ -57,13 +57,13 @@ namespace BinanceApi.Client.Utils
             {
                 result.Add(new Candlestick
                 {
-                    OpenTime = long.Parse(item[0].ToString()),
+                    OpenUnixTime = long.Parse(item[0].ToString()),
                     Open = decimal.Parse(item[1].ToString()),
                     High = decimal.Parse(item[2].ToString()),
                     Low = decimal.Parse(item[3].ToString()),
                     Close = decimal.Parse(item[4].ToString()),
                     Volume = decimal.Parse(item[5].ToString()),
-                    CloseTime = long.Parse(item[6].ToString()),
+                    CloseUnixTime = long.Parse(item[6].ToString()),
                     QuoteAssetVolume = decimal.Parse(item[7].ToString()),
                     NumberOfTrades = int.Parse(item[8].ToString()),
                     TakerBuyBaseAssetVolume = decimal.Parse(item[9].ToString()),

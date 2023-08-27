@@ -2,130 +2,120 @@
 using BinanceApi.Models.Extensions;
 using BinanceApi.Models.Market;
 using BinanceTrader.Tools;
-using JetBrains.Annotations;
 
 namespace BinanceTrader.Tests;
 
 public class TradeSession
 {
-    [NotNull]
     private readonly TradeSessionConfig _config;
-
-    private decimal _nextPrice;
+    private decimal _expectedPrice;
     private OrderSide _nextAction;
-    private DateTime? _lastActionDate;
+    private DateTime? _lastActionTime;
+    private ITradeAccount _account;
+    private readonly decimal _profitRatio;
 
-    public TradeSession(
-        [NotNull] TradeSessionConfig config)
+    public TradeSession(TradeSessionConfig config)
     {
         _config = config;
+        _profitRatio = _config.ProfitRatio.Round8();
     }
 
-    [NotNull]
-    public ITradeAccount Run([NotNull] [ItemNotNull] IReadOnlyList<Candlestick> candlesticks)
+    public ITradeAccount Run(IReadOnlyList<Candlestick> candles)
     {
-        var candles = candlesticks.ToList();
-        var account = new MockTradeAccount(0, _config.InitialQuoteAmount, _config.Fee);
+        _account = new MockTradeAccount(
+            0,
+            _config.InitialQuoteAmount,
+            _config.FeePercentage,
+            _config.FeeAssetToQuoteConversionRatio);
 
         if (!candles.Any())
         {
-            return account;
+            return _account;
         }
 
-        _nextPrice = candles.First().NotNull().Close.Round8();
+        _expectedPrice = candles[0].Close.Round8();
         _nextAction = OrderSide.Buy;
-        _lastActionDate = null;
+        _lastActionTime = null;
 
         foreach (var candle in candles)
         {
-            var isExpired = _lastActionDate == null ||
-                            candle.CloseTime.GetTime() - _lastActionDate.Value >=
-                            _config.MaxIdlePeriod;
+            var isExpired = _lastActionTime == null ||
+                            candle.CloseLocalTime - _lastActionTime.Value >= _config.MaxIdlePeriod;
 
-            //decimal GetProfitRatio() => CalculateProfitRatio(candles, candle, _config.MaxIdlePeriod);
-            decimal GetProfitRatio()
+            var isInRange = _expectedPrice > candle.Low.Round8() && _expectedPrice < candle.High.Round8();
+            var time = candle.OpenLocalTime;
+
+            switch (_nextAction)
             {
-                return _config.ProfitRatio;
-            }
-
-            var inRange = _nextPrice > candle.Low.Round8() && _nextPrice < candle.High.Round8();
-
-            if (_nextAction == OrderSide.Buy)
-            {
-                if (inRange)
+                case OrderSide.Buy when isInRange:
                 {
-                    var price = _nextPrice;
-                    var nextPrice = (price + price.Percents(GetProfitRatio())).Round8();
+                    var price = _expectedPrice;
+                    var expectedPrice = (price + price.Percentage(_profitRatio)).Round8();
 
-                    Buy(account, price, nextPrice, candle);
-                    //Console.WriteLine($"Buy\t {price}\t {candle.OpenTime.GetTime().ToLocalTime()}");
-
-                    _nextAction = OrderSide.Sell;
-                    _lastActionDate = candle.OpenTime.GetTime();
+                    Buy(price, expectedPrice, time);
+                    break;
                 }
-                else if (isExpired)
+                case OrderSide.Buy when isExpired:
                 {
                     var price = candle.High.Round8();
-                    var nextPrice = (price - price.Percents(GetProfitRatio())).Round8();
+                    var expectedPrice = (price - price.Percentage(_profitRatio)).Round8();
 
-                    Cancel(account, nextPrice, candle);
+                    Cancel(expectedPrice, time);
+                    break;
                 }
-            }
-            else if (_nextAction == OrderSide.Sell)
-            {
-                if (inRange)
+                case OrderSide.Sell when isInRange:
                 {
-                    var price = _nextPrice;
-                    var nextPrice = (price - price.Percents(GetProfitRatio())).Round8();
+                    var price = _expectedPrice;
+                    var expectedPrice = (price - price.Percentage(_profitRatio)).Round8();
 
-                    Sell(account, price, nextPrice, candle);
-                    //Console.WriteLine($"Sell\t {price}\t {candle.OpenTime.GetTime().ToLocalTime()}");
+                    Sell(price, expectedPrice, time);
+                    break;
                 }
-                else if (isExpired)
+                case OrderSide.Sell when isExpired:
                 {
                     var price = candle.Low.Round8();
-                    var nextPrice = (price + price.Percents(GetProfitRatio())).Round8();
+                    var expectedPrice = price + price.Percentage(_profitRatio).Round8();
 
-                    Cancel(account, nextPrice, candle);
+                    Cancel(expectedPrice, time);
+                    break;
                 }
             }
         }
 
-        return account;
+        return _account;
     }
 
-    private void Buy([NotNull] ITradeAccount account, decimal price, decimal nextPrice,
-        [NotNull] Candlestick candle)
+    private void Buy(decimal price, decimal expectedPrice, DateTime time)
     {
-        var estimatedBaseAmount = Math.Floor(account.CurrentQuoteAmount / price);
-        if (account.CurrentQuoteAmount > _config.MinQuoteAmount && estimatedBaseAmount > 0)
+        var estimatedBaseAmount = Math.Floor(_account.CurrentQuoteAmount / price);
+        if (_account.CurrentQuoteAmount > _config.MinQuoteAmount && estimatedBaseAmount > 0)
         {
-            account.Buy(estimatedBaseAmount, price, candle.OpenTime.GetTime());
+            _expectedPrice = expectedPrice;
+            _nextAction = OrderSide.Sell;
+            _lastActionTime = time;
 
-            _nextPrice = nextPrice;
-            _nextAction = OrderSide.Buy;
-            _lastActionDate = candle.OpenTime.GetTime();
+            _account.Buy(estimatedBaseAmount, price, time);
         }
     }
 
-    private void Sell([NotNull] ITradeAccount account, decimal price, decimal nextPrice,
-        [NotNull] Candlestick candle)
+    private void Sell(decimal price, decimal expectedPrice, DateTime time)
     {
-        var baseAmount = Math.Floor(account.CurrentBaseAmount);
+        var baseAmount = Math.Floor(_account.CurrentBaseAmount);
         if (baseAmount > 0)
         {
-            account.Sell(baseAmount, price, candle.OpenTime.GetTime());
-
-            _nextPrice = nextPrice;
+            _expectedPrice = expectedPrice;
             _nextAction = OrderSide.Buy;
-            _lastActionDate = candle.OpenTime.GetTime();
+            _lastActionTime = time;
+
+            _account.Sell(baseAmount, price, time);
         }
     }
 
-    private void Cancel([NotNull] ITradeAccount account, decimal nextPrice, [NotNull] Candlestick candle)
+    private void Cancel(decimal expectedPrice, DateTime time)
     {
-        _nextPrice = nextPrice;
-        _lastActionDate = candle.OpenTime.GetTime();
-        account.IncreaseCanceledCount();
+        _expectedPrice = expectedPrice;
+        _lastActionTime = time;
+
+        _account.Cancel();
     }
 }

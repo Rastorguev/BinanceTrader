@@ -4,7 +4,6 @@ using BinanceApi.Models.Account;
 using BinanceApi.Models.Extensions;
 using BinanceApi.Models.Market;
 using BinanceTrader.Tools;
-using JetBrains.Annotations;
 
 namespace BinanceTrader.Core;
 
@@ -13,30 +12,27 @@ public class FundsStateLogger
     private const string UsdtAsset = "USDT";
     private const string BtcAsset = "BTC";
 
-    [NotNull]
     private readonly IBinanceClient _client;
 
-    [NotNull]
     private readonly ILogger _logger;
 
-    [NotNull]
     private readonly string _quoteAsset;
 
     public FundsStateLogger(
-        [NotNull] IBinanceClient client,
-        [NotNull] ILogger logger,
-        [NotNull] string quoteAsset)
+        IBinanceClient client,
+        ILogger logger,
+        string quoteAsset)
     {
         _client = client;
         _logger = logger;
         _quoteAsset = quoteAsset;
     }
 
-    public async Task LogFundsState([NotNull] IReadOnlyList<IBalance> funds, [NotNull] IReadOnlyList<string> assets)
+    public async Task LogFundsState(IReadOnlyList<IBalance> funds, IReadOnlyList<string> assets)
     {
         try
         {
-            var prices = (await _client.GetAllPrices().NotNull()).ToList();
+            var prices = (await _client.GetAllPrices()).ToList();
             var averagePrice = GetAveragePrice(prices, assets);
             var medianPrice = GetMedianPrice(prices, assets);
 
@@ -47,11 +43,11 @@ public class FundsStateLogger
 
             var btcTotal = _quoteAsset != BtcAsset
                 ? quoteTotal *
-                  prices.First(p => p.NotNull().Symbol == btcUsdtSymbol).NotNull().Price
+                  prices.First(p => p.Symbol == btcUsdtSymbol).Price
                 : quoteTotal;
 
             var usdtTotal = quoteTotal *
-                            prices.First(p => p.NotNull().Symbol == quoteUsdtSymbol).NotNull().Price;
+                            prices.First(p => p.Symbol == quoteUsdtSymbol).Price;
 
             _logger.LogMessage("Funds", new Dictionary<string, string>
             {
@@ -69,21 +65,21 @@ public class FundsStateLogger
     }
 
     private decimal GetFundsTotal(
-        [NotNull] IReadOnlyList<IBalance> funds,
-        [NotNull] IReadOnlyList<SymbolPrice> prices)
+        IReadOnlyList<IBalance> funds,
+        IReadOnlyList<SymbolPrice> prices)
     {
         var total = 0m;
         foreach (var balance in funds)
         {
-            var assetTotal = balance.NotNull().Free + balance.NotNull().Locked;
-            if (balance.NotNull().Asset == _quoteAsset)
+            var assetTotal = balance.Free + balance.Locked;
+            if (balance.Asset == _quoteAsset)
             {
                 total += assetTotal;
             }
             else
             {
-                var symbol = $"{balance.NotNull().Asset}{_quoteAsset}";
-                var symbolPrice = prices.FirstOrDefault(p => p.NotNull().Symbol == symbol);
+                var symbol = $"{balance.Asset}{_quoteAsset}";
+                var symbolPrice = prices.FirstOrDefault(p => p.Symbol == symbol);
 
                 if (symbolPrice == null)
                 {
@@ -98,8 +94,8 @@ public class FundsStateLogger
     }
 
     private decimal GetAveragePrice(
-        [NotNull] IEnumerable<SymbolPrice> prices,
-        [NotNull] IEnumerable<string> assets)
+        IEnumerable<SymbolPrice> prices,
+        IEnumerable<string> assets)
     {
         var assetsPrices = GetPrices(prices, assets);
 
@@ -107,21 +103,20 @@ public class FundsStateLogger
     }
 
     private decimal GetMedianPrice(
-        [NotNull] IEnumerable<SymbolPrice> prices,
-        [NotNull] IEnumerable<string> assets)
+        IEnumerable<SymbolPrice> prices,
+        IEnumerable<string> assets)
     {
         var assetsPrices = GetPrices(prices, assets);
 
         return assetsPrices.Median().Round8();
     }
 
-    [NotNull]
-    private IEnumerable<decimal> GetPrices([NotNull] IEnumerable<SymbolPrice> prices,
-        [NotNull] IEnumerable<string> assets)
+    private IEnumerable<decimal> GetPrices(IEnumerable<SymbolPrice> prices,
+        IEnumerable<string> assets)
     {
         var symbols = assets.Select(a => SymbolUtils.GetCurrencySymbol(a, _quoteAsset));
         var assetsPrices =
-            prices.Where(p => symbols.Contains(p.NotNull().Symbol)).Select(p => p.Price).ToList();
+            prices.Where(p => symbols.Contains(p.Symbol)).Select(p => p.Price).ToList();
 
         return assetsPrices;
     }

@@ -1,14 +1,24 @@
-﻿namespace BinanceApi.Models.Market
+﻿using System;
+using BinanceApi.Models.Extensions;
+using Newtonsoft.Json;
+
+namespace BinanceApi.Models.Market
 {
     public class Candlestick
     {
-        public long OpenTime { get; set; }
+        [JsonProperty("openTime")]
+        public long OpenUnixTime { get; set; }
+
+        [JsonProperty("closeTime")]
+        public long CloseUnixTime { get; set; }
+
+        public DateTime OpenLocalTime => OpenUnixTime.GetLocalTime();
+        public DateTime CloseLocalTime => CloseUnixTime.GetLocalTime();
         public decimal Open { get; set; }
         public decimal High { get; set; }
         public decimal Low { get; set; }
         public decimal Close { get; set; }
         public decimal Volume { get; set; }
-        public long CloseTime { get; set; }
         public decimal QuoteAssetVolume { get; set; }
         public int NumberOfTrades { get; set; }
         public decimal TakerBuyBaseAssetVolume { get; set; }

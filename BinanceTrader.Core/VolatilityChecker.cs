@@ -1,28 +1,26 @@
 using System.Collections.Concurrent;
 using BinanceApi.Models.Enums;
+using BinanceTrader.Core.Analysis;
+using BinanceTrader.Core.Candles;
 using BinanceTrader.Tools;
-using JetBrains.Annotations;
 
 namespace BinanceTrader.Core;
 
 public class VolatilityChecker
 {
-    [NotNull]
     private readonly ICandlesProvider _candlesProvider;
 
-    [NotNull]
     private readonly ILogger _logger;
 
-    public VolatilityChecker([NotNull] ICandlesProvider candlesProvider, [NotNull] ILogger logger)
+    public VolatilityChecker(ICandlesProvider candlesProvider, ILogger logger)
     {
         _candlesProvider = candlesProvider;
         _logger = logger;
     }
 
-    [NotNull]
     public async Task<Dictionary<string, decimal>> GetAssetsVolatility(
-        [NotNull] [ItemNotNull] IEnumerable<string> assets,
-        [NotNull] string quoteAsset,
+        IEnumerable<string> assets,
+        string quoteAsset,
         DateTime startTime,
         DateTime endTime,
         TimeInterval interval)
@@ -34,7 +32,7 @@ public class VolatilityChecker
                 {
                     var candles = (await _candlesProvider
                             .LoadCandles(asset, quoteAsset, startTime, endTime, interval)
-                            .NotNull())
+                        )
                         .ToList();
 
                     if (candles.Any())
@@ -51,7 +49,7 @@ public class VolatilityChecker
             })
             .ToList();
 
-        await Task.WhenAll(tasks).NotNull();
+        await Task.WhenAll(tasks);
 
         return allCandles.ToDictionary(c => c.Key, c => c.Value);
     }

@@ -7,7 +7,6 @@ using BinanceApi.Models.Market;
 using BinanceApi.Models.Market.TradingRules;
 using BinanceApi.Models.WebSocket;
 using BinanceTrader.Tools;
-using JetBrains.Annotations;
 using Polly;
 using Polly.Retry;
 using static System.Decimal;
@@ -17,8 +16,6 @@ namespace BinanceTrader.Core;
 
 public class RabbitTrader
 {
-    [NotNull]
-    [ItemNotNull]
     private const string FeeAsset = "BNB";
 
     private const string MaxStepExecutionTimeExceededError = "MaxStepExecutionTimeExceeded";
@@ -32,29 +29,22 @@ public class RabbitTrader
     private static readonly TimeSpan MaxStepExecutionTime = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan NonVolatileAssetsBuyOrderExpiration = TimeSpan.FromMinutes(30);
 
-    [NotNull]
     private readonly IBinanceClient _client;
 
-    [NotNull]
     private readonly FundsStateLogger _fundsStateLogger;
 
-    [NotNull]
     private readonly ILogger _logger;
 
-    [NotNull]
     private readonly OrderDistributor _orderDistributor;
 
     private readonly TimeSpan _orderExpiration;
 
     private readonly decimal _profitRatio;
 
-    [NotNull]
     private readonly string _quoteAsset;
 
-    [NotNull]
     private readonly TradingRulesProvider _rulesProvider;
 
-    [NotNull]
     private readonly AsyncRetryPolicy _startRetryPolicy = Policy
         .Handle<Exception>(ex => !(ex is OperationCanceledException))
         .WaitAndRetryAsync(new[]
@@ -62,33 +52,26 @@ public class RabbitTrader
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(30),
             TimeSpan.FromSeconds(60)
-        })
-        .NotNull();
+        });
 
-    [NotNull]
     private readonly VolatilityChecker _volatilityChecker;
 
-    [NotNull]
     private IReadOnlyDictionary<string, IBalance> _funds = new Dictionary<string, IBalance>();
 
     private long _lastStreamEventTime = DateTime.Now.ToBinary();
     private string _apiListenKey;
 
-    [NotNull]
     private IReadOnlyDictionary<string, decimal> _orderedVolatility = new Dictionary<string, decimal>();
 
-    [NotNull]
     private IReadOnlyDictionary<string, decimal> _mostVolatileAssets = new Dictionary<string, decimal>();
 
-    [NotNull]
-    [ItemNotNull]
     private IReadOnlyList<string> _tradingAssets = new List<string>();
 
     public RabbitTrader(
-        [NotNull] IBinanceClient client,
-        [NotNull] ILogger logger,
-        [NotNull] TraderConfig config,
-        [NotNull] VolatilityChecker volatilityChecker)
+        IBinanceClient client,
+        ILogger logger,
+        TraderConfig config,
+        VolatilityChecker volatilityChecker)
     {
         _quoteAsset = config.QuoteAsset;
         _orderExpiration = config.OrderExpiration;
@@ -120,7 +103,7 @@ public class RabbitTrader
                 StartCheckOrders();
                 StartUpdateFundsAndTradingRules();
                 StartCheckVolatility();
-            }).NotNull();
+            });
         }
         catch (Exception ex)
         {
@@ -149,21 +132,21 @@ public class RabbitTrader
         StartRepeatableStep("CheckDataStream", CheckDataStream, DataStreamCheckInterval);
     }
 
-    private void StartRepeatableStep([NotNull] string name, [NotNull] Func<Task> stepProvider, TimeSpan interval)
+    private void StartRepeatableStep(string name, Func<Task> stepProvider, TimeSpan interval)
     {
         Task.Factory.StartNew(async () =>
             {
                 while (true)
                 {
                     var delayTask = Task.Delay(MaxStepExecutionTime);
-                    var stepTask = Task.WhenAny(stepProvider().NotNull(), delayTask);
+                    var stepTask = Task.WhenAny(stepProvider(), delayTask);
                     if (delayTask.IsCompleted)
                     {
                         _logger.LogMessage(MaxStepExecutionTimeExceededError,
                             $"{name} takes more than {MaxStepExecutionTime}");
                     }
 
-                    await Task.WhenAll(stepTask, Task.Delay(interval)).NotNull();
+                    await Task.WhenAll(stepTask, Task.Delay(interval));
                 }
             },
             TaskCreationOptions.LongRunning);
@@ -190,13 +173,13 @@ public class RabbitTrader
         {
             await _rulesProvider.UpdateRulesIfNeeded();
             _tradingAssets = GetTradingAssets();
-            var newFunds = (await _client.GetAccountInfo().NotNull().NotNull())
-                .Balances.NotNull()
-                .ToDictionary(x => x.NotNull().Asset, x => x);
+            var newFunds = (await _client.GetAccountInfo())
+                .Balances
+                .ToDictionary(x => x.Asset, x => x);
 
             Interlocked.Exchange(ref _funds, newFunds);
 
-            await _fundsStateLogger.LogFundsState(_funds.NotNull().Values.ToList(), _tradingAssets);
+            await _fundsStateLogger.LogFundsState(_funds.Values.ToList(), _tradingAssets);
         }
         catch (Exception ex)
         {
@@ -204,13 +187,13 @@ public class RabbitTrader
         }
     }
 
-    private async void OnTrade([NotNull] OrderOrTradeUpdatedMessage message)
+    private async void OnTrade(OrderOrTradeUpdatedMessage message)
     {
         try
         {
             LastStreamEventTime = DateTime.Now;
 
-            var baseAsset = SymbolUtils.GetBaseAsset(message.Symbol.NotNull(), _quoteAsset);
+            var baseAsset = SymbolUtils.GetBaseAsset(message.Symbol, _quoteAsset);
 
             if (message.Status != OrderStatus.Filled ||
                 baseAsset == FeeAsset)
@@ -254,18 +237,18 @@ public class RabbitTrader
         }
     }
 
-    private void OnAccountInfoUpdated([NotNull] AccountUpdatedMessage message)
+    private void OnAccountInfoUpdated(AccountUpdatedMessage message)
     {
         try
         {
             LastStreamEventTime = DateTime.Now;
 
-            var updatedFunds = message.Balances.NotNull().ToList();
+            var updatedFunds = message.Balances.ToList();
             var newFunds = _funds.ToDictionary(x => x.Key, x => x.Value);
 
             foreach (var f in updatedFunds)
             {
-                newFunds[f.Asset.NotNull()] = f;
+                newFunds[f.Asset] = f;
             }
 
             Interlocked.Exchange(ref _funds, newFunds);
@@ -282,7 +265,7 @@ public class RabbitTrader
         {
             if (_apiListenKey != null)
             {
-                await _client.KeepAliveUserStream(_apiListenKey).NotNull();
+                await _client.KeepAliveUserStream(_apiListenKey);
                 _logger.LogMessage("KeepAlive", $"{_apiListenKey}");
             }
             else
@@ -326,7 +309,7 @@ public class RabbitTrader
             if (_apiListenKey != null)
             {
                 _logger.LogMessage("StopListenListen", $"{_apiListenKey}");
-                await _client.CloseUserStream(_apiListenKey).NotNull();
+                await _client.CloseUserStream(_apiListenKey);
             }
         }
         catch (Exception ex)
@@ -371,7 +354,7 @@ public class RabbitTrader
     {
         try
         {
-            var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
+            var openOrders = (await _client.GetCurrentOpenOrders()).ToList();
             var now = DateTime.Now.ToLocalTime();
             var nonVolatileAssetsBuyOrderExpiration =
                 new TimeSpan(Math.Min(_orderExpiration.Ticks, NonVolatileAssetsBuyOrderExpiration.Ticks));
@@ -379,7 +362,7 @@ public class RabbitTrader
             var expiredOrders = openOrders
                 .Where(o =>
                 {
-                    var orderTime = o.UnixTime.GetTime().ToLocalTime();
+                    var orderTime = o.LocalTime;
 
                     return now - orderTime > _orderExpiration;
                 })
@@ -388,7 +371,7 @@ public class RabbitTrader
             var nonVolatileAssetsBuyOrders = openOrders
                 .Where(o =>
                 {
-                    var orderTime = o.UnixTime.GetTime().ToLocalTime();
+                    var orderTime = o.LocalTime;
                     var baseAsset = SymbolUtils.GetBaseAsset(o.Symbol, _quoteAsset);
                     var isInMostVolatileAssets =
                         !_mostVolatileAssets.Any() || _mostVolatileAssets.ContainsKey(baseAsset);
@@ -407,13 +390,13 @@ public class RabbitTrader
                 .ToList();
 
             var cancelTasks = ordersToCancel
-                .Where(o => _rulesProvider.GetRulesFor(o.NotNull().Symbol).Status == SymbolStatus.Trading)
+                .Where(o => _rulesProvider.GetRulesFor(o.Symbol).Status == SymbolStatus.Trading)
                 .Select(
                     async order =>
                     {
                         try
                         {
-                            await CancelOrder(order.NotNull());
+                            await CancelOrder(order);
                         }
                         catch (Exception ex)
                         {
@@ -421,7 +404,7 @@ public class RabbitTrader
                         }
                     });
 
-            await Task.WhenAll(cancelTasks).NotNull();
+            await Task.WhenAll(cancelTasks);
         }
         catch (Exception ex)
         {
@@ -434,10 +417,10 @@ public class RabbitTrader
         try
         {
             var freeBalances =
-                _funds.Values.ToList().NotNull()
-                    .Where(b => b.NotNull().Free > 0 && _tradingAssets.Contains(b.Asset)).ToList();
+                _funds.Values.ToList()
+                    .Where(b => b.Free > 0 && _tradingAssets.Contains(b.Asset)).ToList();
 
-            var prices = (await _client.GetAllPrices().NotNull()).NotNull().ToList();
+            var prices = (await _client.GetAllPrices()).ToList();
             var placeTasks = new List<Task>();
 
             foreach (var balance in freeBalances)
@@ -445,7 +428,7 @@ public class RabbitTrader
                 try
                 {
                     var symbol =
-                        SymbolUtils.GetCurrencySymbol(balance.NotNull().Asset.NotNull(), _quoteAsset);
+                        SymbolUtils.GetCurrencySymbol(balance.Asset, _quoteAsset);
 
                     var tradingRules = _rulesProvider.GetRulesFor(symbol);
                     if (tradingRules.Status != SymbolStatus.Trading)
@@ -453,9 +436,9 @@ public class RabbitTrader
                         continue;
                     }
 
-                    var price = prices.First(p => p.NotNull().Symbol == symbol).NotNull().Price;
+                    var price = prices.First(p => p.Symbol == symbol).Price;
                     var sellPrice =
-                        RulesHelper.GetMaxFittingPrice(price + price.Percents(_profitRatio), tradingRules);
+                        RulesHelper.GetMaxFittingPrice(price + price.Percentage(_profitRatio), tradingRules);
 
                     var minNotionalQty = RulesHelper.GetMinNotionalQty(price, tradingRules);
                     var maxFittingQty = RulesHelper.GetMaxFittingQty(balance.Free, tradingRules);
@@ -489,7 +472,7 @@ public class RabbitTrader
                 }
             }
 
-            await Task.WhenAll(placeTasks).NotNull();
+            await Task.WhenAll(placeTasks);
         }
         catch (Exception ex)
         {
@@ -502,10 +485,10 @@ public class RabbitTrader
         try
         {
             var freeQuoteBalance = _funds.Values
-                .First(b => b.NotNull().Asset == _quoteAsset).NotNull().Free;
+                .First(b => b.Asset == _quoteAsset).Free;
 
-            var openOrders = (await _client.GetCurrentOpenOrders().NotNull()).NotNull().ToList();
-            var prices = (await _client.GetAllPrices().NotNull()).NotNull().ToList();
+            var openOrders = (await _client.GetCurrentOpenOrders()).ToList();
+            var prices = (await _client.GetAllPrices()).ToList();
             var assetsToBuy = _mostVolatileAssets.Any()
                 ? _mostVolatileAssets.Select(x => x.Key).ToList()
                 : _tradingAssets;
@@ -516,7 +499,7 @@ public class RabbitTrader
             {
                 try
                 {
-                    if (MeetsTradingRules(r.NotNull()))
+                    if (MeetsTradingRules(r))
                     {
                         await PlaceOrder(r);
                     }
@@ -527,7 +510,7 @@ public class RabbitTrader
                 }
             });
 
-            await Task.WhenAll(placeTasks).NotNull();
+            await Task.WhenAll(placeTasks);
         }
         catch (Exception ex)
         {
@@ -537,7 +520,7 @@ public class RabbitTrader
 
     private async Task<decimal> GetActualPrice(string symbol, OrderSide orderSide)
     {
-        var priceInfo = await GetPrices(symbol).NotNull();
+        var priceInfo = await GetPrices(symbol);
 
         switch (orderSide)
         {
@@ -552,7 +535,7 @@ public class RabbitTrader
         }
     }
 
-    private async Task<NewOrder> PlaceOrder([NotNull] OrderRequest orderRequest,
+    private async Task<NewOrder> PlaceOrder(OrderRequest orderRequest,
         OrderType orderType = OrderType.Limit,
         TimeInForce timeInForce = TimeInForce.GTC)
     {
@@ -563,22 +546,22 @@ public class RabbitTrader
                     orderRequest.Side,
                     orderType,
                     timeInForce)
-                .NotNull())
-            .NotNull();
+                )
+            ;
 
         _logger.LogOrderPlaced(newOrder);
 
         return newOrder;
     }
 
-    private async Task CancelOrder([NotNull] IOrder order)
+    private async Task CancelOrder(IOrder order)
     {
-        await _client.CancelOrder(order.Symbol, order.OrderId).NotNull();
+        await _client.CancelOrder(order.Symbol, order.OrderId);
 
         _logger.LogOrderCanceled(order);
     }
 
-    private bool MeetsTradingRules([NotNull] OrderRequest orderRequest)
+    private bool MeetsTradingRules(OrderRequest orderRequest)
     {
         var rules = _rulesProvider.GetRulesFor(orderRequest.Symbol);
         if (orderRequest.MeetsTradingRules(rules))
@@ -593,27 +576,25 @@ public class RabbitTrader
 
     private async Task<PriceChangeInfo> GetPrices(string symbol)
     {
-        var priceInfo = (await _client.GetPriceChange24H(symbol).NotNull()).NotNull().First();
+        var priceInfo = (await _client.GetPriceChange24H(symbol)).First();
 
         return priceInfo;
     }
 
-    [NotNull]
-    private OrderRequest CreateSellOrder([NotNull] IOrder message, decimal qty, decimal price)
+    private OrderRequest CreateSellOrder(IOrder message, decimal qty, decimal price)
     {
         var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
-        var sellPrice = RulesHelper.GetMaxFittingPrice(price + price.Percents(_profitRatio), tradingRules);
+        var sellPrice = RulesHelper.GetMaxFittingPrice(price + price.Percentage(_profitRatio), tradingRules);
         var orderRequest =
             new OrderRequest(message.Symbol, OrderSide.Sell, qty, sellPrice);
 
         return orderRequest;
     }
 
-    [NotNull]
-    private OrderRequest CreateBuyOrder([NotNull] IOrder message, decimal quoteAmount, decimal price)
+    private OrderRequest CreateBuyOrder(IOrder message, decimal quoteAmount, decimal price)
     {
         var tradingRules = _rulesProvider.GetRulesFor(message.Symbol);
-        var buyPrice = RulesHelper.GetMaxFittingPrice(price - price.Percents(_profitRatio), tradingRules);
+        var buyPrice = RulesHelper.GetMaxFittingPrice(price - price.Percentage(_profitRatio), tradingRules);
         var qty = quoteAmount / buyPrice;
         var adjustedQty = RulesHelper.GetMaxFittingQty(qty, tradingRules);
         var orderRequest = new OrderRequest(message.Symbol, OrderSide.Buy, adjustedQty, buyPrice);
@@ -623,7 +604,7 @@ public class RabbitTrader
 
     private bool NeedToBuyFeeCurrency()
     {
-        var feeAmount = _funds[FeeAsset].NotNull().Free;
+        var feeAmount = _funds[FeeAsset].Free;
 
         return feeAmount < MinFeeAmount;
     }
@@ -637,7 +618,7 @@ public class RabbitTrader
 
         if (MeetsTradingRules(orderRequest))
         {
-            var order = await PlaceOrder(orderRequest, OrderType.Market, TimeInForce.IOC).NotNull();
+            var order = await PlaceOrder(orderRequest, OrderType.Market, TimeInForce.IOC);
             var status = order.Status;
             var executedQty = order.ExecutedQty;
 
@@ -701,7 +682,7 @@ public class RabbitTrader
         }
     }
 
-    private void LogVolatility([NotNull] IReadOnlyDictionary<string, decimal> volatility)
+    private void LogVolatility(IReadOnlyDictionary<string, decimal> volatility)
     {
         var median = volatility.Select(v => v.Value).Median();
         var average = volatility.Select(v => v.Value).Average();
@@ -719,7 +700,6 @@ public class RabbitTrader
             string.Join(",\n", mostVolatileAssets.Select(x => string.Join(" - ", x.Key, x.Value.Round4()))));
     }
 
-    [NotNull]
     private List<string> GetTradingAssets()
     {
         var assets = _rulesProvider.GetBaseAssetsFor(_quoteAsset).Where(r => r != FeeAsset).ToList();

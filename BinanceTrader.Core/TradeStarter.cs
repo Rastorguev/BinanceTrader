@@ -1,16 +1,16 @@
 ﻿using System.Globalization;
 using BinanceApi.Client;
+using BinanceTrader.Core.Candles;
 using BinanceTrader.Tools;
 using BinanceTrader.Tools.KeyProviders;
-using JetBrains.Annotations;
 
 namespace BinanceTrader.Core;
 
-public class TradeStarter
+public static class TradeStarter
 {
     public static async void Start(
-        [NotNull] [ItemNotNull] IEnumerable<string> traderNames,
-        [NotNull] Func<string, ILogger> loggerResolver)
+        IEnumerable<string> traderNames,
+        Func<string, ILogger> loggerResolver)
     {
         var connectionStringsProvider = new ConnectionStringsProvider();
         var connectionString = connectionStringsProvider.GetConnectionString("BlobStorage");
@@ -19,8 +19,8 @@ public class TradeStarter
 
         foreach (var traderName in traderNames)
         {
-            var keySet = keys.FirstOrDefault(x => x.NotNull().Name == traderName);
-            var config = configs.FirstOrDefault(x => x.NotNull().Name == traderName);
+            var keySet = keys.FirstOrDefault(x => x.Name == traderName);
+            var config = configs.FirstOrDefault(x => x.Name == traderName);
 
             if (keySet != null && config != null)
             {
@@ -29,12 +29,12 @@ public class TradeStarter
         }
     }
 
-    public static async void Start(
-        [NotNull] BinanceKeySet keys,
-        [NotNull] TraderConfig config,
-        [NotNull] Func<string, ILogger> loggerResolver)
+    private static async void Start(
+        BinanceKeySet keys,
+        TraderConfig config,
+        Func<string, ILogger> loggerResolver)
     {
-        var logger = loggerResolver(keys.Name).NotNull();
+        var logger = loggerResolver(keys.Name);
 
         try
         {
@@ -66,7 +66,7 @@ public class TradeStarter
         }
     }
 
-    private static string GetTruncatedKey([NotNull] string key)
+    private static string GetTruncatedKey(string key)
     {
         const int n = 5;
 

@@ -1,15 +1,14 @@
 ﻿using BinanceApi.Models.WebSocket;
-using JetBrains.Annotations;
 
 namespace BinanceTrader.Core;
 
 public interface ILogger
 {
-    void LogOrderPlaced([NotNull] IOrder order);
-    void LogOrderCompleted([NotNull] IOrder order);
-    void LogOrderCanceled([NotNull] IOrder order);
-    void LogOrderRequest([NotNull] string eventName, [NotNull] OrderRequest orderRequest);
-    void LogMessage([NotNull] string eventName, [NotNull] string message);
-    void LogMessage([NotNull] string eventName, [NotNull] Dictionary<string, string> properties);
-    void LogException([NotNull] Exception ex);
+    void LogOrderPlaced(IOrder order);
+    void LogOrderCompleted(IOrder order);
+    void LogOrderCanceled(IOrder order);
+    void LogOrderRequest(string eventName, OrderRequest orderRequest);
+    void LogMessage(string eventName, string message);
+    void LogMessage(string eventName, Dictionary<string, string> properties);
+    void LogException(Exception ex);
 }

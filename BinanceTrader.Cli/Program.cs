@@ -34,6 +34,6 @@ internal class Program
 
     private static void PreventAppClose()
     {
-        Task.Delay(-1).NotNull().Wait();
+        Task.Delay(-1).Wait();
     }
 }

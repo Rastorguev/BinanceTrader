@@ -2,14 +2,15 @@
 using System.Globalization;
 using System.Net;
 using BinanceApi.Client;
+using BinanceApi.Domain.Interfaces;
 using BinanceApi.Models.Account;
 using BinanceApi.Models.Enums;
 using BinanceApi.Models.Extensions;
 using BinanceApi.Models.Market.TradingRules;
 using BinanceTrader.Core;
-using BinanceTrader.Tools;
+using BinanceTrader.Core.Analysis;
+using BinanceTrader.Core.TradeHistory;
 using BinanceTrader.Tools.KeyProviders;
-using JetBrains.Annotations;
 
 namespace BinanceTrader.Tests;
 
@@ -44,58 +45,34 @@ internal class Program
         var candlesProvider = new CandlesProvider(client);
         var rules = await client.LoadTradingRules();
 
-        var assets = rules.Rules.NotNull()
-            .Where(r => r.NotNull().QuoteAsset == QuoteAsset && r.NotNull().Status == SymbolStatus.Trading)
+        var assets = rules.Rules
+            .Where(r => r.QuoteAsset == QuoteAsset && r.Status == SymbolStatus.Trading)
             .Select(r => r.BaseAsset)
             .OrderBy(a => a)
             .ToList();
 
-        var assetsTradesHistory = new Dictionary<string, IReadOnlyList<Trade>>();
-        var historyStartTime = new DateTime(2023, 08, 01, 00, 00, 00);
-
-        foreach (var asset in assets)
-        {
-            var symbol = SymbolUtils.GetCurrencySymbol(asset, QuoteAsset);
-
-            Console.WriteLine($"Trade History Load Started: {symbol}");
-
-            var tradeHistory = (await client.GetTradeList(symbol, startTime: historyStartTime)).ToList();
-            await Task.Delay(100);
-
-            Console.WriteLine($"Trade History Load Finished: {symbol}");
-
-            assetsTradesHistory.Add(asset, tradeHistory);
-        }
-
-        var analysis = TechAnalyzer.AnalyzeTradeHistory(assetsTradesHistory, 0.1289m);
-        var pnlNet = analysis.Sum(x => x.Value.PnlNet);
-        var pnlGross = analysis.Sum(x => x.Value.PnlGross);
-        var fee = analysis.Sum(x => x.Value.Fee);
-        var feeInQuote = analysis.Sum(x => x.Value.FeeInQuote);
-        var pnlNetMedian = analysis.Select(x => x.Value.PnlNet).Median();
-        var pnlGrossMedian = analysis.Select(x => x.Value.PnlGross).Median();
-        var pnlNetAverage = analysis.Select(x => x.Value.PnlNet).Average();
-        var pnlGrossAverage = analysis.Select(x => x.Value.PnlGross).Average();
+        //await AnaliseTradesHistory(assets, QuoteAsset, client);
 
         var configs = GetConfigs();
-        var tests = new StrategiesTests(candlesProvider);
         var watch = Stopwatch.StartNew();
 
-        var candles = (await tests.LoadCandles(
-                assets,
-                QuoteAsset,
-                //Current Period
-                // new DateTime(2023, 08, 01, 00, 00, 00),
-                // new DateTime(2023, 08, 18, 00, 00, 00),
+        var candles = await candlesProvider.LoadCandles(
+            assets,
+            QuoteAsset,
+            //Current Period
+            new DateTime(2023, 08, 01, 00, 00, 00),
+            new DateTime(2023, 08, 18, 00, 00, 00),
 
-                //Bull Run 2017
-                // new DateTime(2017, 11, 01, 00, 00, 00),
-                // new DateTime(2018, 02, 01, 00, 00, 00),
+            //Bull Run 2017
+            // new DateTime(2017, 11, 01, 00, 00, 00),
+            // new DateTime(2018, 02, 01, 00, 00, 00),
 
-                //Bull Run 2021
-                new DateTime(2021, 01, 01, 00, 00, 00),
-                new DateTime(2021, 12, 01, 00, 00, 00),
-                TimeInterval.Minutes_1))
+            //Bull Run 2021
+            // new DateTime(2021, 01, 01, 00, 00, 00),
+            // new DateTime(2021, 12, 01, 00, 00, 00),
+            TimeInterval.Minutes_1);
+
+        candles = candles
             .Where(x => x.Value.Any())
             .ToDictionary(x => x.Key, x => x.Value);
 
@@ -119,13 +96,13 @@ internal class Program
             .Where(x => tradeAssets.Contains(x.Key))
             .ToDictionary(x => x.Key, x => x.Value);
 
-        var results = tests.CompareStrategies(candles, configs);
+        var results = StrategiesTests.CompareStrategies(candles, configs);
 
         watch.Stop();
         var elapsed = new TimeSpan(watch.ElapsedTicks);
 
-        var ordered = results.NotNull()
-            .OrderByDescending(r => r.Value.NotNull().TradeProfit)
+        var ordered = results
+            .OrderByDescending(r => r.Value.TradeProfitPercentage)
             .ToList();
 
         var max = ordered.First();
@@ -134,18 +111,28 @@ internal class Program
         Console.WriteLine($"Elapsed Time: {elapsed.TotalSeconds}");
 
         var tradeResults = ordered.Select(o => (
-                Profit: o.Key.NotNull().ProfitRatio,
-                Idle: o.Key.NotNull().MaxIdlePeriod,
-                o.Value.NotNull().TradeProfit,
-                TradesCount: o.Value.NotNull().CompletedCount))
-            .OrderByDescending(o => o.TradeProfit)
+                Profit: o.Key.ProfitRatio,
+                Idle: o.Key.MaxIdlePeriod,
+                TradeProfitPercentages: o.Value.TradeProfitPercentage,
+                TradesCount: o.Value.CompletedCount))
+            .OrderByDescending(o => o.TradeProfitPercentages)
             .ToList();
 
         Debugger.Break();
     }
 
-    [NotNull]
-    [ItemNotNull]
+    private static async Task AnaliseTradesHistory(IReadOnlyList<string> baseAssets, string quoteAsset,
+        IBinanceClient client)
+    {
+        var startTime = new DateTime(2023, 08, 01, 00, 00, 00);
+        var endTime = DateTime.Now; //new DateTime(2019, 05, 01, 00, 00, 00);
+
+        var tradeHistoryLoader = new TradeHistoryLoader(client);
+        var tradeHistory = await tradeHistoryLoader.LoadTradeHistory(baseAssets, quoteAsset, startTime, endTime);
+
+        var analysis = TechAnalyzer.AnalyzeTradeHistory(tradeHistory, 0.1289m);
+    }
+
     private static IReadOnlyList<TradeSessionConfig> GetConfigs()
     {
         var configs = new List<TradeSessionConfig>();
@@ -161,6 +148,7 @@ internal class Program
         return new TradeSessionConfig(
             1m,
             0.075m,
+            1m,
             0.01m,
             minProfit,
             idle);
@@ -216,6 +204,6 @@ internal class Program
 
     private static void PreventAppClose()
     {
-        Task.Delay(-1).NotNull().Wait();
+        Task.Delay(-1).Wait();
     }
 }

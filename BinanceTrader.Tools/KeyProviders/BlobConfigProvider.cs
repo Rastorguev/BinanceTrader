@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using JetBrains.Annotations;
 using Microsoft.WindowsAzure.Storage;
 using Newtonsoft.Json;
 
@@ -7,10 +6,9 @@ namespace BinanceTrader.Tools.KeyProviders;
 
 public class BlobConfigProvider : ITraderConfigProvider
 {
-    [NotNull]
     private readonly string _connectionString;
 
-    public BlobConfigProvider([NotNull] string connectionString)
+    public BlobConfigProvider(string connectionString)
     {
         _connectionString = connectionString;
     }
@@ -18,10 +16,10 @@ public class BlobConfigProvider : ITraderConfigProvider
     public async Task<IReadOnlyList<TraderConfig>> GetConfigsAsync()
     {
         const string containerName = "configs";
-        var account = CloudStorageAccount.Parse(_connectionString).NotNull();
-        var client = account.CreateCloudBlobClient().NotNull();
-        var container = client.GetContainerReference(containerName).NotNull();
-        var blob = container.GetBlobReference("TraderConfigs.json").NotNull();
+        var account = CloudStorageAccount.Parse(_connectionString);
+        var client = account.CreateCloudBlobClient();
+        var container = client.GetContainerReference(containerName);
+        var blob = container.GetBlobReference("TraderConfigs.json");
 
         string content;
         using (var result = await blob.OpenReadAsync())
@@ -31,7 +29,7 @@ public class BlobConfigProvider : ITraderConfigProvider
             content = Encoding.Default.GetString(bytes);
         }
 
-        var configs = JsonConvert.DeserializeObject<IReadOnlyList<TraderConfig>>(content).NotNull();
+        var configs = JsonConvert.DeserializeObject<IReadOnlyList<TraderConfig>>(content);
 
         return configs;
     }
