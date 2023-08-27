@@ -9,7 +9,6 @@ using BinanceApi.Models.WebSocket;
 using BinanceTrader.Tools;
 using Polly;
 using Polly.Retry;
-using static System.Decimal;
 
 // ReSharper disable FunctionNeverReturns
 namespace BinanceTrader.Core;
@@ -30,19 +29,12 @@ public class RabbitTrader
     private static readonly TimeSpan NonVolatileAssetsBuyOrderExpiration = TimeSpan.FromMinutes(30);
 
     private readonly IBinanceClient _client;
-
     private readonly FundsStateLogger _fundsStateLogger;
-
     private readonly ILogger _logger;
-
     private readonly OrderDistributor _orderDistributor;
-
     private readonly TimeSpan _orderExpiration;
-
     private readonly decimal _profitRatio;
-
     private readonly string _quoteAsset;
-
     private readonly TradingRulesProvider _rulesProvider;
 
     private readonly AsyncRetryPolicy _startRetryPolicy = Policy
@@ -55,17 +47,14 @@ public class RabbitTrader
         });
 
     private readonly VolatilityChecker _volatilityChecker;
-
     private IReadOnlyDictionary<string, IBalance> _funds = new Dictionary<string, IBalance>();
-
     private long _lastStreamEventTime = DateTime.Now.ToBinary();
     private string _apiListenKey;
-
     private IReadOnlyDictionary<string, decimal> _orderedVolatility = new Dictionary<string, decimal>();
-
     private IReadOnlyDictionary<string, decimal> _mostVolatileAssets = new Dictionary<string, decimal>();
-
     private IReadOnlyList<string> _tradingAssets = new List<string>();
+    private bool _shouldCancelNonVolatileAssetsBuyOrderEarlier = false;
+    private bool _shoulPlaceBuyOrderForMostVolatileAssetsOnly = false;
 
     public RabbitTrader(
         IBinanceClient client,
@@ -356,8 +345,6 @@ public class RabbitTrader
         {
             var openOrders = (await _client.GetCurrentOpenOrders()).ToList();
             var now = DateTime.Now.ToLocalTime();
-            var nonVolatileAssetsBuyOrderExpiration =
-                new TimeSpan(Math.Min(_orderExpiration.Ticks, NonVolatileAssetsBuyOrderExpiration.Ticks));
 
             var expiredOrders = openOrders
                 .Where(o =>
@@ -368,26 +355,17 @@ public class RabbitTrader
                 })
                 .ToList();
 
-            var nonVolatileAssetsBuyOrders = openOrders
-                .Where(o =>
-                {
-                    var orderTime = o.LocalTime;
-                    var baseAsset = SymbolUtils.GetBaseAsset(o.Symbol, _quoteAsset);
-                    var isInMostVolatileAssets =
-                        !_mostVolatileAssets.Any() || _mostVolatileAssets.ContainsKey(baseAsset);
-                    var shouldCancel =
-                        o.Side == OrderSide.Buy &&
-                        !isInMostVolatileAssets &&
-                        now - orderTime > nonVolatileAssetsBuyOrderExpiration;
+            var ordersToCancel = expiredOrders;
 
-                    return shouldCancel;
-                })
-                .ToList();
+            if (_shouldCancelNonVolatileAssetsBuyOrderEarlier)
+            {
+                var nonVolatileAssetsBuyOrders = GetNonVolatileAssetsOrdersToCancel(openOrders);
 
-            var ordersToCancel = expiredOrders
-                .Concat(nonVolatileAssetsBuyOrders)
-                .DistinctBy(x => x.OrderId)
-                .ToList();
+                ordersToCancel = expiredOrders
+                    .Concat(nonVolatileAssetsBuyOrders)
+                    .DistinctBy(x => x.OrderId)
+                    .ToList();
+            }
 
             var cancelTasks = ordersToCancel
                 .Where(o => _rulesProvider.GetRulesFor(o.Symbol).Status == SymbolStatus.Trading)
@@ -410,6 +388,31 @@ public class RabbitTrader
         {
             _logger.LogException(ex);
         }
+    }
+
+    private List<Order> GetNonVolatileAssetsOrdersToCancel(IReadOnlyList<Order> openOrders)
+    {
+        var now = DateTime.Now.ToLocalTime();
+        var nonVolatileAssetsBuyOrderExpiration =
+            new TimeSpan(Math.Min(_orderExpiration.Ticks, NonVolatileAssetsBuyOrderExpiration.Ticks));
+
+        var nonVolatileAssetsBuyOrders = openOrders
+            .Where(o =>
+            {
+                var orderTime = o.LocalTime;
+                var baseAsset = SymbolUtils.GetBaseAsset(o.Symbol, _quoteAsset);
+                var isInMostVolatileAssets =
+                    !_mostVolatileAssets.Any() || _mostVolatileAssets.ContainsKey(baseAsset);
+                var shouldCancel =
+                    o.Side == OrderSide.Buy &&
+                    !isInMostVolatileAssets &&
+                    now - orderTime > nonVolatileAssetsBuyOrderExpiration;
+
+                return shouldCancel;
+            })
+            .ToList();
+
+        return nonVolatileAssetsBuyOrders;
     }
 
     private async Task PlaceSellOrders()
@@ -489,9 +492,10 @@ public class RabbitTrader
 
             var openOrders = (await _client.GetCurrentOpenOrders()).ToList();
             var prices = (await _client.GetAllPrices()).ToList();
-            var assetsToBuy = _mostVolatileAssets.Any()
+            var assetsToBuy = _shoulPlaceBuyOrderForMostVolatileAssetsOnly && _mostVolatileAssets.Any()
                 ? _mostVolatileAssets.Select(x => x.Key).ToList()
                 : _tradingAssets;
+
             var orderRequests =
                 _orderDistributor.SplitIntoBuyOrders(freeQuoteBalance, assetsToBuy, openOrders, prices);
 
