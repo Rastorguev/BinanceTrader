@@ -60,8 +60,12 @@ internal class Program
             assets,
             QuoteAsset,
             //Current Period
-            new DateTime(2023, 08, 01, 00, 00, 00),
-            new DateTime(2023, 08, 18, 00, 00, 00),
+            // new DateTime(2023, 08, 01, 00, 00, 00),
+            // new DateTime(2023, 08, 27, 00, 00, 00),
+
+            //From the biginning of 2023
+            new DateTime(2023, 01, 01, 00, 00, 00),
+            new DateTime(2023, 08, 27, 00, 00, 00),
 
             //Bull Run 2017
             // new DateTime(2017, 11, 01, 00, 00, 00),

@@ -52,9 +52,9 @@ namespace BinanceApi.Domain.Abstract
         {
             var handler = new HttpClientHandler();
 
-            //Binance api allows only 10 requests per 1 seconds.
+            //Binance api limits number of orders per minute.
             var throttlingHandler =
-                new ThrottlingMessageHandler(new TimeSpanSemaphore(10, TimeSpan.FromSeconds(1)), handler);
+                new ThrottlingMessageHandler(new TimeSpanSemaphore(30, TimeSpan.FromSeconds(1)), handler);
 
             _apiUrl = apiUrl;
             _apiKey = apiKey;
