@@ -53,8 +53,8 @@ public class RabbitTrader
     private IReadOnlyDictionary<string, decimal> _orderedVolatility = new Dictionary<string, decimal>();
     private IReadOnlyDictionary<string, decimal> _mostVolatileAssets = new Dictionary<string, decimal>();
     private IReadOnlyList<string> _tradingAssets = new List<string>();
-    private bool _shouldCancelNonVolatileAssetsBuyOrderEarlier = false;
-    private bool _shoulPlaceBuyOrderForMostVolatileAssetsOnly = false;
+    private bool _shouldCancelNonVolatileAssetsBuyOrderEarlier = true;
+    private bool _shouldPlaceBuyOrderForMostVolatileAssetsOnly = true;
 
     public RabbitTrader(
         IBinanceClient client,
@@ -492,7 +492,7 @@ public class RabbitTrader
 
             var openOrders = (await _client.GetCurrentOpenOrders()).ToList();
             var prices = (await _client.GetAllPrices()).ToList();
-            var assetsToBuy = _shoulPlaceBuyOrderForMostVolatileAssetsOnly && _mostVolatileAssets.Any()
+            var assetsToBuy = _shouldPlaceBuyOrderForMostVolatileAssetsOnly && _mostVolatileAssets.Any()
                 ? _mostVolatileAssets.Select(x => x.Key).ToList()
                 : _tradingAssets;
 
