@@ -20,7 +20,7 @@ public class RabbitTrader
     private const string MaxStepExecutionTimeExceededError = "MaxStepExecutionTimeExceeded";
     private const decimal MinFeeAmount = 0.25m;
 
-    private static readonly TimeSpan FundsAndTradingRulesCheckInterval = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan TradingRulesCheckInterval = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan OrdersCheckInterval = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan DataStreamCheckInterval = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan MaxStreamEventsInterval = TimeSpan.FromMinutes(10);
@@ -47,14 +47,14 @@ public class RabbitTrader
         });
 
     private readonly VolatilityChecker _volatilityChecker;
+    private readonly bool _shouldCancelNonVolatileAssetsBuyOrderEarlier = true;
+    private readonly bool _shouldPlaceBuyOrderForMostVolatileAssetsOnly = true;
     private IReadOnlyDictionary<string, IBalance> _funds = new Dictionary<string, IBalance>();
     private long _lastStreamEventTime = DateTime.Now.ToBinary();
     private string _apiListenKey;
     private IReadOnlyDictionary<string, decimal> _orderedVolatility = new Dictionary<string, decimal>();
     private IReadOnlyDictionary<string, decimal> _mostVolatileAssets = new Dictionary<string, decimal>();
     private IReadOnlyList<string> _tradingAssets = new List<string>();
-    private bool _shouldCancelNonVolatileAssetsBuyOrderEarlier = true;
-    private bool _shouldPlaceBuyOrderForMostVolatileAssetsOnly = true;
 
     public RabbitTrader(
         IBinanceClient client,
@@ -86,11 +86,12 @@ public class RabbitTrader
         {
             await _startRetryPolicy.ExecuteAsync(async () =>
             {
-                await UpdateFundsAndTradingRules();
+                await UpdateTradingRules();
+                await UpdateFunds();
 
                 StartCheckDataStream();
                 StartCheckOrders();
-                StartUpdateFundsAndTradingRules();
+                StartUpdateTradingRules();
                 StartCheckVolatility();
             });
         }
@@ -105,10 +106,9 @@ public class RabbitTrader
         StartRepeatableStep("CheckOrders", CheckOrders, OrdersCheckInterval);
     }
 
-    private void StartUpdateFundsAndTradingRules()
+    private void StartUpdateTradingRules()
     {
-        StartRepeatableStep("UpdateFundsAndTradingRules", UpdateFundsAndTradingRules,
-            FundsAndTradingRulesCheckInterval);
+        StartRepeatableStep("UpdateTradingRules", UpdateTradingRules, TradingRulesCheckInterval);
     }
 
     private void StartCheckVolatility()
@@ -147,6 +147,7 @@ public class RabbitTrader
         {
             await CancelExpiredOrders();
             await CheckFeeCurrency();
+            await UpdateFunds();
             await PlaceSellOrders();
             await PlaceBuyOrders();
         }
@@ -156,19 +157,32 @@ public class RabbitTrader
         }
     }
 
-    private async Task UpdateFundsAndTradingRules()
+    private async Task UpdateTradingRules()
     {
         try
         {
             await _rulesProvider.UpdateRulesIfNeeded();
-            _tradingAssets = GetTradingAssets();
+            var tradingAssets = GetTradingAssets();
+
+            Interlocked.Exchange(ref _tradingAssets, tradingAssets);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogException(ex);
+        }
+    }
+
+    private async Task UpdateFunds()
+    {
+        try
+        {
             var newFunds = (await _client.GetAccountInfo())
                 .Balances
                 .ToDictionary(x => x.Asset, x => x);
 
             Interlocked.Exchange(ref _funds, newFunds);
 
-            await _fundsStateLogger.LogFundsState(_funds.Values.ToList(), _tradingAssets);
+            await _fundsStateLogger.LogFundsStateIfNeeded(_funds.Values.ToList(), _tradingAssets);
         }
         catch (Exception ex)
         {
@@ -543,15 +557,13 @@ public class RabbitTrader
         OrderType orderType = OrderType.Limit,
         TimeInForce timeInForce = TimeInForce.GTC)
     {
-        var newOrder = (await _client.PostNewOrder(
-                    orderRequest.Symbol,
-                    orderRequest.Qty,
-                    orderRequest.Price,
-                    orderRequest.Side,
-                    orderType,
-                    timeInForce)
-                )
-            ;
+        var newOrder = await _client.PostNewOrder(
+                orderRequest.Symbol,
+                orderRequest.Qty,
+                orderRequest.Price,
+                orderRequest.Side,
+                orderType,
+                timeInForce);
 
         _logger.LogOrderPlaced(newOrder);
 

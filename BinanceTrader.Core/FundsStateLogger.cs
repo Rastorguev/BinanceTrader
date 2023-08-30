@@ -13,10 +13,10 @@ public class FundsStateLogger
     private const string BtcAsset = "BTC";
 
     private readonly IBinanceClient _client;
-
     private readonly ILogger _logger;
-
     private readonly string _quoteAsset;
+    private readonly TimeSpan _expiration = TimeSpan.FromMinutes(5);
+    private DateTime? _lastLogTime;
 
     public FundsStateLogger(
         IBinanceClient client,
@@ -28,8 +28,16 @@ public class FundsStateLogger
         _quoteAsset = quoteAsset;
     }
 
-    public async Task LogFundsState(IReadOnlyList<IBalance> funds, IReadOnlyList<string> assets)
+    public async Task LogFundsStateIfNeeded(IReadOnlyList<IBalance> funds, IReadOnlyList<string> assets)
     {
+        var needToLog = _lastLogTime != null &&
+                        _lastLogTime.Value + _expiration > DateTime.Now;
+
+        if (!needToLog)
+        {
+            return;
+        }
+
         try
         {
             var prices = (await _client.GetAllPrices()).ToList();
@@ -57,6 +65,8 @@ public class FundsStateLogger
                 { "AverageAssetPrice", averagePrice.Round8().ToString(CultureInfo.InvariantCulture) },
                 { "MedianAssetPrice", medianPrice.Round8().ToString(CultureInfo.InvariantCulture) }
             });
+
+            _lastLogTime = DateTime.Now;
         }
         catch (Exception ex)
         {
