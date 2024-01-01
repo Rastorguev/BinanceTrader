@@ -14,6 +14,8 @@ namespace BinanceApi.Models.Market
 
         public DateTime OpenLocalTime => OpenUnixTime.GetLocalTime();
         public DateTime CloseLocalTime => CloseUnixTime.GetLocalTime();
+        public decimal Amplitude => (High - Low) / Low * 100;
+        public decimal Change => (Close - Open) / Open * 100;
         public decimal Open { get; set; }
         public decimal High { get; set; }
         public decimal Low { get; set; }
